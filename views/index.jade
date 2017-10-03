@@ -1,0 +1,28 @@
+extends layout
+
+block content
+    h1 #{title} #{header}
+    h2 How to use
+    p You can call any of the service URL in the next section directly from a client browser(it allows AJAX requests from any origin).It will return a JSON formatted results.
+    br
+    h2 Get Problems
+    p url:
+        a(href='/api/problem/local/1000') /api/problem/{source}/{problem_id}
+    p source:Which oj owns problem
+    p problem_id the target problem's id
+    br
+    h2 Get User
+    p url:
+        a(href='/api/user/2016011253') /api/user/{user_id}
+    p user_id:The target user_id
+    br
+    h2 Get nick
+    p url:
+        a(href='api/user/nick/冯云豪') /api/user/nick/{nick}
+    p nick:user's nick
+    br
+    h2 Get submission
+    p url:
+        a(href='api/user/2016011253/submit') /api/user/{user_id}/submit
+    p user_id:The target user_id
+    br

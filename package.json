@@ -1,0 +1,22 @@
+{
+  "name": "CUP_Online_Judge_Express",
+  "version": "1.0.0",
+  "dependencies": {
+    "body-parser": "~1.18.2",
+    "cookie-parser": "~1.4.3",
+    "debug": "~3.1.0",
+    "express": "~4.16.1",
+    "fs": "0.0.2",
+    "http": "~0.0.0",
+    "jade": "~1.11.0",
+    "morgan": "~1.9.0",
+    "mysql": "^2.14.1",
+    "node-cache": "^4.1.1",
+    "serve-favicon": "~2.4.5",
+    "socket.io": "~2.0.3"
+  },
+  "main": "./bin/main.js",
+  "scripts": {
+    "start": "node ./bin/main.js"
+  }
+}
