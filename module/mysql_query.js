@@ -9,11 +9,11 @@ const query = function (sql_query, sqlArr, callback) {
             }
             else {
                 conn.query(sql_query, sqlArr, function (err, results, fields) {
-                    conn.release();
                     callback(results);
                 })
             }
-        })
+            conn.release();
+        });
     }
     else {
         return new Promise((resolve, reject) => {
@@ -29,9 +29,9 @@ const query = function (sql_query, sqlArr, callback) {
                         else {
                             resolve(results);
                         }
-                        connection.release();
                     })
                 }
+                connection.release();
             })
         })
     }
