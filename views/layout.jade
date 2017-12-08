@@ -3,5 +3,8 @@ html
     head
         title= title
         meta(charset="utf-8")
+        include js.jade
+        include css.jade
     body
-        block content
+        div(class="ui container")
+            block content

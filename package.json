@@ -1,22 +1,37 @@
 {
-  "name": "CUP_Online_Judge_Express",
-  "version": "1.0.0",
+  "name": "CUP-Online-Judge-BackEnd",
+  "author": "Ryan Lee",
+  "homepage": "https://github.com/ryanlee2014",
+  "version": "1.2.0",
   "dependencies": {
     "body-parser": "~1.18.2",
     "cookie-parser": "~1.4.3",
+    "crypto-js": "^3.1.9-1",
     "debug": "~3.1.0",
-    "express": "~4.16.1",
+    "express": "^4.16.2",
+    "express-session": "^1.15.6",
     "fs": "0.0.2",
     "http": "~0.0.0",
     "jade": "~1.11.0",
+    "meteor-random": "0.0.3",
     "morgan": "~1.9.0",
-    "mysql": "^2.14.1",
+    "mysql": "^2.15.0",
     "node-cache": "^4.1.1",
     "serve-favicon": "~2.4.5",
-    "socket.io": "~2.0.3"
+    "session-file-store": "^1.1.2",
+    "sha1": "^1.1.1",
+    "socket.io": "~2.0.3",
+    "crypto": "~1.0.1",
+    "escape-html": "~1.0.3",
+    "helmet": "~3.9.0",
+    "compression": "~1.7.1",
+    "log4js": "~2.3.12"
   },
   "main": "./bin/main.js",
   "scripts": {
-    "start": "node ./bin/main.js"
+    "test": "node ./bin/main.js",
+    "start": "forever start ./bin/main.js",
+    "stop": "forever stop ./bin/main.js",
+    "restart": "forever restart ./bin/main.js"
   }
 }

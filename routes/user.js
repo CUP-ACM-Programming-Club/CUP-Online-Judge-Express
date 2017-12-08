@@ -12,6 +12,7 @@ router.get('/:user_id', function (req, res, next) {
             if (rows.length !== 0) {
                 const usr = rows[0];
                 const user_detail = {
+                    user_id: user_id,
                     submit: usr['submit'],
                     solved: usr['solved'],
                     email: usr['email'],

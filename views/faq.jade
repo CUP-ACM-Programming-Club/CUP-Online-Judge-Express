@@ -1,0 +1,267 @@
+extends layout
+
+block content
+    div
+        center
+            h1.ui.header.block  FAQ
+        p
+            font(color='green') Q
+            | :这个在线裁判系统使用什么样的编译器和编译选项?
+            br
+            font(color='red') A
+            | :详见
+            a(href="acm.cup.edu.cn:8100/常见问题/编译命令", target='_blank') CUP Online Judge WIKI
+        p
+            | 编译器版本为（系统可能升级编译器版本，这里直供参考）:
+            br
+            .ui.raised.segment
+                font(color='blue')
+                    | gcc 版本 7.2.0 (GCC) 使用内建 specs
+                    br
+                    | 目标：x86_64-pc-linux-gnu
+                    br
+                    | 配置为：../configure --disable-multilib
+                    br
+                    | 线程模型：posix
+                br
+                font(color='blue')
+                    | clang version 3.4.2 (tags/RELEASE_34/dot2-final)
+                    | Target: x86_64-redhat-linux-gnu
+                br
+                font(color='blue') glibc 2.3.6
+                br
+                font(color='blue')
+                    | Free Pascal Compiler version 2.4.0-2 [2010/03/06] for i386
+                    br
+                    |                 OpenJDK Runtime Environment (build 1.8.0_131-b12)
+                    br
+                    | OpenJDK 64-Bit Server VM (build 25.131-b12, mixed mode)
+                    br
+                    | Python 2.7.5
+                    br
+    .ui.section.divider
+    .ui.bottom.attached.warning.message
+        i.warning.icon
+        |   Java程序必须使用Main作为类，main作为主函数提交，否则将无法通过编译
+    p
+        font(color='green') Q
+        | :程序怎样取得输入、进行输出?
+        br
+        font(color='red') A
+        | :你的程序应该从标准输入 stdin('Standard Input')获取输入，并将结果输出到标准输出 stdout('Standard Output').例如,在C语言可以使用 'scanf' ，在C++可以使用'cin' 进行输入；在C使用 'printf' ，在C++使用'cout'进行输出.
+    p
+        | 用户程序不允许直接读写文件, 如果这样做可能会判为运行时错误 "
+        font(color='green') Runtime Error
+        | "。
+        br
+        br
+        |             下面是 1000题的参考答案
+    p
+        | C++:
+        br
+    #editor.editor
+        | #include <iostream>
+        | using namespace std;
+        | int main(){
+        | int a,b;
+        | while(cin >> a >> b)
+        | cout << a+b << endl;
+        | return 0;
+        | }
+    |         C:
+    br
+    #editor1.editor
+        | #include <stdio.h>
+        | int main(){
+        | int a,b;
+        | while(scanf("%d %d",&a, &b) != EOF)
+        | printf("%d\n",a+b);
+        | return 0;
+        | }
+    |         PASCAL:
+    br
+    #editor2.editor
+        | program p1001(Input,Output);
+        | var
+        | a,b:Integer;
+        | begin
+        | while not eof(Input) do
+        | begin
+        | Readln(a,b);
+        | Writeln(a+b);
+        | end;
+        | end.
+    br
+    |         Java:
+    br
+    #editor3.editor
+        | import java.util.*;
+        | public class Main{
+        | public static void main(String args[]){
+        | Scanner cin = new Scanner(System.in);
+        | int a, b;
+        | while (cin.hasNext()){
+        | a = cin.nextInt(); b = cin.nextInt();
+        | System.out.println(a + b);
+        | }
+        | }
+        | }
+    br
+    | Python 2:
+    br
+    #editor4.editor
+        | import sys
+        | for line in sys.stdin:
+        | a = line.split()
+        | print int(a[0]) + int(a[1])
+    hr
+    font(color='green') Q
+    | :为什么我的程序在自己的电脑上正常编译，而系统告诉我编译错误!
+    br
+    font(color='red') A
+    | :GCC的编译标准与VC6有些不同，更加符合c/c++标准:
+    br
+    ul
+        li
+            font(color='blue') main
+            |  函数必须返回
+            font(color='blue') int
+            | ,
+            font(color='blue') void main
+            |  的函数声明会报编译错误。
+            br
+        li
+            font(color='green') i
+            |  在循环外失去定义 "
+            font(color='blue') for
+            | (
+            font(color='blue') int
+            font(color='green') i
+            | =0...){...}"
+            br
+        li
+            font(color='green') itoa
+            |  不是ansi标准函数.
+            br
+        li
+            font(color='green') __int64
+            |  不是ANSI标准定义，只能在VC使用, 但是可以使用
+            font(color='blue') long long
+            | 声明64位整数。
+            br
+            | 如果用了__int64,试试提交前加一句#define __int64 long long
+    hr
+    font(color='green') Q
+    | :系统返回信息都是什么意思?
+    br
+    font(color='red') A
+    | :详见下述:
+    br
+    p
+        font(color='blue') Pending
+        |  : 系统忙，你的答案在排队等待.
+    p
+        font(color='blue') Pending Rejudge
+        | : 因为数据更新或其他原因，系统将重新判你的答案.
+    p
+        font(color='blue') Compiling
+        |  : 正在编译.
+        br
+    p
+        font(color='blue') Running & Judging
+        | : 正在运行和判断.
+        br
+    p
+        font(color='blue') Accepted
+        |  : 程序通过!
+        br
+        br
+        font(color='blue') Presentation Error
+        |  : 答案基本正确，但是格式不对。
+        br
+        br
+        font(color='blue') Wrong Answer
+        |  : 答案不对，仅仅通过样例数据的测试并不一定是正确答案，一定还有你没想到的地方.
+        br
+        br
+        font(color='blue') Time Limit Exceeded
+        |  : 运行超出时间限制，检查下是否有死循环，或者应该有更快的计算方法。
+        br
+        br
+        font(color='blue') Memory Limit Exceeded
+        |  : 超出内存限制，数据可能需要压缩，检查内存是否有泄露。
+        br
+        br
+        font(color='blue') Output Limit Exceeded
+        | : 输出超过限制，你的输出比正确答案长了两倍.
+        br
+        br
+        font(color='blue') Runtime Error
+        |  : 运行时错误，非法的内存访问，数组越界，指针漂移，调用禁用的系统函数。请点击后获得详细输出。
+        br
+    p
+        font(color='blue') Compile Error
+        |  : 编译错误，请点击后获得编译器的详细输出。
+        br
+        br
+    hr
+    font(color='green') Q
+    | :如何参加在线比赛?
+    br
+    font(color='red') A
+    | :
+    a(href='registerpage.php') 注册
+    |  一个帐号，然后就可以练习，点击比赛列表Contests可以看到正在进行的比赛并参加。
+    br
+    br
+    hr
+    center
+        font(color='green', size='+2')
+            | 其他问题请发邮件到
+            a(href='mailto:gxlhybh@gmail.com') 我的邮箱
+    hr
+    center
+        table(width='100%', border='0')
+            tr
+                td(align='right', width='65%')
+                    a(href='index.php')
+                        font(color='red')
+                    font(color='red') 2017/3/18
+    // /container
+    //
+        Bootstrap core JavaScript
+        ==================================================
+    // Placed at the end of the document so the pages load faster
+    script(language='javascript', type='text/javascript', src='../include/jquery.flot.js')
+    script(src='/ace-builds/src-noconflict/ace.js', type='text/javascript', charset='utf-8')
+    script.
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.getSession().setMode("ace/mode/c_cpp");
+        editor.setShowPrintMargin(false);
+        document.getElementById('editor').style.fontSize = '15px';
+        editor.setReadOnly(true);
+        var editor1 = ace.edit("editor1");
+        editor1.setTheme("ace/theme/monokai");
+        editor1.getSession().setMode("ace/mode/c_cpp");
+        document.getElementById('editor1').style.fontSize = '15px';
+        editor1.setReadOnly(true);
+        var editor2 = ace.edit("editor2");
+        editor2.setTheme("ace/theme/monokai");
+        editor2.getSession().setMode("ace/mode/pascal");
+        document.getElementById('editor2').style.fontSize = '15px';
+        editor2.setReadOnly(true);
+        var editor3 = ace.edit("editor3");
+        editor3.setTheme("ace/theme/monokai");
+        editor3.getSession().setMode("ace/mode/java");
+        document.getElementById('editor3').style.fontSize = '15px';
+        editor3.setReadOnly(true);
+        var editor4 = ace.edit("editor4");
+        editor4.setTheme("ace/theme/monokai");
+        editor4.getSession().setMode("ace/mode/python");
+        document.getElementById('editor4').style.fontSize = '15px';
+        editor4.setReadOnly(true);
+        editor1.setShowPrintMargin(false);
+        editor2.setShowPrintMargin(false);
+        editor3.setShowPrintMargin(false);
+        editor4.setShowPrintMargin(false);
