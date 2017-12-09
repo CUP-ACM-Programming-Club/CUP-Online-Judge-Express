@@ -27,12 +27,14 @@ app.use(log4js.connectLogger(log, {level: 'info'}));
 const oneDay = 86400000;
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+app.set('view cache', true);
 app.use('/static', express.static(__dirname + "/static", {
     maxAge: oneDay * 30
 }));
 app.use(session({
     store: new FileStore(),
     saveUninitialized: false,
+    ttl: oneDay * 31 * 12 * 100,
     resave: false,
     secret: Random.secret(128),
     cookie: {

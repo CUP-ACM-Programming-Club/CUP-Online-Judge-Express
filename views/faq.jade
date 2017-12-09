@@ -3,7 +3,7 @@ extends layout
 block content
     div
         center
-            h1.ui.header.block  FAQ
+            h1.ui.header.block #{title} FAQ
         p
             font(color='green') Q
             | :这个在线裁判系统使用什么样的编译器和编译选项?
@@ -63,20 +63,20 @@ block content
         | #include <iostream>
         | using namespace std;
         | int main(){
-        | int a,b;
-        | while(cin >> a >> b)
-        | cout << a+b << endl;
-        | return 0;
+        |   int a,b;
+        |   while(cin >> a >> b)
+        |       cout << a+b << endl;
+        |   return 0;
         | }
     |         C:
     br
     #editor1.editor
         | #include <stdio.h>
         | int main(){
-        | int a,b;
-        | while(scanf("%d %d",&a, &b) != EOF)
-        | printf("%d\n",a+b);
-        | return 0;
+        |   int a,b;
+        |    while(scanf("%d %d",&a, &b) != EOF)
+        |        printf("%d\n",a+b);
+        |   return 0;
         | }
     |         PASCAL:
     br
@@ -97,14 +97,14 @@ block content
     #editor3.editor
         | import java.util.*;
         | public class Main{
-        | public static void main(String args[]){
-        | Scanner cin = new Scanner(System.in);
-        | int a, b;
-        | while (cin.hasNext()){
-        | a = cin.nextInt(); b = cin.nextInt();
-        | System.out.println(a + b);
-        | }
-        | }
+        |   public static void main(String args[]){
+        |       Scanner cin = new Scanner(System.in);
+        |       int a, b;
+        |       while (cin.hasNext()){
+        |           a = cin.nextInt(); b = cin.nextInt();
+        |           System.out.println(a + b);
+        |       }
+        |   }
         | }
     br
     | Python 2:

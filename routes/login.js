@@ -11,6 +11,13 @@ const reverse = (val) => {
     return val.toString().split("").reverse().join("");
 };
 
+router.post("/", function (req, res, next) {
+    if (req.session.auth) {
+        req.session.destroy();
+    }
+    next('route');
+});
+
 router.post("/", async function (req, res, next) {
     let receive = req.body.msg;
     receive = Buffer.from(receive, "base64").toString();
@@ -21,8 +28,8 @@ router.post("/", async function (req, res, next) {
     await query("select password from users where user_id=?", [json['user_id']]).then(async (val) => {
         const ans = val[0].password;
         if (checkPassword(ans, json['password'])) {
-            //   query("update users set newpassword=? where user_id=?",
-            //     [crypto.encryptAES(reverse(json['password']) + salt, reverse(salt)), json['user_id']]).catch(logger.fatal);
+            query("update users set newpassword=? where user_id=?",
+                [crypto.encryptAES(reverse(json['password']) + salt, reverse(salt)), json['user_id']]).catch(log.fatal);
             req.session.user_id = json['user_id'];
             req.session.auth = true;
             res.json({
