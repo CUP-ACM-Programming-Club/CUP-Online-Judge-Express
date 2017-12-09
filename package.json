@@ -5,7 +5,7 @@
   "version": "1.2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ryanlee2014/CUP-Online-Judge-Express.git"
+    "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
   },
   "license": "Apache-2.0",
   "dependencies": {
