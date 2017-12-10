@@ -3,6 +3,11 @@
   "author": "Ryan Lee",
   "homepage": "https://github.com/ryanlee2014",
   "version": "1.2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
+  },
+  "license": "Apache-2.0",
   "dependencies": {
     "body-parser": "~1.18.2",
     "cookie-parser": "~1.4.3",
