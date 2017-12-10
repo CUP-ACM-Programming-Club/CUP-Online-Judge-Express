@@ -3,6 +3,76 @@ const NodeCache = require('node-cache');
 const router = express.Router();
 const query = require('../module/mysql_query');
 const cache = new NodeCache({stdTTL: 10, checkperiod: 15});
+Date.prototype.Format = function (fmt) { //author: meizz
+    const o = {
+        "M+": this.getMonth() + 1, //月份
+        "d+": this.getDate(), //日
+        "h+": this.getHours(), //小时
+        "m+": this.getMinutes(), //分
+        "s+": this.getSeconds(), //秒
+        "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+        "S": this.getMilliseconds() //毫秒
+    };
+    if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    for (let k in o)
+        if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length === 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+    return fmt;
+};
+
+const rank_search = async (req, res, next, start, end) => {
+    if (start > end) {
+        start ^= end;
+        end ^= start;
+        start ^= end;
+    }
+    const step = end - start;
+    const _detail = cache.get(`rank from ${start} to ${end}`);
+    if (_detail === undefined) {
+        let result = await query(`SELECT * FROM users 
+            ORDER BY solved DESC,submit,reg_time LIMIT ${start},${step + 1}`);
+        let send_msg = {
+            cache_time: (new Date()).Format("YYYY-MM-DD"),
+            start: start,
+            end: end,
+            user: []
+        };
+        for (let i in result) {
+            const user_detail = {
+                user_id: result[i].user_id,
+                nick: result[i].nick,
+                solved: result[i].solved,
+                submit: result[i].submit,
+            };
+            send_msg.user.push(user_detail);
+        }
+        res.json(send_msg);
+        cache.set(`rank from ${start} to ${end}`, send_msg, 10 * 60);
+    }
+    else {
+        res.json(_detail);
+    }
+};
+
+
+router.get('/rank/:start/:end', async function (req, res, next) {
+    let start = parseInt(req.params.start);
+    let end = parseInt(req.params.end);
+    if (isNaN(start) || isNaN(end)) {
+        next();
+    }
+    else {
+        await rank_search(req, res, next, start, end);
+    }
+}, function (req, res, next) {
+    res.json({
+        status: "error",
+        statement: "invalid rank start or end num"
+    })
+});
+
+router.get('/rank', function (req, res, next) {
+    rank_search(req, res, next, 0, 50);
+});
 
 router.get('/:user_id', function (req, res, next) {
     const user_id = req.params.user_id;

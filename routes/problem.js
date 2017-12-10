@@ -30,6 +30,35 @@ const no_privilege = {
     statement: "Permission Denied"
 };
 
+router.get('/module/search/:val', function (req, res, next) {
+    const val = "%" + req.params.val + "%";
+    const _res = cache.get("/module/search/" + req.session.isadmin + val);
+    if (_res === undefined) {
+        if (val.length < 5) {
+            const obj = {
+                msg: "ERROR",
+                statement: "Value too short!"
+            };
+            send_json(res, obj);
+            return;
+        }
+        query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
+            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ?", [val, val, val, val], function (rows) {
+            for (i in rows) {
+                rows[i]['url'] = "/newsubmitpage.php?id=" + rows[i]['problem_id'];
+            }
+            const result = {
+                items: rows
+            };
+            send_json(res, result);
+            cache.set("/module/search/" + req.session.isadmin + val, result, 10 * 24 * 60 * 60);
+        })
+    }
+    else {
+        send_json(res, _res);
+    }
+});
+
 router.get('/:source/:id', function (req, res, next) {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -131,32 +160,5 @@ router.get('/:source/:id/:sid', function (req, res, next) {
     }
 });
 
-router.get('/module/search/:val', function (req, res, next) {
-    const val = "%" + req.params.val + "%";
-    const _res = cache.get("/module/search/" + val);
-    if (_res === undefined) {
-        if (val.length < 5) {
-            const obj = {
-                msg: "ERROR",
-                statement: "Value too short!"
-            };
-            send_json(res, obj);
-            return;
-        }
-        query("SELECT * FROM problem WHERE problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ?", [val, val, val, val], function (rows) {
-            for (i in rows) {
-                rows[i]['url'] = "/newsubmitpage.php?id=" + rows[i]['problem_id'];
-            }
-            const result = {
-                items: rows
-            };
-            send_json(res, result);
-            cache.set("/module/search/" + val, result, 10 * 24 * 60 * 60);
-        })
-    }
-    else {
-        send_json(res, _res);
-    }
-});
 
 module.exports = router;
