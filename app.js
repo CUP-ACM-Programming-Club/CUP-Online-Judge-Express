@@ -38,7 +38,7 @@ app.use(session({
     resave: false,
     secret: Random.secret(128),
     cookie: {
-        maxAge: 100 * 365 * 24 * 60 * 60 * 1000
+        maxAge: 60 * 60 * 1000
     }
 }));
 app.use(compression());

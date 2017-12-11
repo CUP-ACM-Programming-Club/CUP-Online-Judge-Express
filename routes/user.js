@@ -31,7 +31,7 @@ const rank_search = async (req, res, next, start, end) => {
         let result = await query(`SELECT * FROM users 
             ORDER BY solved DESC,submit,reg_time LIMIT ${start},${step + 1}`);
         let send_msg = {
-            cache_time: (new Date()).Format("YYYY-MM-DD"),
+            cache_time: (new Date()).Format("yyyy-MM-dd hh:mm:ss"),
             start: start,
             end: end,
             user: []
