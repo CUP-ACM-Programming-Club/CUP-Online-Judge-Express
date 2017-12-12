@@ -69,7 +69,7 @@ router.post("/token", function (req, res) {
         }
         log.info(receive);
         const token = JSON.parse(receive);
-        const token_str = token['token'];
+        const token_str = token['token'] || "";
         query("SELECT authcode FROM users WHERE user_id=?", [token['user_id']]).then((rows) => {
             const original_token = rows[0].authcode;
             if (token_str === original_token) {
