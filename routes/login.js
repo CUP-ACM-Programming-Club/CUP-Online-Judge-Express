@@ -140,4 +140,15 @@ router.post("/", async function (req, res) {
     })
 });
 
+router.post('/newpassword', function (req, res, next) {
+    let user_id = req.body.user_id;
+    let password = req.body.password;
+    query("update users set newpassword=? where user_id=?",
+        [crypto.encryptAES(password + salt, reverse(salt)), user_id])
+        .catch((e) => {
+            res.json(error.database);
+            log.fatal(e);
+        });
+});
+
 module.exports = router;

@@ -27,7 +27,9 @@ const rank_search = async (req, res, next, start, end) => {
     }
     const step = end - start;
     const _detail = cache.get(`rank from ${start} to ${end}`);
+    // console.log("here");
     if (_detail === undefined) {
+        //console.log("not cache");
         let result = await query(`SELECT * FROM users 
             ORDER BY solved DESC,submit,reg_time LIMIT ${start},${step + 1}`);
         let send_msg = {
@@ -37,12 +39,18 @@ const rank_search = async (req, res, next, start, end) => {
             user: []
         };
         for (let i in result) {
+            let admin = await query("select count(1) as count from privilege where user_id=? " +
+                "and rightstr='administrator'", [result[i].user_id]);
+            admin = admin[0].count > 0 ? "管理员" : "普通用户";
             const user_detail = {
                 user_id: result[i].user_id,
                 nick: result[i].nick,
                 solved: result[i].solved,
                 submit: result[i].submit,
+                reg_time: (new Date(result[i].reg_time).Format("yyyy-MM-dd")),
+                privilege: admin
             };
+            //console.log(user_detail);
             send_msg.user.push(user_detail);
         }
         res.json(send_msg);
