@@ -102,6 +102,13 @@ io.on('connection', function (socket) {
                 cachePool.del(pos.ip);
                 delete onlineUser[username];
             }
+            let online = Object.values(onlineUser);
+            let userArr = {
+                user_cnt: online.length,
+                user: online
+            };
+            socket.emit("user", userArr);
+            socket.broadcast.emit("user", userArr);
         }
     });
 });
