@@ -9,7 +9,7 @@ const query = function (sql_query, sqlArr, callback) {
             }
             else {
                 conn.query(sql_query, sqlArr, function (err, results, fields) {
-                    callback(results);
+                    callback(results, fields);
                 })
             }
             conn.release();
@@ -22,12 +22,12 @@ const query = function (sql_query, sqlArr, callback) {
                     reject(err);
                 }
                 else {
-                    connection.query(sql_query, sqlArr, (err, results) => {
+                    connection.query(sql_query, sqlArr, (err, results, fields) => {
                         if (err) {
                             reject(err);
                         }
                         else {
-                            resolve(results);
+                            resolve(results, fields);
                         }
                     })
                 }
