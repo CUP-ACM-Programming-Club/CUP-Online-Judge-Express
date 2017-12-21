@@ -29,6 +29,7 @@ function findurl(user, url) {
 function broadcast(userArr, type, val) {
     for (let i in userArr) {
         userArr[i].emit(type, val);
+        // console.log(userArr[i]);
     }
 }
 
@@ -79,10 +80,14 @@ io.on('connection', function (socket) {
                 user_cnt: online.length
             };
             broadcast(normal_user, "user", userArr);
+            if (!privilege) {
+                socket.emit("user", userArr);
+            }
             userArr["user"] = online;
             broadcast(admin_user, "user", userArr);
-//            socket.emit("user", userArr);
-//            socket.broadcast.emit("user", userArr);
+            if (privilege) {
+                socket.emit("user", userArr);
+            }
         }
     });
 
@@ -111,7 +116,6 @@ io.on('connection', function (socket) {
             pos.url.splice(upos, 1);
             if (pos.url.length === 0) {
                 delete user_socket[username];
-                //     cachePool.del(pos.ip);
                 delete onlineUser[username];
                 if (admin_user[username])
                     delete admin_user[username];
