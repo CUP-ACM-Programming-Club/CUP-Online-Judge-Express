@@ -6,47 +6,9 @@ const log4js = require("../module/logger");
 const log = log4js.logger('cheese', 'info');
 const crypto = require('../module/encrypt');
 const memcache = require('../module/memcached');
+const [error, ok] = require('../module/const_var');
 const salt = "thisissalt";
-let error = {};
-let ok = {};
-error.database = {
-    status: "error",
-    statement: "database error"
-};
-error.parseJSON = {
-    status: "error",
-    statement: "invalid JSON string"
-};
-error.tokenNoMatch = {
-    status: "error",
-    statement: "token doesn't match"
-};
-error.passNoMatch = {
-    status: "error",
-    statement: "password doesn't match"
-};
-error.invalidToken = {
-    status: "error",
-    statement: "invalid token"
-};
 
-error.invalidUser = {
-    status: "error",
-    statement: "invalid user"
-};
-
-error.memcahceError = {
-    status: "error",
-    statememt: "memcache error"
-};
-
-ok.logined = {
-    status: "OK",
-    statment: "logined"
-};
-ok.ok = {
-    status: "OK"
-};
 
 const reverse = (val) => {
     return val.toString().split("").reverse().join("");
@@ -64,7 +26,7 @@ router.post("/token", async function (req, res) {
         res.json(ok.logined);
     }
     else {
-        console.log(req.body.token);
+        // console.log(req.body.token);
         let receive = "";
         try {
             receive = Buffer.from(req.body.token, "base64").toString();
@@ -141,7 +103,7 @@ router.post("/", async function (req, res) {
     })
 });
 
-router.post('/newpassword', function (req, res, next) {
+router.post('/newpassword', function (req, res) {
     let user_id = req.body.user_id;
     let password = req.body.password;
     query("update users set newpassword=? where user_id=?",

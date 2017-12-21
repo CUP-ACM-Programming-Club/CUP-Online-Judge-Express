@@ -1,5 +1,4 @@
 const app = require('../app');
-//const local_app = require('../local');
 const debug = require('debug')('express:server');
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
@@ -8,17 +7,14 @@ const io = require('socket.io')(server);
 const port = process.env.PORT || 3000;
 const query = require('../module/mysql_query');
 const memcache = require('../module/memcached');
-//const config = require('../config.json');
-const cachePool = require('../module/cachePool');
+const cookie = require('cookie');
 server.listen(port, function () {
     logger.info('Server listening at port %d', port);
 });
-/*
-local_app.listen(4323);
-*/
 let onlineUser = {};
 let user_socket = {};
 let admin_user = {};
+let normal_user = {};
 
 function findurl(user, url) {
     const len = user.url.length;
@@ -30,29 +26,33 @@ function findurl(user, url) {
     return -1;
 }
 
+function broadcast(userArr, type, val) {
+    for (let i in userArr) {
+        userArr[i].emit(type, val);
+    }
+}
+
 io.on('connection', function (socket) {
     let username;
     let url;
     let privilege = null;
     socket.on('auth', async function (data) {
-        const val = await memcache.get(data['user_id']);
-        //console.log(val);
-        if (data['authcode'] === val) {
+        const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
+        const token = parse_cookie['token'] || "";
+        const user_id = parse_cookie['user_id'];
+        const val = await memcache.get(user_id);
+        const cache_token = await memcache.get(user_id + "token");
+        if (data['authcode'] === val || token === cache_token) {
             const priv = await query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-                "user_id=?", [data['user_id']]);
+                "user_id=?", [user_id]);
             privilege = parseInt(priv[0].cnt) > 0;
-            const usr_auth = {
-                user_id: data['user_id'],
-                auth: data['authcode']
-            };
-            cachePool.set(data['ip'], JSON.stringify(usr_auth), 60 * 60);
-            const pos = onlineUser[data['user_id']];
+            const pos = onlineUser[user_id];
             if (pos !== undefined) {
                 pos.url.push(data['url']);
             }
             else {
                 const user = {
-                    user_id: data['user_id'],
+                    user_id: user_id,
                     url: [data['url']],
                     identify: data['id'],
                     ip: data['ip'],
@@ -63,23 +63,26 @@ io.on('connection', function (socket) {
                     screen: data['screen']
                 };
                 user_socket[user.user_id] = socket;
-                onlineUser[data['user_id']] = user;
+                onlineUser[user_id] = user;
                 if (privilege) {
-                    admin_user[data['user_id']] = user;
+                    admin_user[user_id] = socket;
+                }
+                else {
+                    normal_user[user_id] = socket;
                 }
             }
-            socket.user = data['user_id'];
-            username = data['user_id'];
+            socket.user = user_id;
+            username = user_id;
             url = data['url'];
             let online = Object.values(onlineUser);
             let userArr = {
                 user_cnt: online.length
             };
-            if (privilege) {
-                userArr["user"] = online;
-            }
-            socket.emit("user", userArr);
-            socket.broadcast.emit("user", userArr);
+            broadcast(normal_user, "user", userArr);
+            userArr["user"] = online;
+            broadcast(admin_user, "user", userArr);
+//            socket.emit("user", userArr);
+//            socket.broadcast.emit("user", userArr);
         }
     });
 
@@ -108,8 +111,12 @@ io.on('connection', function (socket) {
             pos.url.splice(upos, 1);
             if (pos.url.length === 0) {
                 delete user_socket[username];
-                cachePool.del(pos.ip);
+                //     cachePool.del(pos.ip);
                 delete onlineUser[username];
+                if (admin_user[username])
+                    delete admin_user[username];
+                if (normal_user[username])
+                    delete normal_user[username];
             }
             let online = Object.values(onlineUser);
             let userArr = {
