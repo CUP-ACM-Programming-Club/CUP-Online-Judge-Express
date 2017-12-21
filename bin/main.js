@@ -1,5 +1,4 @@
 const app = require('../app');
-//const local_app = require('../local');
 const debug = require('debug')('express:server');
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
@@ -7,16 +6,15 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const port = process.env.PORT || 3000;
 const query = require('../module/mysql_query');
-//const config = require('../config.json');
-const cachePool = require('../module/cachePool');
+const memcache = require('../module/memcached');
+const cookie = require('cookie');
 server.listen(port, function () {
     logger.info('Server listening at port %d', port);
 });
-/*
-local_app.listen(4323);
-*/
 let onlineUser = {};
 let user_socket = {};
+let admin_user = {};
+let normal_user = {};
 
 function findurl(user, url) {
     const len = user.url.length;
@@ -28,50 +26,64 @@ function findurl(user, url) {
     return -1;
 }
 
+function broadcast(userArr, type, val) {
+    for (let i in userArr) {
+        userArr[i].emit(type, val);
+    }
+}
+
 io.on('connection', function (socket) {
     let username;
     let url;
-    socket.on('auth', function (data) {
-        //console.log(data);
-        query("SELECT authcode FROM users WHERE user_id=?", [data['user_id']], function (rows) {
-            if (rows[0]['authcode'] !== "NULL" && rows[0]['authcode'] === data['authcode']) {
-                const usr_auth = {
-                    user_id: data['user_id'],
-                    auth: data['authcode']
+    let privilege = null;
+    socket.on('auth', async function (data) {
+        const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
+        const token = parse_cookie['token'] || "";
+        const user_id = parse_cookie['user_id'];
+        const val = await memcache.get(user_id);
+        const cache_token = await memcache.get(user_id + "token");
+        if (data['authcode'] === val || token === cache_token) {
+            const priv = await query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
+                "user_id=?", [user_id]);
+            privilege = parseInt(priv[0].cnt) > 0;
+            const pos = onlineUser[user_id];
+            if (pos !== undefined) {
+                pos.url.push(data['url']);
+            }
+            else {
+                const user = {
+                    user_id: user_id,
+                    url: [data['url']],
+                    identify: data['id'],
+                    ip: data['ip'],
+                    version: data['version'],
+                    platform: data['platform'],
+                    browser_core: data['browser_core'],
+                    useragent: data['useragent'],
+                    screen: data['screen']
                 };
-                cachePool.set(data['ip'], JSON.stringify(usr_auth), 60 * 60);
-                const pos = onlineUser[data['user_id']];
-                if (pos !== undefined) {
-                    pos.url.push(data['url']);
+                user_socket[user.user_id] = socket;
+                onlineUser[user_id] = user;
+                if (privilege) {
+                    admin_user[user_id] = socket;
                 }
                 else {
-                    const user = {
-                        user_id: data['user_id'],
-                        url: [data['url']],
-                        identify: data['id'],
-                        ip: data['ip'],
-                        version: data['version'],
-                        platform: data['platform'],
-                        browser_core: data['browser_core'],
-                        useragent: data['useragent'],
-                        screen: data['screen']
-                    };
-                    user_socket[user.user_id] = socket;
-                    onlineUser[data['user_id']] = user;
+                    normal_user[user_id] = socket;
                 }
-                socket.user = data['user_id'];
-                username = data['user_id'];
-                url = data['url'];
-                query("UPDATE users SET authcode=? WHERE user_id=?", ["NULL", data['user_id']]);
-                let online = Object.values(onlineUser);
-                let userArr = {
-                    user_cnt: online.length,
-                    user: online
-                };
-                socket.emit("user", userArr);
-                socket.broadcast.emit("user", userArr);
             }
-        })
+            socket.user = user_id;
+            username = user_id;
+            url = data['url'];
+            let online = Object.values(onlineUser);
+            let userArr = {
+                user_cnt: online.length
+            };
+            broadcast(normal_user, "user", userArr);
+            userArr["user"] = online;
+            broadcast(admin_user, "user", userArr);
+//            socket.emit("user", userArr);
+//            socket.broadcast.emit("user", userArr);
+        }
     });
 
     socket.on("submit", function (data) {
@@ -99,8 +111,12 @@ io.on('connection', function (socket) {
             pos.url.splice(upos, 1);
             if (pos.url.length === 0) {
                 delete user_socket[username];
-                cachePool.del(pos.ip);
+                //     cachePool.del(pos.ip);
                 delete onlineUser[username];
+                if (admin_user[username])
+                    delete admin_user[username];
+                if (normal_user[username])
+                    delete normal_user[username];
             }
             let online = Object.values(onlineUser);
             let userArr = {
@@ -111,4 +127,5 @@ io.on('connection', function (socket) {
             socket.broadcast.emit("user", userArr);
         }
     });
-});
+})
+;

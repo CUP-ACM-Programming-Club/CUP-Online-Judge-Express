@@ -5,42 +5,10 @@ const checkPassword = require("../module/check_password");
 const log4js = require("../module/logger");
 const log = log4js.logger('cheese', 'info');
 const crypto = require('../module/encrypt');
+const memcache = require('../module/memcached');
+const [error, ok] = require('../module/const_var');
 const salt = "thisissalt";
-let error = {};
-let ok = {};
-error.database = {
-    status: "error",
-    statement: "database error"
-};
-error.parseJSON = {
-    status: "error",
-    statement: "invalid JSON string"
-};
-error.tokenNoMatch = {
-    status: "error",
-    statement: "token doesn't match"
-};
-error.passNoMatch = {
-    status: "error",
-    statement: "password doesn't match"
-};
-error.invalidToken = {
-    status: "error",
-    statement: "invalid token"
-};
 
-error.invalidUser = {
-    status: "error",
-    statement: "invalid user"
-};
-
-ok.logined = {
-    status: "OK",
-    statment: "logined"
-};
-ok.ok = {
-    status: "OK"
-};
 
 const reverse = (val) => {
     return val.toString().split("").reverse().join("");
@@ -53,12 +21,12 @@ router.post("/token", function (req, res, next) {
         next('route');
     }
 });
-router.post("/token", function (req, res) {
+router.post("/token", async function (req, res) {
     if (req.session.auth) {
         res.json(ok.logined);
     }
     else {
-        console.log(req.body.token);
+        // console.log(req.body.token);
         let receive = "";
         try {
             receive = Buffer.from(req.body.token, "base64").toString();
@@ -70,29 +38,24 @@ router.post("/token", function (req, res) {
         log.info(receive);
         const token = JSON.parse(receive);
         const token_str = token['token'] || "";
-        query("SELECT authcode FROM users WHERE user_id=?", [token['user_id']]).then((rows) => {
-            const original_token = rows[0].authcode;
-            if (token_str === original_token) {
-                req.session.user_id = token['user_id'];
-                req.session.auth = true;
-                res.json(ok.ok);
-                if (typeof token['password'] === "string") {
-                    query("update users set newpassword=? where user_id=?",
-                        [crypto.encryptAES(reverse(token['password']) + salt, reverse(salt)), token['user_id']]).catch(log.fatal);
+        const data = await memcache.get(token['user_id']);
+        if (token_str === data) {
+            req.session.user_id = token['user_id'];
+            req.session.auth = true;
+            res.json(ok.ok);
+            if (typeof token['password'] === "string") {
+                query("update users set newpassword=? where user_id=?",
+                    [crypto.encryptAES(reverse(token['password']) + salt, reverse(salt)), token['user_id']]).catch(log.fatal);
 
-                }
-                query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [token['user_id']])
-                    .then((val) => {
-                        req.session.isadmin = parseInt(val[0].count) > 0;
-                    });
             }
-            else {
-                res.json(error.invalidToken);
-            }
-        }).catch((e) => {
-            res.json(error.database);
-            log.fatal(e);
-        });
+            query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [token['user_id']])
+                .then((val) => {
+                    req.session.isadmin = parseInt(val[0].count) > 0;
+                });
+        }
+        else {
+            res.json(error.invalidToken);
+        }
     }
 });
 
@@ -140,7 +103,7 @@ router.post("/", async function (req, res) {
     })
 });
 
-router.post('/newpassword', function (req, res, next) {
+router.post('/newpassword', function (req, res) {
     let user_id = req.body.user_id;
     let password = req.body.password;
     query("update users set newpassword=? where user_id=?",

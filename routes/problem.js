@@ -7,14 +7,16 @@ const log4js = require("../module/logger");
 const logger = log4js.logger('cheese', 'info');
 const query = require('../module/mysql_query');
 const send_json = (res, val) => {
-    res.header('Content-Type', 'application/json');
-    res.json(val);
+    if (res !== null) {
+        res.header('Content-Type', 'application/json');
+        res.json(val);
+    }
 };
 
 const problem_callback = (rows, res, source, id) => {
     if (rows.length !== 0) {
         send_json(res, rows[0]);
-        cache.set("source/id/" + source + id, rows[0], 10 * 24 * 60 * 60);
+        cache.set("source/id/" + source + id, rows[0], 60 * 60);
     }
     else {
         const obj = {
@@ -92,26 +94,30 @@ router.get('/:source/:id/:sid', function (req, res, next) {
     send_json(res, errmsg);
 });
 
+const make_cache = (id, source, res) => {
+    logger.info(id);
+    if (source.length === 0) {
+        query("SELECT * FROM problem WHERE problem_id=?", [id], (rows) => {
+            problem_callback(rows, res, source, id);
+        })
+    }
+    else {
+        query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source], (rows) => {
+            problem_callback(rows, res, source, id);
+        })
+    }
+};
 
 router.get('/:source/:id', function (req, res, next) {
     const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
     const id = parseInt(req.params.id);
     const _res = cache.get("source/id/" + source + id);
     if (_res === undefined) {
-        logger.info(id);
-        if (source.length === 0) {
-            query("SELECT * FROM problem WHERE problem_id=?", [id], (rows) => {
-                problem_callback(rows, res, source, id);
-            })
-        }
-        else {
-            query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source], (rows) => {
-                problem_callback(rows, res, source, id);
-            })
-        }
+        make_cache(id, source, res);
     }
     else {
         send_json(res, _res);
+        make_cache(id, source, null);
     }
 });
 
