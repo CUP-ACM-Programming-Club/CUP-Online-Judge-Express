@@ -35,6 +35,7 @@ function broadcast(userArr, type, val) {
 
 io.on('connection', function (socket) {
     let username;
+    let user_nick;
     let url;
     let privilege = null;
     socket.on('auth', async function (data) {
@@ -47,6 +48,8 @@ io.on('connection', function (socket) {
             const priv = await query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
                 "user_id=?", [user_id]);
             privilege = parseInt(priv[0].cnt) > 0;
+            const nick = await query("SELECT nick FROM users WHERE user_id=?", [user_id]);
+            user_nick = nick[0].nick;
             const pos = onlineUser[user_id];
             if (pos !== undefined) {
                 pos.url.push(data['url']);
@@ -56,6 +59,7 @@ io.on('connection', function (socket) {
                     user_id: user_id,
                     url: [data['url']],
                     identify: data['id'],
+                    intranet_ip: data['intranet_ip'],
                     ip: data['ip'],
                     version: data['version'],
                     platform: data['platform'],
@@ -91,8 +95,15 @@ io.on('connection', function (socket) {
         }
     });
 
-    socket.on("submit", function (data) {
-        socket.broadcast.emit("submit", data);
+    socket.on("submit", async function (data) {
+        //socket.broadcast.emit("submit", data);
+        data["user_id"] = username;
+        data["nick"] = user_nick;
+        if (typeof data["val"]["cid"] !== "undefined") {
+            const id_val = await query("SELECT problem_id FROM contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
+            data["val"]["id"] = id_val[0].problem_id;
+        }
+        broadcast(admin_user, "submit", data);
     });
 
     socket.on("msg", function (data) {
