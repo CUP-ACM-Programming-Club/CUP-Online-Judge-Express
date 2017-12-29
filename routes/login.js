@@ -108,6 +108,9 @@ router.post('/newpassword', function (req, res) {
     let password = req.body.password;
     query("update users set newpassword=? where user_id=?",
         [crypto.encryptAES(password + salt, reverse(salt)), user_id])
+        .then(() => {
+            res.json(ok.ok);
+        })
         .catch((e) => {
             res.json(error.database);
             log.fatal(e);

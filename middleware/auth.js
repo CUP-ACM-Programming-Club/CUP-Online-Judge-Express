@@ -31,6 +31,7 @@ module.exports = async (req, res, next) => {
         }
 
     }
-    else
+    else {
         return next();
+    }
 };

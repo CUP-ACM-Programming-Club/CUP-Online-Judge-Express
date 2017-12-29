@@ -1,7 +1,6 @@
 const express = require('express');
 const session = require('express-session');
 const compression = require("compression");
-const FileStore = require('session-file-store')(session);
 const path = require('path');
 const favicon = require('serve-favicon');
 const logger = require('morgan');
@@ -22,6 +21,7 @@ const auth = require('./middleware/auth');
 const helmet = require("helmet");
 const log4js = require("./module/logger");
 const log = log4js.logger('cheese', 'info');
+const sessionMiddleware = require('./module/session').sessionMiddleware;
 app.use(log4js.connectLogger(log, {level: 'info'}));
 
 const oneDay = 86400000;
@@ -31,16 +31,7 @@ app.set('view cache', true);
 app.use('/static', express.static(__dirname + "/static", {
     maxAge: oneDay * 30
 }));
-app.use(session({
-    store: new FileStore(),
-    saveUninitialized: false,
-    ttl: oneDay * 31 * 12 * 100,
-    resave: false,
-    secret: Random.secret(128),
-    cookie: {
-        maxAge: 60 * 60 * 1000
-    }
-}));
+app.use(sessionMiddleware);
 app.use(compression());
 const expiryDate = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
 app.use(session({

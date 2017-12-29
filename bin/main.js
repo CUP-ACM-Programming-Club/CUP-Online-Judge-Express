@@ -9,6 +9,7 @@ const query = require('../module/mysql_query');
 const Memcache = require('../module/memcached');
 const cachePool = require('../module/cachePool');
 const cookie = require('cookie');
+const sessionMiddleware = require('../module/session').sessionMiddleware;
 server.listen(port, function () {
     logger.info('Server listening at port %d', port);
 });
@@ -52,18 +53,23 @@ function privilege_diff_broadcast(socket) {
 }
 
 
+io.use((socket, next) => {
+    sessionMiddleware(socket.request, socket.request.res, next);
+});
+
+
 io.use(async (socket, next) => {
-    if (socket.auth)
+    if (socket.request.session.auth)
         next();
     const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
     const token = parse_cookie['token'] || "";
-    socket.user_id = parse_cookie['user_id'];
+    socket.user_id = parse_cookie['user_id'] || socket.request.session.user_id;
     const cache_token = await Memcache.get(socket.user_id + "token");
     if (token === cache_token) {
         privilege_diff_broadcast(socket);
         socket.auth = true;
         next();
-        if (!socket.privilege) {
+        if (socket.privilege === undefined) {
             let _priv;
             if (_priv = cachePool.get(`${socket.user_id}privilege`)) {
                 socket.privilege = parseInt(_priv) > 0;
@@ -75,7 +81,7 @@ io.use(async (socket, next) => {
                 cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
             }
         }
-        if (!socket.nick) {
+        if (socket.nick === undefined) {
             let _nick;
             if (_nick = cachePool.get(`${socket.user_id}nick`)) {
                 socket.nick = _nick;
@@ -91,9 +97,11 @@ io.use(async (socket, next) => {
     else {
         next(new Error("Auth failed"));
     }
-});
+})
+;
 
 io.on('connection', async function (socket) {
+    console.log(socket.request.session);
     socket.on('auth', async function (data) {
         const pos = onlineUser[socket.user_id];
         if (pos !== undefined) {
