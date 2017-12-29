@@ -10,6 +10,7 @@ const Memcache = require('../module/memcached');
 const cachePool = require('../module/cachePool');
 const cookie = require('cookie');
 const sessionMiddleware = require('../module/session').sessionMiddleware;
+const client = require('../module/redis');
 server.listen(port, function () {
     logger.info('Server listening at port %d', port);
 });
@@ -59,76 +60,99 @@ io.use((socket, next) => {
 
 
 io.use(async (socket, next) => {
-    if (socket.request.session.auth)
-        next();
     const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
-    const token = parse_cookie['token'] || "";
     socket.user_id = parse_cookie['user_id'] || socket.request.session.user_id;
-    const cache_token = await Memcache.get(socket.user_id + "token");
-    if (token === cache_token) {
-        privilege_diff_broadcast(socket);
-        socket.auth = true;
-        next();
-        if (socket.privilege === undefined) {
-            let _priv;
-            if (_priv = cachePool.get(`${socket.user_id}privilege`)) {
-                socket.privilege = parseInt(_priv) > 0;
-            }
-            else {
-                const priv = await query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-                    "user_id=?", [socket.user_id]);
-                socket.privilege = parseInt(priv[0].cnt) > 0;
-                cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
-            }
+    if (!socket.request.session.auth) {
+        const token = parse_cookie['token'] || "";
+        //const cache_token = await Memcache.get(socket.user_id + "token");
+        const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
+        if (cache_token.indexOf(token) !== -1) {
+            //if (token === cache_token) {
+            privilege_diff_broadcast(socket);
+            socket.auth = true;
+            next();
         }
-        if (socket.nick === undefined) {
-            let _nick;
-            if (_nick = cachePool.get(`${socket.user_id}nick`)) {
-                socket.nick = _nick;
-            }
-            else {
-                const nick = await query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
-                socket.user_nick = nick[0].nick;
-                cachePool.set(`${socket.user_id}nick`, socket.user_nick, 60);
-            }
+        else {
+            next(new Error("Auth failed"));
         }
-        privilege_diff_broadcast(socket);
     }
     else {
-        next(new Error("Auth failed"));
+        next();
     }
 })
 ;
 
-io.on('connection', async function (socket) {
-    console.log(socket.request.session);
-    socket.on('auth', async function (data) {
-        const pos = onlineUser[socket.user_id];
-        if (pos !== undefined) {
-            pos.url.push(data['url']);
+io.use(async (socket, next) => {
+    if (socket.privilege === undefined) {
+        let _priv;
+        if (_priv = cachePool.get(`${socket.user_id}privilege`)) {
+            socket.privilege = parseInt(_priv) > 0;
         }
         else {
-            const user = {
-                user_id: socket.user_id,
-                url: [data['url']],
-                identify: data['id'],
-                intranet_ip: data['intranet_ip'],
-                ip: data['ip'],
-                version: data['version'],
-                platform: data['platform'],
-                browser_core: data['browser_core'],
-                useragent: data['useragent'],
-                screen: data['screen']
-            };
-            user_socket[socket.user_id] = socket;
-            onlineUser[socket.user_id] = user;
-            if (socket.privilege) {
-                admin_user[socket.user_id] = socket;
-            }
-            else {
-                normal_user[socket.user_id] = socket;
-            }
+            const priv = await
+                query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
+                    "user_id=?", [socket.user_id]);
+            socket.privilege = parseInt(priv[0].cnt) > 0;
+            cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
         }
+    }
+    if (socket.nick === undefined) {
+        let _nick;
+        if (_nick = cachePool.get(`${socket.user_id}nick`)) {
+            socket.nick = _nick;
+        }
+        else {
+            const nick = await
+                query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
+            socket.user_nick = nick[0].nick;
+            cachePool.set(`${socket.user_id}nick`, socket.user_nick, 60);
+        }
+    }
+    privilege_diff_broadcast(socket);
+    next();
+});
+
+io.use((socket, next) => {
+    const pos = onlineUser[socket.user_id];
+    const referer = socket.handshake.headers.referer;
+    const origin = socket.handshake.headers.origin;
+    const _url = referer.substring(origin.length);
+    // const _url=socket.handshake.headers.referer.substr(socket.handshake.headers.origin,socket.handshake.headers.referer);
+    socket.url = _url;
+    if (pos !== undefined) {
+        next();
+        pos.url.push(_url);
+    }
+    else {
+        const user = {
+            user_id: socket.user_id,
+            url: [_url]
+        };
+        user_socket[socket.user_id] = socket;
+        onlineUser[socket.user_id] = user;
+        if (socket.privilege) {
+            admin_user[socket.user_id] = socket;
+        }
+        else {
+            normal_user[socket.user_id] = socket;
+        }
+    }
+    next();
+});
+
+io.on('connection', async function (socket) {
+    //socket.handshake.headers.referer
+    socket.on('auth', async function (data) {
+        const pos = onlineUser[socket.user_id];
+        //pos.url.push(data['url']);
+        pos.identity = data['id'];
+        pos.intranet_ip = data['intranet_ip'];
+        pos.ip = data['ip'];
+        pos.version = data['version'];
+        pos.platform = data['platform'];
+        pos.browser_core = data['browser_core'];
+        pos.useragent = data['useragent'];
+        pos.screen = data['screen'];
         socket.url = data['url'];
         privilege_diff_broadcast(socket);
     });
