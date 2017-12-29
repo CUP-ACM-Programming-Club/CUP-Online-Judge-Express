@@ -1,46 +1,46 @@
 let error = {};
 let ok = {};
 error.database = {
-    status: "error",
-    statement: "database error"
+	status: "error",
+	statement: "database error"
 };
 error.parseJSON = {
-    status: "error",
-    statement: "invalid JSON string"
+	status: "error",
+	statement: "invalid JSON string"
 };
 error.tokenNoMatch = {
-    status: "error",
-    statement: "token doesn't match"
+	status: "error",
+	statement: "token doesn't match"
 };
 error.passNoMatch = {
-    status: "error",
-    statement: "password doesn't match"
+	status: "error",
+	statement: "password doesn't match"
 };
 error.invalidToken = {
-    status: "error",
-    statement: "invalid token"
+	status: "error",
+	statement: "invalid token"
 };
 
 error.invalidUser = {
-    status: "error",
-    statement: "invalid user"
+	status: "error",
+	statement: "invalid user"
 };
 
 error.memcahceError = {
-    status: "error",
-    statememt: "memcache error"
+	status: "error",
+	statememt: "memcache error"
 };
 
 error.nologin = {
-    status: "error",
-    statement: "not login"
+	status: "error",
+	statement: "not login"
 };
 
 ok.logined = {
-    status: "OK",
-    statment: "logined"
+	status: "OK",
+	statment: "logined"
 };
 ok.ok = {
-    status: "OK"
+	status: "OK"
 };
 module.exports = [error, ok];
