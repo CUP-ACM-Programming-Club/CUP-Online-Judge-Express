@@ -6,7 +6,6 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 const port = process.env.PORT || 3000;
 const query = require("../module/mysql_query");
-//const Memcache = require("../module/memcached");
 const cachePool = require("../module/cachePool");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
@@ -19,20 +18,12 @@ let user_socket = {};
 let admin_user = {};
 let normal_user = {};
 
-function findurl(user, url) {
-	const len = user.url.length;
-	for (let i = 0; i < len; ++i) {
-		if (user.url[i] === url) {
-			return i;
-		}
-	}
-	return -1;
-}
 
 function broadcast(userArr, type, val) {
 	for (let i in userArr) {
-		userArr[i].emit(type, val);
-		// console.log(userArr[i]);
+		for (let j in userArr[i]) {
+			userArr[i][j].emit(type, val);
+		}
 	}
 }
 
@@ -44,7 +35,6 @@ function privilege_diff_broadcast(socket) {
 	broadcast(normal_user, "user", userArr);
 	if (!socket.privilege) {
 		socket.emit("user", userArr);
-		return;
 	}
 	userArr["user"] = online;
 	broadcast(admin_user, "user", userArr);
@@ -62,12 +52,10 @@ io.use((socket, next) => {
 io.use(async (socket, next) => {
 	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
 	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
-	if (!socket.request.session.auth) {
+	if (!socket.request.session.auth && !socket.auth) {
 		const token = parse_cookie["token"] || "";
-		//const cache_token = await Memcache.get(socket.user_id + "token");
 		const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
 		if (cache_token.indexOf(token) !== -1) {
-			//if (token === cache_token) {
 			privilege_diff_broadcast(socket);
 			socket.auth = true;
 			next();
@@ -91,7 +79,7 @@ io.use(async (socket, next) => {
 		else {
 			const priv = await
 				query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-                    "user_id=?", [socket.user_id]);
+					"user_id=?", [socket.user_id]);
 			socket.privilege = parseInt(priv[0].cnt) > 0;
 			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
 		}
@@ -117,34 +105,38 @@ io.use((socket, next) => {
 	const referer = socket.handshake.headers.referer;
 	const origin = socket.handshake.headers.origin;
 	const _url = referer.substring(origin.length);
-	// const _url=socket.handshake.headers.referer.substr(socket.handshake.headers.origin,socket.handshake.headers.referer);
 	socket.url = _url;
 	if (pos !== undefined) {
 		next();
 		pos.url.push(_url);
+		user_socket[socket.user_id].push(socket);
+		if (socket.privilege) {
+			admin_user[socket.user_id].push(socket);
+		}
+		else {
+			normal_user[socket.user_id].push(socket);
+		}
 	}
 	else {
 		const user = {
 			user_id: socket.user_id,
 			url: [_url]
 		};
-		user_socket[socket.user_id] = socket;
+		user_socket[socket.user_id] = [socket];
 		onlineUser[socket.user_id] = user;
 		if (socket.privilege) {
-			admin_user[socket.user_id] = socket;
+			admin_user[socket.user_id] = [socket];
 		}
 		else {
-			normal_user[socket.user_id] = socket;
+			normal_user[socket.user_id] = [socket];
 		}
 	}
 	next();
 });
 
 io.on("connection", async function (socket) {
-	//socket.handshake.headers.referer
 	socket.on("auth", async function (data) {
 		const pos = onlineUser[socket.user_id];
-		//pos.url.push(data['url']);
 		pos.identity = data["id"];
 		pos.intranet_ip = data["intranet_ip"];
 		pos.ip = data["ip"];
@@ -175,7 +167,7 @@ io.on("connection", async function (socket) {
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data["to"];
-		user_socket[toPersonUser_id].emit("chat", {
+		broadcast(user_socket[toPersonUser_id], "chat", {
 			from: data["from"],
 			content: data["content"],
 			time: Date.now().toString()
@@ -185,8 +177,20 @@ io.on("connection", async function (socket) {
 	socket.on("disconnect", function () {
 		let pos = onlineUser[socket.user_id];
 		if (pos !== undefined) {
-			let url_pos = findurl(pos, socket.url);
-			pos.url.splice(url_pos, 1);
+			let url_pos = pos.url.indexOf(socket.url);
+			if (url_pos !== -1)
+				pos.url.splice(url_pos, 1);
+			let socket_pos;
+			if (socket.privilege) {
+				socket_pos = admin_user[socket.user_id].indexOf(socket);
+				if (socket_pos !== -1)
+					admin_user[socket.user_id].splice(socket_pos, 1);
+			}
+			else {
+				socket_pos = normal_user[socket.user_id].indexOf(socket);
+				if (socket_pos !== -1)
+					normal_user[socket.user_id].splice(socket_pos, 1);
+			}
 			if (pos.url.length === 0) {
 				delete user_socket[socket.user_id];
 				delete onlineUser[socket.user_id];
