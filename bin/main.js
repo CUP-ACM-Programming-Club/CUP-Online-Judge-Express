@@ -105,9 +105,9 @@ io.use((socket, next) => {
 	const pos = onlineUser[socket.user_id];
 	const referer = socket.handshake.headers.referer || "";
 	const origin = socket.handshake.headers.origin || "";
-	const _url = referer.substring(origin.length||referer.lastIndexOf("/"));
+	const _url = referer.substring(origin.length || referer.lastIndexOf("/"));
 	socket.url = _url;
-	console.log(socket.url);
+	//console.log(socket.url);
 	if (pos !== undefined) {
 		next();
 		pos.url.push(_url);
@@ -179,10 +179,12 @@ io.on("connection", async function (socket) {
 
 	socket.on("disconnect", function () {
 		let pos = onlineUser[socket.user_id];
-		console.log(`user_id:${socket.user_id}`);
-		if (pos !== undefined) {
+		//console.log(`user_id:${socket.user_id}`);
+		//console.log(socket);
+		if (pos !== undefined && !socket.hasClosed) {
+			socket.hasClosed = true;
 			let url_pos = pos.url.indexOf(socket.url);
-			console.log(`${socket.user_id}:${socket.url}`);
+			//console.log(`${socket.user_id}:${socket.url}`);
 			if (url_pos !== -1)
 				pos.url.splice(url_pos, 1);
 			let socket_pos;
