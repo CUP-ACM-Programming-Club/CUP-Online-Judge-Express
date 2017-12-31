@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
@@ -102,10 +103,11 @@ io.use(async (socket, next) => {
 
 io.use((socket, next) => {
 	const pos = onlineUser[socket.user_id];
-	const referer = socket.handshake.headers.referer;
-	const origin = socket.handshake.headers.origin;
-	const _url = referer.substring(origin.length);
+	const referer = socket.handshake.headers.referer || "";
+	const origin = socket.handshake.headers.origin || "";
+	const _url = referer.substring(origin.length||referer.lastIndexOf("/"));
 	socket.url = _url;
+	console.log(socket.url);
 	if (pos !== undefined) {
 		next();
 		pos.url.push(_url);
@@ -145,6 +147,7 @@ io.on("connection", async function (socket) {
 		pos.browser_core = data["browser_core"];
 		pos.useragent = data["useragent"];
 		pos.screen = data["screen"];
+		pos.nick = data["nick"];
 		socket.url = data["url"];
 		privilege_diff_broadcast(socket);
 	});
@@ -176,8 +179,10 @@ io.on("connection", async function (socket) {
 
 	socket.on("disconnect", function () {
 		let pos = onlineUser[socket.user_id];
+		console.log(`user_id:${socket.user_id}`);
 		if (pos !== undefined) {
 			let url_pos = pos.url.indexOf(socket.url);
+			console.log(`${socket.user_id}:${socket.url}`);
 			if (url_pos !== -1)
 				pos.url.splice(url_pos, 1);
 			let socket_pos;
