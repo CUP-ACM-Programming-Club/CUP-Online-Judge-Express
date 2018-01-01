@@ -2,22 +2,44 @@
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
+const config = require("../config.json");
 const logger = log4js.logger("normal", "info");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || config.ws.client_port;
 const query = require("../module/mysql_query");
 const cachePool = require("../module/cachePool");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
-server.listen(port, function () {
-	logger.info("Server listening at port %d", port);
-});
+const WebSocket = require("ws");
+
+const wss = new WebSocket.Server({port: config.ws.judger_port});
+
 let onlineUser = {};
 let user_socket = {};
 let admin_user = {};
 let normal_user = {};
+let submissions = {};
+
+wss.on("connection", function (ws) {
+	ws.on("message", async function (message) {
+		console.log(message);
+		const solution_pack = JSON.parse(message);
+		const finished = parseInt(solution_pack.finish);
+		const solution_id = solution_pack.solution_id.toString();
+		if (submissions[solution_id])
+			await submissions[solution_id].emit("result", solution_pack);
+		if (finished) {
+			delete submissions[solution_id];
+		}
+	});
+});
+
+
+server.listen(port, function () {
+	logger.info("Server listening at port %d", port);
+});
 
 
 function broadcast(userArr, type, val) {
@@ -28,20 +50,14 @@ function broadcast(userArr, type, val) {
 	}
 }
 
-function privilege_diff_broadcast(socket) {
+function privilege_diff_broadcast() {
 	let online = Object.values(onlineUser);
 	let userArr = {
 		user_cnt: online.length
 	};
 	broadcast(normal_user, "user", userArr);
-	if (!socket.privilege) {
-		socket.emit("user", userArr);
-	}
 	userArr["user"] = online;
 	broadcast(admin_user, "user", userArr);
-	if (socket.privilege) {
-		socket.emit("user", userArr);
-	}
 }
 
 
@@ -57,7 +73,7 @@ io.use(async (socket, next) => {
 		const token = parse_cookie["token"] || "";
 		const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
 		if (cache_token.indexOf(token) !== -1) {
-			privilege_diff_broadcast(socket);
+			privilege_diff_broadcast();
 			socket.auth = true;
 			next();
 		}
@@ -97,7 +113,7 @@ io.use(async (socket, next) => {
 			cachePool.set(`${socket.user_id}nick`, socket.user_nick, 60);
 		}
 	}
-	privilege_diff_broadcast(socket);
+	privilege_diff_broadcast();
 	next();
 });
 
@@ -107,7 +123,6 @@ io.use((socket, next) => {
 	const origin = socket.handshake.headers.origin || "";
 	const _url = referer.substring(origin.length || referer.lastIndexOf("/"));
 	socket.url = _url;
-	//console.log(socket.url);
 	if (pos !== undefined) {
 		next();
 		pos.url.push(_url);
@@ -149,13 +164,15 @@ io.on("connection", async function (socket) {
 		pos.screen = data["screen"];
 		pos.nick = data["nick"];
 		socket.url = data["url"];
-		privilege_diff_broadcast(socket);
+		privilege_diff_broadcast();
 	});
 
 
 	socket.on("submit", async function (data) {
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
+		const submission_id = data["submission_id"].toString();
+		submissions[submission_id] = socket;
 		if (typeof data["val"]["cid"] !== "undefined") {
 			const id_val = await query("SELECT problem_id FROM contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
 			data["val"]["id"] = id_val[0].problem_id;
@@ -179,12 +196,9 @@ io.on("connection", async function (socket) {
 
 	socket.on("disconnect", function () {
 		let pos = onlineUser[socket.user_id];
-		//console.log(`user_id:${socket.user_id}`);
-		//console.log(socket);
 		if (pos !== undefined && !socket.hasClosed) {
 			socket.hasClosed = true;
 			let url_pos = pos.url.indexOf(socket.url);
-			//console.log(`${socket.user_id}:${socket.url}`);
 			if (url_pos !== -1)
 				pos.url.splice(url_pos, 1);
 			let socket_pos;
@@ -206,7 +220,7 @@ io.on("connection", async function (socket) {
 				if (normal_user[socket.user_id])
 					delete normal_user[socket.user_id];
 			}
-			privilege_diff_broadcast(socket);
+			privilege_diff_broadcast();
 		}
 	});
 })
