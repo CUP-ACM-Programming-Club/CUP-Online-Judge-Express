@@ -13,6 +13,8 @@ const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
+const _localJudge = require("../module/judger");
+const localJudge = new _localJudge("/home/judge",8);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 
@@ -172,8 +174,9 @@ io.on("connection", async function (socket) {
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
 		const submission_id = data["submission_id"].toString();
+		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
-		if (typeof data["val"]["cid"] !== "undefined") {
+		if (data["val"] && typeof data["val"]["cid"] !== "undefined") {
 			const id_val = await query("SELECT problem_id FROM contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
 			data["val"]["id"] = id_val[0].problem_id;
 		}
