@@ -14,7 +14,8 @@ const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
-const localJudge = new _localJudge("/home/judge",8);
+const judge_config=config["judger"];
+const localJudge = new _localJudge(judge_config["oj_home"],judge_config["oj_judge_num"]);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 
