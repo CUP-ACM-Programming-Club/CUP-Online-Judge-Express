@@ -27,7 +27,7 @@ let submissions = {};
 
 wss.on("connection", function (ws) {
 	ws.on("message", async function (message) {
-		console.log(message);
+		//console.log(message);
 		const solution_pack = JSON.parse(message);
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = solution_pack.solution_id.toString();
