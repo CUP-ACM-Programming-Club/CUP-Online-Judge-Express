@@ -14,8 +14,8 @@ const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
-const judge_config=config["judger"];
-const localJudge = new _localJudge(judge_config["oj_home"],judge_config["oj_judge_num"]);
+const judge_config = config["judger"];
+const localJudge = new _localJudge(judge_config["oj_home"], judge_config["oj_judge_num"]);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 
@@ -75,7 +75,7 @@ io.use(async (socket, next) => {
 	if (!socket.request.session.auth && !socket.auth) {
 		const token = parse_cookie["token"] || "";
 		const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
-		if (cache_token.indexOf(token) !== -1) {
+		if (~cache_token.indexOf(token)) {
 			privilege_diff_broadcast();
 			socket.auth = true;
 			next();
@@ -177,9 +177,11 @@ io.on("connection", async function (socket) {
 		const submission_id = data["submission_id"].toString();
 		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
-		if (data["val"] && typeof data["val"]["cid"] !== "undefined") {
-			const id_val = await query("SELECT problem_id FROM contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
-			data["val"]["id"] = id_val[0].problem_id;
+		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
+			const id_val = await query("SELECT problem_id FROM " +
+				"contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
+			if (id_val.length && id_val[0].problem_id)
+				data["val"]["id"] = id_val[0].problem_id;
 		}
 		broadcast(admin_user, "submit", data);
 	});
@@ -203,20 +205,20 @@ io.on("connection", async function (socket) {
 		if (pos !== undefined && !socket.hasClosed) {
 			socket.hasClosed = true;
 			let url_pos = pos.url.indexOf(socket.url);
-			if (url_pos !== -1)
+			if (~url_pos)
 				pos.url.splice(url_pos, 1);
 			let socket_pos;
 			if (socket.privilege) {
 				socket_pos = admin_user[socket.user_id].indexOf(socket);
-				if (socket_pos !== -1)
+				if (~socket_pos)
 					admin_user[socket.user_id].splice(socket_pos, 1);
 			}
 			else {
 				socket_pos = normal_user[socket.user_id].indexOf(socket);
-				if (socket_pos !== -1)
+				if (~socket_pos)
 					normal_user[socket.user_id].splice(socket_pos, 1);
 			}
-			if (pos.url.length === 0) {
+			if (!pos.url.length) {
 				delete user_socket[socket.user_id];
 				delete onlineUser[socket.user_id];
 				if (admin_user[socket.user_id])

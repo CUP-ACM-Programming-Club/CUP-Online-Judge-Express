@@ -18,7 +18,8 @@ module.exports = async (req, res, next) => {
 				query("select count(1) as count from privilege where user_id=? and rightstr='administrator'",
 					[user_id])
 					.then((val) => {
-						req.session.isadmin = parseInt(val[0].count) > 0;
+						if (val.length > 0 && val[0].count)
+							req.session.isadmin = parseInt(val[0].count) > 0;
 					});
 				//for session admin privilege
 				return next();
