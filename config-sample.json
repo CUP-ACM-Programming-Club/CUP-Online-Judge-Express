@@ -5,5 +5,13 @@
     "password": "yourpassword",
     "port": "3306",
     "database": "root"
+  },
+  "ws":{
+    "client_port":3000,
+    "judger_port":5100
+  },
+  "judger":{
+    "oj_home":"/home/judge",
+    "oj_judge_num":8
   }
 }
