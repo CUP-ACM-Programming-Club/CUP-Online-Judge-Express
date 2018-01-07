@@ -1,8 +1,8 @@
 {
   "name": "CUP-Online-Judge-BackEnd",
-  "author": "Ryan Lee",
+  "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
@@ -40,8 +40,8 @@
   "main": "./bin/main.js",
   "scripts": {
     "test": "node ./bin/main.js",
-    "start": "forever start ./bin/main.js",
-    "stop": "forever stop ./bin/main.js",
-    "restart": "forever restart ./bin/main.js"
+    "start": "pm2 start pm2.json",
+    "stop": "pm2 stop pm2.json",
+    "restart": "pm2 restart pm2.json"
   }
 }
