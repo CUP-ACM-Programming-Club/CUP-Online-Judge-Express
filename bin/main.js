@@ -24,6 +24,10 @@ let user_socket = {};
 let admin_user = {};
 let normal_user = {};
 let submissions = {};
+let page_push = {
+	status: [],
+	contest_status: []
+};
 
 wss.on("connection", function (ws) {
 	ws.on("message", async function (message) {
@@ -154,6 +158,18 @@ io.use((socket, next) => {
 	next();
 });
 
+io.use((socket, next) => {
+	if (socket.url && ~socket.url.indexOf("status")) {
+		if (~socket.url.indexOf("cid")) {
+			page_push.contest_status.push(socket);
+		}
+		else {
+			page_push.status.push(socket);
+		}
+	}
+	next();
+});
+
 io.on("connection", async function (socket) {
 	socket.on("auth", async function (data) {
 		const pos = onlineUser[socket.user_id];
@@ -183,7 +199,9 @@ io.on("connection", async function (socket) {
 			if (id_val.length && id_val[0].problem_id)
 				data["val"]["id"] = id_val[0].problem_id;
 		}
-		broadcast(admin_user, "submit", data);
+		//broadcast(admin_user, "submit", data);
+		broadcast((data["val"] && data["val"]["cid"]) ?
+			page_push.contest_status : page_push.status, "submit", data);
 	});
 
 	socket.on("msg", function (data) {
@@ -217,6 +235,13 @@ io.on("connection", async function (socket) {
 				socket_pos = normal_user[socket.user_id].indexOf(socket);
 				if (~socket_pos)
 					normal_user[socket.user_id].splice(socket_pos, 1);
+			}
+			let page_push_pos;
+			if (~(page_push_pos = page_push.status.indexOf(socket))) {
+				page_push.status.splice(page_push_pos, 1);
+			}
+			else if (~(page_push_pos = page_push.contest_status.indexOf(socket))) {
+				page_push.contest_status.splice(page_push_pos, 1);
 			}
 			if (!pos.url.length) {
 				delete user_socket[socket.user_id];
