@@ -30,15 +30,34 @@ let page_push = {
 };
 
 wss.on("connection", function (ws) {
-	ws.on("message", async function (message) {
-		//console.log(message);
-		const solution_pack = JSON.parse(message);
+	ws.on("judger", async function (message) {
+		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = solution_pack.solution_id.toString();
 		if (submissions[solution_id])
 			await submissions[solution_id].emit("result", solution_pack);
 		if (finished) {
 			delete submissions[solution_id];
+		}
+	});
+	ws.on("message", async function (message) {
+		let request;
+		try {
+			request = JSON.parse(message);
+		}
+		catch (e) {
+			logger.fatal(`Error:\n
+			Error name:${e.name}\n
+			Error Message:${e.message}
+			`);
+			return;
+		}
+		if (request.type && typeof request.type === "string") {
+			ws.emit(request.type, request.value, request);
+			console.log(request);
+		}
+		else {
+			logger.fatal(`Error:Parsing message failed.Receive data:${message}`);
 		}
 	});
 });
@@ -49,10 +68,17 @@ server.listen(port, function () {
 });
 
 
-function broadcast(userArr, type, val) {
-	for (let i in userArr) {
-		for (let j in userArr[i]) {
-			userArr[i][j].emit(type, val);
+function broadcast(userArr, type, val, dimension = 2) {
+	if (dimension === 2) {
+		for (let i in userArr) {
+			for (let j in userArr[i]) {
+				userArr[i][j].emit(type, val);
+			}
+		}
+	}
+	else if (dimension === 1) {
+		for (let i in userArr) {
+			userArr[i].emit(type, val);
 		}
 	}
 }
@@ -199,9 +225,8 @@ io.on("connection", async function (socket) {
 			if (id_val.length && id_val[0].problem_id)
 				data["val"]["id"] = id_val[0].problem_id;
 		}
-		//broadcast(admin_user, "submit", data);
 		broadcast((data["val"] && data["val"]["cid"]) ?
-			page_push.contest_status : page_push.status, "submit", data);
+			page_push.contest_status : page_push.status, "submit", data, 1);
 	});
 
 	socket.on("msg", function (data) {
