@@ -10,8 +10,10 @@ class localJudger {
 		this.waiting_queue = [];
 		this.judging_queue = [];
 		this.latestSolutionID = 0;
+		localJudger.startupInit();// Reset result whose solution didn't finish
 		this.startLoopJudge(3000);
 	}
+
 
 	addTask(solution_id) {
 		if (solution_id > this.latestSolutionID) {
@@ -89,6 +91,10 @@ class localJudger {
 				}
 			}
 		}
+	}
+
+	static startupInit() {
+		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
 	}
 }
 
