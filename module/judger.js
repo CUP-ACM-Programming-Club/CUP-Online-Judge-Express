@@ -1,9 +1,17 @@
+/**
+ * Class LocalJudger
+ */
 const {spawn} = require("child_process");
 const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 
 class localJudger {
+	/**
+	 * 构造判题机
+	 * @param {String} home_dir 评测机所在的目录
+	 * @param {Number} judger_num 评测机数量
+	 */
 	constructor(home_dir, judger_num) {
 		this.oj_home = home_dir;
 		this.judge_queue = [...Array(judger_num).keys()].map(x => x + 1);
@@ -14,9 +22,18 @@ class localJudger {
 		this.startLoopJudge(3000);
 	}
 
+	/**
+	 * 开启时更新数据库状态
+	 */
+
 	static startupInit() {
 		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
 	}
+
+	/**
+	 * 返回Judger状态
+	 * @returns {{judging: Array, free_judger: Array, waiting: Array, last_solution_id: number|*, is_looping: *, oj_home: String|*}} 返回评测机的所有状态
+	 */
 
 	getStatus() {
 		return {
@@ -28,6 +45,11 @@ class localJudger {
 			oj_home: this.oj_home
 		};
 	}
+
+	/**
+	 * 添加一个提交任务
+	 * @param {Number} solution_id 提交ID
+	 */
 
 	addTask(solution_id) {
 		if (solution_id > this.latestSolutionID &&
@@ -44,13 +66,26 @@ class localJudger {
 		}
 	}
 
+	/**
+	 * （回调）获取剩余的任务
+	 */
+
 	getRestTask() {
 		if (this.judge_queue.length && this.waiting_queue.length) {
 			this.runJudger(this.waiting_queue.shift(), this.judge_queue.shift());
 		}
 	}
 
+	/**
+	 *
+	 * @param {Number} time 轮询事件间隔
+	 * @returns {TypeError}
+	 */
+
 	startLoopJudge(time = 1000) {
+		if(typeof time !== "number"){
+			return new TypeError("variable time must be a number");
+		}
 		if (this.isLooping()) {
 			this.stopLoopJudge();
 		}
@@ -60,14 +95,30 @@ class localJudger {
 		}, time);
 	}
 
+	/**
+	 * 返回judger是否轮询拾取数据库数据
+	 * @returns {boolean} 轮询开始返回true 否则返回false
+	 */
+
 	isLooping() {
 		return this.loopingFlag;
 	}
+
+	/**
+	 * 停止轮询
+	 */
 
 	stopLoopJudge() {
 		this.loopingFlag = false;
 		clearInterval(this.loopJudgeFlag);
 	}
+
+	/**
+	 * 运行后台判题机
+	 * @param {Number} solution_id 提交ID
+	 * @param {Number} runner_id 判题机ID
+	 * @returns {Promise<void>} 返回一个空Promise
+	 */
 
 	async runJudger(solution_id, runner_id) {
 		const judger = spawn(`${process.cwd()}/wsjudged`, [solution_id, runner_id, this.oj_home]);
@@ -91,6 +142,11 @@ class localJudger {
 		});
 	}
 
+	/**
+	 * 从数据库收集提交
+	 * @returns {Promise<void>} 返回一个空Promise
+	 */
+
 	async collectSubmissionFromDatabase() {
 		let result = await query("SELECT solution_id FROM solution WHERE result<2");
 		for (let i in result) {
@@ -109,5 +165,6 @@ class localJudger {
 		}
 	}
 }
+
 
 module.exports = localJudger;
