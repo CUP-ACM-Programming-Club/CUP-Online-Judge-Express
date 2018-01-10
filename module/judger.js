@@ -10,11 +10,29 @@ class localJudger {
 		this.waiting_queue = [];
 		this.judging_queue = [];
 		this.latestSolutionID = 0;
+		localJudger.startupInit();// Reset result whose solution didn't finish
 		this.startLoopJudge(3000);
 	}
 
+	static startupInit() {
+		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+	}
+
+	getStatus() {
+		return {
+			judging: this.judging_queue,
+			free_judger: this.judging_queue,
+			waiting: this.waiting_queue,
+			last_solution_id: this.latestSolutionID,
+			is_looping: this.isLooping(),
+			oj_home: this.oj_home
+		};
+	}
+
 	addTask(solution_id) {
-		if (solution_id > this.latestSolutionID) {
+		if (solution_id > this.latestSolutionID &&
+		!~this.judging_queue.indexOf(solution_id) &&
+		!~this.waiting_queue.indexOf(solution_id)) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
 				this.runJudger(solution_id, this.judge_queue.shift());
