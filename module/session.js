@@ -1,10 +1,9 @@
 const session = require("express-session");
-require("session-file-store")(session);
+const RedisStore = require("connect-redis")(session);
 const Random = require("meteor-random");
 const oneDay = 86400000;
-const sessionStore = new session.MemoryStore();
 const sessionMiddleware = session({
-	store: sessionStore,
+	store: new RedisStore,
 	saveUninitialized: false,
 	ttl: oneDay * 31 * 12 * 100,
 	resave: false,
@@ -15,4 +14,4 @@ const sessionMiddleware = session({
 });
 
 module.exports.sessionMiddleware = sessionMiddleware;
-module.exports.sessionStore = sessionStore;
+module.exports.sessionStore = RedisStore;
