@@ -244,10 +244,14 @@ io.use((socket, next) => {
 	const pos = onlineUser[socket.user_id];
 	const referer = socket.handshake.headers.referer || "";
 	const origin = socket.handshake.headers.origin || "";
-	const _url = referer.substring(origin.length || referer.lastIndexOf("/"));
-	socket.url = _url;
+	const _url = referer.substring(origin.length || referer.indexOf("/", 9));
+	if (_url.length && _url.length > 0) {
+		socket.url = _url;
+	}
 	if (pos !== undefined) {
-		pos.url.push(_url);
+		if (_url.length > 0) {
+			pos.url.push(_url);
+		}
 		user_socket[socket.user_id].push(socket);
 		if (socket.privilege) {
 			admin_user[socket.user_id].push(socket);
@@ -257,10 +261,14 @@ io.use((socket, next) => {
 		}
 	}
 	else {
-		const user = {
+		let user = {
 			user_id: socket.user_id,
-			url: [_url]
+			url: [],
+			nick: socket.user_nick
 		};
+		if (_url.length && _url.length > 0) {
+			user.url.push(_url);
+		}
 		user_socket[socket.user_id] = [socket];
 		onlineUser[socket.user_id] = user;
 		if (socket.privilege) {
@@ -279,7 +287,7 @@ io.use((socket, next) => {
 io.use((socket, next) => {
 	if (socket.url && ~socket.url.indexOf("status")) {
 		if (~socket.url.indexOf("cid")) {
-			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("/"), socket.url.length));
+			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("/", 9), socket.url.length));
 			const contest_id = parseInt(parseObj["cid"]) || 0;
 			if (contest_id >= 1000) {
 				if (!pagePush.contest_status[contest_id]) {
@@ -302,19 +310,26 @@ io.use((socket, next) => {
 io.on("connection", async function (socket) {
 	socket.on("auth", function (data) {
 		if (!socket.send_auth) {
+			console.log(data);
 			socket.send_auth = true;
 			const pos = onlineUser[socket.user_id];
-			pos.identity = data["id"];
-			pos.intranet_ip = data["intranet_ip"];
-			pos.ip = data["ip"];
-			pos.version = data["version"];
-			pos.platform = data["platform"];
-			pos.browser_core = data["browser_core"];
-			pos.useragent = data["useragent"];
-			pos.screen = data["screen"];
-			pos.nick = data["nick"];
-			if(!socket.url) {
-				socket.url = data["url"];
+			pos.identity = socket.privilege ? "admin" : "normal";
+			pos.intranet_ip = data["intranet_ip"] || socket.handshake.address;
+			pos.ip = data["ip"] || "";
+			pos.version = data["version"] || "";
+			pos.platform = data["platform"] || "";
+			pos.browser_core = data["browser_core"] || "";
+			pos.useragent = data["useragent"] || "";
+			pos.screen = data["screen"] || "";
+			pos.nick = pos.nick || data["nick"] || socket.user_nick;
+			console.log(pos);
+			if ((!socket.url || (socket.url.length && socket.url.length === 0)) && data["url"]) {
+				let url = data["url"];
+				if (~url.indexOf(socket.handshake.headers.origin)) {
+					url = url.substring(url.lastIndexOf(":"), url.length);
+				}
+				socket.url = url;
+				pos.url.push(url);
 			}
 			onlineUserBroadcast();
 		}
