@@ -11,7 +11,10 @@ const salt = "thisissalt";
 
 
 const reverse = (val) => {
-	return val.toString().split("").reverse().join("");
+	if (typeof val !== "string" && val.toString)
+		return val.toString().split("").reverse().join("");
+	else
+		return val.split("").reverse().join("");
 };
 router.post("/token", function (req, res, next) {
 	if (typeof req.body.token !== "string") {
@@ -78,29 +81,42 @@ router.post("/", async function (req, res) {
 		return;
 	}
 	log.info(receive);
-	receive = JSON.parse(receive);
+	try {
+		receive = JSON.parse(receive);
+	}
+	catch (e) {
+		log.fatal(`Error:${e.name}\n
+		Error message:${e.message}`);
+	}
 	const json = receive;
-	await query("select password from users where user_id=?", [json["user_id"]]).then(async (val) => {
-		const ans = val[0].password;
-		if (checkPassword(ans, json["password"])) {
-			query("update users set newpassword=? where user_id=?",
-				[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), json["user_id"]])
-				.catch((e) => {
-					res.json(error.database);
-					log.fatal(e);
-				});
-			req.session.user_id = json["user_id"];
-			req.session.auth = true;
-			res.json(ok.ok);
-			await query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [json["user_id"]])
-				.then((val) => {
-					req.session.isadmin = parseInt(val[0].count) > 0;
-				});
-		}
-		else {
-			res.json(error.invalidUser);
-		}
-	});
+	const user_id = json["user_id"] || "";
+	const password = json["password"] || "";
+	if (user_id !== "" && password !== "") {
+		await query("select password from users where user_id=?", [user_id]).then(async (val) => {
+			let ans;
+			if (val.length && val.length > 0) {
+				ans = val[0].password;
+				if (checkPassword(ans, password)) {
+					query("update users set newpassword=? where user_id=?",
+						[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
+						.catch((e) => {
+							res.json(error.database);
+							log.fatal(e);
+						});
+					req.session.user_id = user_id;
+					req.session.auth = true;
+					res.json(ok.ok);
+					await query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [user_id])
+						.then((val) => {
+							req.session.isadmin = parseInt(val[0].count) > 0;
+						});
+				}
+				else {
+					res.json(error.invalidUser);
+				}
+			}
+		});
+	}
 });
 
 router.post("/newpassword", function (req, res) {
