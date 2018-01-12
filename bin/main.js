@@ -309,8 +309,7 @@ io.use((socket, next) => {
  */
 io.on("connection", async function (socket) {
 	socket.on("auth", function (data) {
-		if (!socket.send_auth) {
-			console.log(data);
+		if (!socket.send_auth && socket.auth) {
 			socket.send_auth = true;
 			const pos = onlineUser[socket.user_id];
 			pos.identity = socket.privilege ? "admin" : "normal";
@@ -322,7 +321,6 @@ io.on("connection", async function (socket) {
 			pos.useragent = data["useragent"] || "";
 			pos.screen = data["screen"] || "";
 			pos.nick = pos.nick || data["nick"] || socket.user_nick;
-			console.log(pos);
 			if ((!socket.url || (socket.url.length && socket.url.length === 0)) && data["url"]) {
 				let url = data["url"];
 				if (~url.indexOf(socket.handshake.headers.origin)) {
