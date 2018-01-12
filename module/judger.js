@@ -5,6 +5,7 @@ const {spawn} = require("child_process");
 const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
+const os = require("os");
 
 class localJudger {
 	/**
@@ -18,6 +19,13 @@ class localJudger {
 		this.waiting_queue = [];
 		this.judging_queue = [];
 		this.latestSolutionID = 0;
+		const CPUDetails = this.CPUDetails = os.cpus();
+		this.CPUModel = CPUDetails[0].model;
+		this.CPUSpeed = CPUDetails[0].speed;
+		this.platform = os.platform();
+		if (this.platform !== "linux") {
+			return new Error("Your platform doesn't support right now");
+		}
 		localJudger.startupInit();// Reset result whose solution didn't finish
 		this.startLoopJudge(3000);
 	}
@@ -42,7 +50,9 @@ class localJudger {
 			waiting: this.waiting_queue,
 			last_solution_id: this.latestSolutionID,
 			is_looping: this.isLooping(),
-			oj_home: this.oj_home
+			oj_home: this.oj_home,
+			cpu_details:this.CPUDetails,
+			platform:this.platform
 		};
 	}
 
@@ -53,8 +63,8 @@ class localJudger {
 
 	addTask(solution_id) {
 		if (solution_id > this.latestSolutionID &&
-		!~this.judging_queue.indexOf(solution_id) &&
-		!~this.waiting_queue.indexOf(solution_id)) {
+			!~this.judging_queue.indexOf(solution_id) &&
+			!~this.waiting_queue.indexOf(solution_id)) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
 				this.runJudger(solution_id, this.judge_queue.shift());
@@ -77,13 +87,13 @@ class localJudger {
 	}
 
 	/**
-	 *
+	 * 启动查询数据库的轮询
 	 * @param {Number} time 轮询事件间隔
 	 * @returns {TypeError}
 	 */
 
 	startLoopJudge(time = 1000) {
-		if(typeof time !== "number"){
+		if (typeof time !== "number") {
 			return new TypeError("variable time must be a number");
 		}
 		if (this.isLooping()) {
