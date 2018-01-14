@@ -390,11 +390,13 @@ io.on("connection", async function (socket) {
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data["to"];
-		sendMessage(user_socket[toPersonUser_id], "chat", {
-			from: data["from"],
-			content: data["content"],
-			time: Date.now().toString()
-		});
+		if (user_socket[toPersonUser_id] && user_socket[toPersonUser_id].emit) {
+			sendMessage(user_socket[toPersonUser_id], "chat", {
+				from: data["from"],
+				content: data["content"],
+				time: Date.now().toString()
+			});
+		}
 	});
 	/**
 	 * 断开连接销毁所有保存的数据
