@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const app = express();
 const index = require("./routes/index");
+const homepage = require("./routes/homepage");
 const problem = require("./routes/problem");
 const user = require("./routes/user");
 const test = require("./routes/test");
@@ -23,7 +24,7 @@ app.use(log4js.connectLogger(log, {level: "info"}));
 
 const oneDay = 86400000;
 app.set("views", path.join(__dirname, "views"));
-app.set("view engine", "jade");
+app.set("view engine", "pug");
 app.set("view cache", true);
 app.use("/static", express.static(__dirname + "/static", {
 	maxAge: oneDay * 30
@@ -45,6 +46,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extend: false}));
 app.use(cookieParser());
 app.use("/", index);
+app.use("/homepage", homepage);
 app.use("/problem", auth, problem);
 app.use("/user", auth, user);
 app.use("/test", test);

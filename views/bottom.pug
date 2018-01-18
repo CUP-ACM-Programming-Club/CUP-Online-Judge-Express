@@ -1,0 +1,35 @@
+.ui.inverted.vertical.footer.segment(style="margin-top:150px")
+    .ui.container
+        .ui.stackable.inverted.divided.equal.height.stackable.grid
+            .seven.wide.column
+                h4.ui.inverted.header
+                    a(href="faqs.php" target="_blank") About
+                .ui.inverted.link.list
+                    a.item(href="mailto:gxlhybh@gmail.com") Contact Us
+                    a.item(href="opensource.php") OpenSource Announcement
+            //
+                <div class="three wide column">
+                <h4 class="ui inverted header">Services</h4>
+                <div class="ui inverted link list">
+                <a href="#" class="item">Banana Pre-Order</a>
+                <a href="#" class="item">DNA FAQ</a>
+                <a href="#" class="item">How To Access</a>
+                <a href="#" class="item">Favorite X-Men</a>
+                </div>
+                </div>
+            .seven.wide.column
+                h4.ui.inverted.header Impressed by HUSTOJ
+                p © CUP Online Judge 2017
+                p
+                    | Developer:
+                    a(href="https://github.com/ryanlee2014" target="_blank") Ryan Lee(李昊元)
+script.
+    $("form").append("<div id='csrf' class='csrf' />");
+    $(".csrf").load("<?php echo $path_fix?>csrf.php");
+    var $logout = $(".logout");
+    $logout.on('click', function () {
+        $.get("/api/logout", function (data) {
+            location.href = "../logout.php";
+        });
+    });
+    //$.get("/api");//keep node.js session awake
