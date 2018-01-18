@@ -65,10 +65,10 @@ class dockerJudger {
 		if (isNaN(this.problem_id) || this.problem_id < 1000) {
 			this.problem_id = undefined;
 			if (isNaN(this.problem_id)) {
-				throw TypeError("problem_id should be a integer");
+				throw new TypeError("problem_id should be a integer");
 			}
 			else {
-				throw Error("problem_id should larger than 1000");
+				throw new Error("problem_id should larger than 1000");
 			}
 		}
 	}
