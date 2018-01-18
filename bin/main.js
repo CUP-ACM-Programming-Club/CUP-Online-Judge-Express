@@ -320,7 +320,7 @@ io.on("connection", async function (socket) {
 			pos.browser_core = data["browser_core"] || "";
 			pos.useragent = data["useragent"] || "";
 			pos.screen = data["screen"] || "";
-			pos.nick = pos.nick || data["nick"] || socket.user_nick;
+			pos.nick = pos.nick || socket.user_nick || data["nick"];
 			if ((!socket.url || (socket.url.length && socket.url.length === 0)) && data["url"]) {
 				let url = data["url"];
 				if (~url.indexOf(socket.handshake.headers.origin)) {
