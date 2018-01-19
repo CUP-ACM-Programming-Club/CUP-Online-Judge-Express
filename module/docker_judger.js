@@ -9,6 +9,26 @@ const path = require("path");
 const Promise = require("bluebird");
 const fs = Promise.promisifyAll(require("fs"));
 const checker = require("checker");
+const OUTPUT_LIMIT_EXCEEDED = -1;
+const WRONG_ANSWER = 0;
+const PRESENTATION_ERROR = 1;
+const ACCEPTED = 2;
+const COMPILE_ERROR = 3;
+const RUNTIME_ERROR = 4;
+const TIME_LIMIT_EXCEEDED = 5;
+const MEMORY_LIMIT_EXCEEDED = 6;
+const CLOCK_LIMIT_EXCEEDED = 7;
+
+function parseResult(code,time,memory,pass_point,compile_msg,compile_error_msg){
+    return {
+        status:code,
+        time:time,
+        memory:memory,
+        pass_point:pass_point,
+        compile_message:compile_msg,
+        compile_error_message:compile_error_msg
+    };
+}
 
 class dockerJudger {
 
@@ -18,6 +38,20 @@ class dockerJudger {
         this.outputFile = [];
         this.Sandbox = Sandbox;
         this.submit = this.Sandbox.createSubmit();
+    }
+
+    static parseJudgerCodeToWeb(code) {
+        const status = {
+            "2": 4,
+            "1": 5,
+            "0": 6,
+            "5": 7,
+            "6": 8,
+            "-1": 9,
+            "4": 10,
+            "3": 11,
+        };
+        return status[code.toString()];
     }
 
     static parseLanguage(language) {
@@ -59,6 +93,11 @@ class dockerJudger {
             "go": ".go"
         };
         return languageSuffix[language];
+    }
+
+    static sandboxCodeToJudger(code){
+        const status = [ACCEPTED,TIME_LIMIT_EXCEEDED,MEMORY_LIMIT_EXCEEDED,
+        OUTPUT_LIMIT_EXCEEDED,RUNTIME_ERROR];
     }
 
     setProblemID(problem_id) {
@@ -129,17 +168,25 @@ class dockerJudger {
             this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
             this.result = await this.Sandbox.runner(this.submit);
             const status = this.result.status;
-            let judge_return_val = 0;
+            let judge_return_val;
+            let time = 0, memory = 0;
+            let pass_point = 0;
+            let compile_msg = this.result.compile_out;
+            let compile_err_msg = this.result.compile_error;
             for (let i in this.result.result) {
+                time = Math.max(parseInt(this.result.result[i].time_usage),time);
+                memory = Math.max(parseInt(this.result.result[i].memory_usage),memory);
                 if ((judge_return_val = parseInt(this.result.result[i].runtime_flag))) {
                     break;
                 }
+                ++pass_point;
             }
             if (status !== "OK" || judge_return_val) {
-                // TODO:complete running and judging status is false
+                const sandboxCode = dockerJudger.sandboxCodeToJudger(judge_return_val);
+                return parseResult(dockerJudger.parseJudgerCodeToWeb(sandboxCode),time,memory,pass_point,compile_msg,compile_err_msg);
             }
             else {
-                const result = checker.compareDiff(this.result.output_files, ...outfilelist);
+                const result = await checker.compareDiff(this.result.output_files, ...outfilelist);
             }
         }
     }

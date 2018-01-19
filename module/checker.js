@@ -14,6 +14,10 @@ function flipSuffix(file_name) {
     }
 }
 
+function flipNoneTextCode(text) {
+    return text.split("\n").join("").split(" ").join("");
+}
+
 async function fileToRawText(...file) {
     let result = [];
     for (let i in file) {
@@ -30,9 +34,40 @@ async function compareDiff(result, ...file_name) {
     });
     const rawText = await fileToRawText(...file_name);
     let outputText = [];
-    rawText.map((file,index) => {
+    rawText.map((file, index) => {
         outputText[index] = file;
     });
+
+    for(let i in userOutputText){
+        if(userOutputText[i].length > outputText[i].left * 2){
+            return -1;
+        }
+    }
+
+    let judge_result = ((user, out) => {
+        if (user.length !== out.length) {
+            return 0;
+        }
+        for (let i in user) {
+            const user_text = flipNoneTextCode(user[i]);
+            const out_text = flipNoneTextCode(out_text[i]);
+            if (user_text !== out_text) {
+                return 0;
+            }
+        }
+        return 1;
+    })(userOutputText, outputText);
+    if (judge_result) {
+        judge_result += ((user, out) => {
+            for (let i in user) {
+                if (user[i] !== out[i]) {
+                    return 0;
+                }
+            }
+            return 1;
+        })(userOutputText, outputText);
+    }
+    return judge_result;
 }
 
 module.exports = {
