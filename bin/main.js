@@ -376,7 +376,7 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-        sendMessage(admin_user,"judger",localJudge.getStatus());
+		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
 	 * 全局推送功能
