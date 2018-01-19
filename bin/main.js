@@ -221,10 +221,10 @@ io.use(async (socket, next) => {
 			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
 		}
 	}
-	if (socket.nick === undefined) {
+	if (socket.user_nick === undefined) {
 		let _nick;
-		if ((_nick = cachePool.get(`${socket.user_id}nick`))) {
-			socket.nick = _nick;
+		if ((_nick = cachePool.get(`${socket.user_id}nick`)) && _nick.length) {
+			socket.user_nick = _nick;
 		}
 		else {
 			const nick = await
@@ -278,6 +278,7 @@ io.use((socket, next) => {
 			normal_user[socket.user_id] = [socket];
 		}
 	}
+	onlineUserBroadcast();
 	next();
 });
 /**
@@ -313,7 +314,7 @@ io.on("connection", async function (socket) {
 			socket.send_auth = true;
 			const pos = onlineUser[socket.user_id];
 			pos.identity = socket.privilege ? "admin" : "normal";
-			pos.intranet_ip = data["intranet_ip"] || socket.handshake.address;
+			pos.intranet_ip = data["intranet_ip"] || socket.handshake.address || "未知";
 			pos.ip = data["ip"] || "";
 			pos.version = data["version"] || "";
 			pos.platform = data["platform"] || "";
@@ -375,7 +376,7 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-
+        sendMessage(admin_user,"judger",localJudge.getStatus());
 	});
 	/**
 	 * 全局推送功能

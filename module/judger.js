@@ -46,7 +46,7 @@ class localJudger {
 	getStatus() {
 		return {
 			judging: this.judging_queue,
-			free_judger: this.judging_queue,
+			free_judger: this.judge_queue,
 			waiting: this.waiting_queue,
 			last_solution_id: this.latestSolutionID,
 			is_looping: this.isLooping(),

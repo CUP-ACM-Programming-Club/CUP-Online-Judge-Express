@@ -173,17 +173,22 @@ class dockerJudger {
             let pass_point = 0;
             let compile_msg = this.result.compile_out;
             let compile_err_msg = this.result.compile_error;
-            for (let i in this.result.result) {
-                time = Math.max(parseInt(this.result.result[i].time_usage),time);
-                memory = Math.max(parseInt(this.result.result[i].memory_usage),memory);
-                if ((judge_return_val = parseInt(this.result.result[i].runtime_flag))) {
-                    break;
+            if(~compile_err_msg.indexOf("error")){
+                judge_return_val = COMPILE_ERROR;
+            }
+            if(!judge_return_val) {
+                for (let i in this.result.result) {
+                    time = Math.max(parseInt(this.result.result[i].time_usage), time);
+                    memory = Math.max(parseInt(this.result.result[i].memory_usage), memory);
+                    if ((judge_return_val = parseInt(this.result.result[i].runtime_flag))) {
+                        judge_return_val = dockerJudger.sandboxCodeToJudger(judge_return_val);
+                        break;
+                    }
+                    ++pass_point;
                 }
-                ++pass_point;
             }
             if (status !== "OK" || judge_return_val) {
-                const sandboxCode = dockerJudger.sandboxCodeToJudger(judge_return_val);
-                return parseResult(dockerJudger.parseJudgerCodeToWeb(sandboxCode),time,memory,pass_point,compile_msg,compile_err_msg);
+                return parseResult(judge_return_val,time,memory,pass_point,compile_msg,compile_err_msg);
             }
             else {
                 const result = await checker.compareDiff(this.result.output_files, ...outfilelist);
