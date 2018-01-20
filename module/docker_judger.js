@@ -194,6 +194,7 @@ class dockerJudger {
 			}
 			else {
 				const result = await checker.compareDiff(this.result.output_files, ...outfilelist);
+				//return parseResult(parseJudgerCodeToWeb(result),time,memory,pass_point,compile_err_msg)
 			}
 		}
 	}
