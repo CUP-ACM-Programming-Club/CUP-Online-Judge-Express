@@ -20,14 +20,14 @@ const TIME_LIMIT_EXCEEDED = 5;
 const MEMORY_LIMIT_EXCEEDED = 6;
 const CLOCK_LIMIT_EXCEEDED = 7;
 
-function parseResult(code,time,memory,pass_point,compile_msg,compile_error_msg){
+function parseResult(code, time, memory, pass_point, compile_msg, compile_error_msg) {
 	return {
-		status:code,
-		time:time,
-		memory:memory,
-		pass_point:pass_point,
-		compile_message:compile_msg,
-		compile_error_message:compile_error_msg
+		status: code,
+		time: time,
+		memory: memory,
+		pass_point: pass_point,
+		compile_message: compile_msg,
+		compile_error_message: compile_error_msg
 	};
 }
 
@@ -96,9 +96,9 @@ class dockerJudger {
 		return languageSuffix[language];
 	}
 
-	static sandboxCodeToJudger(code){
-		const status = [ACCEPTED,TIME_LIMIT_EXCEEDED,MEMORY_LIMIT_EXCEEDED,
-			OUTPUT_LIMIT_EXCEEDED,RUNTIME_ERROR];
+	static sandboxCodeToJudger(code) {
+		const status = [ACCEPTED, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED,
+			OUTPUT_LIMIT_EXCEEDED, RUNTIME_ERROR];
 		return status[code];
 	}
 
@@ -136,10 +136,37 @@ class dockerJudger {
 		this.submit.setLanguage(this.language);
 	}
 
-	setCustomInput(input){
+	setCompareFn(fn) {
+		if (typeof fn === "function") {
+			this.compare_fn = fn;
+		}
+		else {
+			return new TypeError("argument must be function");
+		}
+	}
+
+	on(event, callback) {
+		if (typeof event === "string") {
+			if (typeof fn === "function") {
+				this.submit.on(event, callback);
+			}
+			else {
+				return new TypeError("callback must be function");
+			}
+		}
+		else {
+			return new TypeError("event must be a string");
+		}
+	}
+
+	setSpecialJudge(file,language){
+
+	}
+
+	setCustomInput(input) {
 		this.submit.pushInputRawFiles({
-			name:"custominput.in",
-			data:input
+			name: "custominput.in",
+			data: input
 		});
 	}
 
@@ -182,10 +209,10 @@ class dockerJudger {
 			let pass_point = 0;
 			let compile_msg = this.result.compile_out;
 			let compile_err_msg = this.result.compile_error;
-			if(~compile_err_msg.indexOf("error")){
+			if (~compile_err_msg.indexOf("error")) {
 				judge_return_val = COMPILE_ERROR;
 			}
-			if(!judge_return_val) {
+			if (!judge_return_val) {
 				for (let i in this.result.result) {
 					time = Math.max(parseInt(this.result.result[i].time_usage), time);
 					memory = Math.max(parseInt(this.result.result[i].memory_usage), memory);
@@ -197,7 +224,7 @@ class dockerJudger {
 				}
 			}
 			if (status !== "OK" || judge_return_val) {
-				return parseResult(judge_return_val,time,memory,pass_point,compile_msg,compile_err_msg);
+				return parseResult(judge_return_val, time, memory, pass_point, compile_msg, compile_err_msg);
 			}
 			else {
 				const result = await checker.compareDiff(this.result.output_files, ...outfilelist);
