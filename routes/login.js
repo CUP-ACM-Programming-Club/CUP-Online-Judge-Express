@@ -92,17 +92,21 @@ router.post("/", async function (req, res) {
 	const user_id = json["user_id"] || "";
 	const password = json["password"] || "";
 	if (user_id !== "" && password !== "") {
-		await query("select password from users where user_id=?", [user_id]).then(async (val) => {
+		await query("select password,newpassword from users where user_id=?", [user_id]).then(async (val) => {
 			let ans;
+			let newpass;
 			if (val.length && val.length > 0) {
 				ans = val[0].password;
-				if (checkPassword(ans, password)) {
-					query("update users set newpassword=? where user_id=?",
-						[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
-						.catch((e) => {
-							res.json(error.database);
-							log.fatal(e);
-						});
+				newpass = val[0].newpassword;
+				if (checkPassword(ans, password, reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length))) {
+					if (!newpass) {
+						query("update users set newpassword=? where user_id=?",
+							[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
+							.catch((e) => {
+								res.json(error.database);
+								log.fatal(e);
+							});
+					}
 					req.session.user_id = user_id;
 					req.session.auth = true;
 					res.json(ok.ok);
