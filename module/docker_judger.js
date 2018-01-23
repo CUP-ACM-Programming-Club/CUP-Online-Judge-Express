@@ -136,6 +136,13 @@ class dockerJudger {
 		this.submit.setLanguage(this.language);
 	}
 
+	setCustomInput(input){
+		this.submit.pushInputRawFiles({
+			name:"custominput.in",
+			data:input
+		});
+	}
+
 	setCode(code) {
 		this.code = code;
 		this.submit.pushInputRawFiles({

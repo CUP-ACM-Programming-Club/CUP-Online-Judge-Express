@@ -7,8 +7,8 @@ html
         meta(name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0")
         script.
             var homepage = true;
-        include js.jade
-        include css.jade
+        include js.pug
+        include css.pug
     body
         div
             #background.ui.inverted.vertical.masthead.center.aligned.segment.zoomed
@@ -83,7 +83,7 @@ html
                 h4.ui.content 技术栈:Linux + C/C++ + MySQL + PHP + Node.js + ExpressJS + Apache
                 h4.ui.content Vue.js/Backbone.js(Developing)
                 a.ui.large.disabled.button(href="https://coding.net/u/RyanLee/p/CUPOJ" target="_blank") 部分代码暂未开源
-        include bottom.jade
+        include bottom.pug
         script.
             function getRandomIntInclusive(min, max) {
                 min = Math.ceil(min);
