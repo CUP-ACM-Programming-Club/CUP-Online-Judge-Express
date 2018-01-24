@@ -11,6 +11,7 @@ const Promise = require("bluebird");
 const query = require("../module/mysql_query");
 const fs = Promise.promisifyAll(require("fs"));
 const checker = require("./docker/checker");
+const eventEmitter = require("events").eventEmitter;
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
 const PRESENTATION_ERROR = 1;
@@ -44,9 +45,10 @@ function parseResult(code, time, memory, pass_point, compile_msg, compile_error_
 	};
 }
 
-class dockerJudger {
+class dockerJudger extends eventEmitter {
 
 	constructor(oj_home) {
+		super();
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
@@ -54,6 +56,7 @@ class dockerJudger {
 		this.submit = this.Sandbox.createSubmit();
 		this.language = NaN;
 		this.submit_id = NaN;
+		this.mode = 0;
 	}
 
 	static parseJudgerCodeToWeb(code) {
@@ -73,7 +76,7 @@ class dockerJudger {
 	static parseLanguage(language) {
 		language = parseInt(language);
 		const languageToName =
-            ["c11", "c++17", "pascal", "java","ruby", "bash", "python2", "php","perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99"];
+			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99"];
 		if (language > -1 && language < languageToName.length) {
 			return languageToName[language];
 		}
@@ -191,8 +194,16 @@ class dockerJudger {
 		this.language = language;
 	}
 
+	setMode(mode) {
+		this.mode = mode;
+	}
+
 	setCode(code) {
 		this.code = code;
+	}
+
+	setUserID(user_id) {
+		this.user_id = user_id;
 	}
 
 	pushRawFile(file) {
@@ -212,7 +223,7 @@ class dockerJudger {
 					this.submit.setFileStdin(path.join(dirname, filelist[i]));
 				}
 				else if (filelist[i].indexOf(".out") > 0 && !~filelist[i].indexOf("~")) {
-					this.submit.pushAnswerFiles(path.join(dirname,filelist[i]));
+					this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
 					outfilelist.push(path.join(dirname, filelist[i]));
 				}
 			}
@@ -221,13 +232,16 @@ class dockerJudger {
 			this.submit.setTimeLimitReserve(this.time_limit_reserve);
 			this.submit.setMemoryLimit(this.memory_limit);
 			this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
-			this.submit.setCompareFunction(checker.compareDiff);
+			if(!this.mode) {
+				this.submit.setCompareFunction(checker.compareDiff);
+			}
 			this.submit.pushInputRawFiles({
-				name:`Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
-				data:this.code
+				name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
+				data: this.code
 			});
 			console.log(this.submit);
 			this.result = await this.Sandbox.runner(this.submit);
+			this.emit("finish");
 		}
 	}
 
