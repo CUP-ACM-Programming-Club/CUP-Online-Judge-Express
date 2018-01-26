@@ -13,10 +13,11 @@ const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
-const _localJudge = require("../module/judger");
-const judge_config = config["judger"];
+//const _localJudge = require("../module/judger");
+const _dockerRunner = require("../module/docker_runner");
 const querystring = require("querystring");
-const localJudge = new _localJudge(judge_config["oj_home"], judge_config["oj_judge_num"]);
+//const localJudge = new _localJudge(judge_config["oj_home"], judge_config["oj_judge_num"]);
+const dockerRunner = new _dockerRunner(config.judger.oj_home,config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 /**
@@ -44,6 +45,7 @@ let normal_user = {};
  * @type {{Socket}} 记录solution_id对应的Socket连接
  */
 let submissions = {};
+global.submissions = submissions;
 /**
  * 记录打开状态页面的Socket连接
  * @type {{status: Array, contest_status: {}}}
@@ -128,6 +130,8 @@ wss.on("connection", function (ws) {
 	});
 });
 
+
+
 /**
  * 监听端口
  */
@@ -182,6 +186,20 @@ function whiteBoardBroadCast(socket, content) {
 				content: content
 			});
 		}
+	}
+}
+
+let cache_queue = [];
+
+async function cache_query(sql, sqlArr) {
+	let cache_str;
+	if (cache_queue[(cache_str = sql + sqlArr.toString())]) {
+		return cache_queue[cache_str];
+	}
+	else {
+		const result = await query(sql, sqlArr);
+		cache_queue[cache_str] = result;
+		return result;
 	}
 }
 
@@ -312,7 +330,7 @@ io.use((socket, next) => {
 io.use((socket, next) => {
 	if (socket.url && ~socket.url.indexOf("status")) {
 		if (~socket.url.indexOf("cid")) {
-			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("/", 9), socket.url.length));
+			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("?") + 1, socket.url.length));
 			const contest_id = parseInt(parseObj["cid"]) || 0;
 			if (contest_id >= 1000) {
 				if (!pagePush.contest_status[contest_id]) {
@@ -366,27 +384,45 @@ io.on("connection", async function (socket) {
 		if (socket.privilege) {
 			const request = data["request"];
 			if (request && request === "judger") {
-				socket.emit(localJudge.getStatus());
+				socket.emit(dockerRunner.getStatus());
 			}
 		}
 	});
 	/**
 	 * 提交推送处理
 	 */
-	socket.on("submit", async function (data) {
+	socket.on("submit", async function (_data) {
+		/**
+		 * { submission_id: 61459,
+         * val:
+         * { id: '1000',
+         * input_text: '1 2',
+         * language: '1',
+         * source: '#include <iostream>\nusing namespace std;\nint main()\n{\n    int a,b;\n    while(cin>>a>>b)cout<<a+b<<endl;\n}',
+         * type: 'problem',
+         * csrf: '3FEY3VDt7hTnsgvDtKEac3kbs5Ek5L3N' },
+         * user_id: '2016011253',
+         * nick: 'Ryan Lee(李昊元)' }
+         *
+         */
+		let data = Object.assign({}, _data);
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
 		const submission_id = parseInt(data["submission_id"]);
-		localJudge.addTask(submission_id);
+		//localJudge.addTask(submission_id);
+
+
+
 		submissions[submission_id] = socket;
 		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
-			const id_val = await query("SELECT problem_id FROM " +
-				"contest_problem WHERE contest_id=? and num=?", [data["val"]["cid"], data["val"]["pid"]]);
-			if (id_val.length && id_val[0].problem_id)
-				data["val"]["id"] = id_val[0].problem_id;
+			const id_val = await cache_query("SELECT problem_id FROM " +
+                "contest_problem WHERE contest_id=? and num=?", [Math.abs(data["val"]["cid"]), data["val"]["pid"]]);
+			if (id_val.length && id_val[0].problem_id) {
+				data.val.id = id_val[0].problem_id;
+			}
 		}
 		if ((data["val"] && data["val"]["cid"])) {
-			const contest_id = parseInt(data["val"]["cid"]) || 0;
+			const contest_id = Math.abs(parseInt(data["val"]["cid"])) || 0;
 			if (contest_id >= 1000) {
 				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
 				if (!submissionType.contest[contest_id]) {
@@ -400,18 +436,19 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-		sendMessage(admin_user, "judger", localJudge.getStatus());
+		dockerRunner.addTask(data);
+		sendMessage(admin_user, "judger", dockerRunner.getStatus());
 	});
 	/**
-	 * 全局推送功能
-	 */
+     * 全局推送功能
+     */
 	socket.on("msg", function (data) {
 		socket.broadcast.emit("msg", data);
 		socket.emit("msg", data);
 	});
 	/**
-	 * 聊天功能，向目标用户发送聊天信息
-	 */
+     * 聊天功能，向目标用户发送聊天信息
+     */
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data["to"];
@@ -479,5 +516,4 @@ io.on("connection", async function (socket) {
 			onlineUserBroadcast();
 		}
 	});
-})
-;
+});

@@ -1,15 +1,17 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars,no-console */
 /**
  * Class LocalJudger
  */
 //const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 //const logger = log4js.logger("normal", "info");
-const Sandbox = require("../docker/index");
+const Sandbox = require("./docker/index");
 const path = require("path");
 const Promise = require("bluebird");
+const query = require("../module/mysql_query");
 const fs = Promise.promisifyAll(require("fs"));
-const checker = require("checker");
+const checker = require("./docker/checker");
+const eventEmitter = require("events").EventEmitter;
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
 const PRESENTATION_ERROR = 1;
@@ -20,25 +22,41 @@ const TIME_LIMIT_EXCEEDED = 5;
 const MEMORY_LIMIT_EXCEEDED = 6;
 const CLOCK_LIMIT_EXCEEDED = 7;
 
-function parseResult(code,time,memory,pass_point,compile_msg,compile_error_msg){
+let cache = [];
+
+
+async function cache_query(sql, sqlArr) {
+	if (cache[sql + sqlArr.toString()]) {
+		return cache[sql + sqlArr.toString()];
+	}
+	else {
+		return (cache[sql + sqlArr.toString()] = await query(sql, sqlArr));
+	}
+}
+
+function parseResult(code, time, memory, pass_point, compile_msg, compile_error_msg) {
 	return {
-		status:code,
-		time:time,
-		memory:memory,
-		pass_point:pass_point,
-		compile_message:compile_msg,
-		compile_error_message:compile_error_msg
+		status: code,
+		time: time,
+		memory: memory,
+		pass_point: pass_point,
+		compile_message: compile_msg,
+		compile_error_message: compile_error_msg
 	};
 }
 
-class dockerJudger {
+class dockerJudger extends eventEmitter {
 
 	constructor(oj_home) {
+		super();
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
 		this.Sandbox = Sandbox;
 		this.submit = this.Sandbox.createSubmit();
+		this.language = NaN;
+		this.submit_id = NaN;
+		this.mode = 0;
 	}
 
 	static parseJudgerCodeToWeb(code) {
@@ -58,14 +76,18 @@ class dockerJudger {
 	static parseLanguage(language) {
 		language = parseInt(language);
 		const languageToName =
-			["c11", "c++17", "pascal", "java",
-				"ruby", "bash", "python2", "php",
-				"perl", "csharp", "objc", "freebasic",
-				"schema", "clang", "clang++", "lua",
-				"nodejs", "go", "python3", "c++11",
-				"c++98", "c99"];
+			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99","kotlin"];
 		if (language > -1 && language < languageToName.length) {
 			return languageToName[language];
+		}
+	}
+
+	static LanguageBonus(language){
+		if(language<3||language === 13||language===14||language>18){
+			return 1;
+		}
+		else{
+			return 2;
 		}
 	}
 
@@ -91,18 +113,19 @@ class dockerJudger {
 			"kotlin": ".kt",
 			"bash": ".sh",
 			"pascal": ".pas",
-			"go": ".go"
+			"go": ".go",
+			"java":".java"
 		};
 		return languageSuffix[language];
 	}
 
-	static sandboxCodeToJudger(code){
-		const status = [ACCEPTED,TIME_LIMIT_EXCEEDED,MEMORY_LIMIT_EXCEEDED,
-			OUTPUT_LIMIT_EXCEEDED,RUNTIME_ERROR];
+	static sandboxCodeToJudger(code) {
+		const status = [ACCEPTED, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED,
+			OUTPUT_LIMIT_EXCEEDED, RUNTIME_ERROR];
 		return status[code];
 	}
 
-	setProblemID(problem_id) {
+	async setProblemID(problem_id) {
 		this.problem_id = parseInt(problem_id);
 		if (isNaN(this.problem_id) || this.problem_id < 1000) {
 			this.problem_id = undefined;
@@ -113,10 +136,21 @@ class dockerJudger {
 				throw new Error("problem_id should larger than 1000");
 			}
 		}
+		const problem_status = await cache_query("SELECT * FROM problem WHERE problem_id=?", [this.problem_id]);
+		let time_limit = parseFloat(problem_status[0].time_limit);
+		let memory_limit = parseInt(problem_status[0].memory_limit);
+		this.setTimeLimit(time_limit);
+		this.setTimeLimitReserve(time_limit / 2);
+		this.setMemoryLimit(memory_limit);
+		this.setMemoryLimitReserve(memory_limit / 4);
 	}
 
 	setTimeLimit(time_limit) {
 		this.time_limit = parseFloat(time_limit);
+	}
+
+	setSolutionID(solution_id) {
+		this.submit_id = solution_id;
 	}
 
 	setTimeLimitReserve(time_limit_reserve) {
@@ -131,24 +165,55 @@ class dockerJudger {
 		this.memory_limit_reserve = parseInt(memory_limit_reserve);
 	}
 
-	setLanguage(language) {
-		this.language = dockerJudger.parseLanguage(language);
-		this.submit.setLanguage(this.language);
+
+	setCompareFn(fn) {
+		if (typeof fn === "function") {
+			this.compare_fn = fn;
+		}
+		else {
+			return new TypeError("argument must be function");
+		}
 	}
 
-	setCustomInput(input){
+	on(event, callback) {
+		if (typeof event === "string") {
+			if (typeof callback === "function") {
+				this.submit.on(event, callback);
+			}
+			else {
+				return new TypeError("callback must be function");
+			}
+		}
+		else {
+			return new TypeError("event must be a string");
+		}
+	}
+
+	setSpecialJudge(file, language) {
+
+	}
+
+	setCustomInput(input) {
 		this.submit.pushInputRawFiles({
-			name:"custominput.in",
-			data:input
+			name: "custominput.in",
+			data: input
 		});
+	}
+
+	setLanguage(language) {
+		this.language = language;
+	}
+
+	setMode(mode) {
+		this.mode = mode;
 	}
 
 	setCode(code) {
 		this.code = code;
-		this.submit.pushInputRawFiles({
-			name: `Main${dockerJudger.parseLanguageSuffix(this.language)}`,
-			data: code
-		});
+	}
+
+	setUserID(user_id) {
+		this.user_id = user_id;
 	}
 
 	pushRawFile(file) {
@@ -159,51 +224,38 @@ class dockerJudger {
 	}
 
 	async run() {
-		if (this.problem_id) {
+		if (this.mode === 0) {
 			const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
 			const filelist = await fs.readdirAsync(dirname);
 			const outfilelist = [];
 			for (let i in filelist) {
+				//(filelist[i]);
 				if (filelist[i].indexOf(".in") > 0) {
-					this.submit.pushInputFiles(path.join(dirname, filelist[i]));
+					this.submit.pushFileStdin(path.join(dirname, filelist[i]));
 				}
 				else if (filelist[i].indexOf(".out") > 0) {
+					this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
 					outfilelist.push(path.join(dirname, filelist[i]));
 				}
 			}
-			this.submit.setTimeLimit(this.time_limit);
-			this.submit.setTimeLimitReserve(this.time_limit_reserve);
-			this.submit.setMemoryLimit(this.memory_limit);
-			this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
-			this.result = await this.Sandbox.runner(this.submit);
-			const status = this.result.status;
-			let judge_return_val;
-			let time = 0, memory = 0;
-			let pass_point = 0;
-			let compile_msg = this.result.compile_out;
-			let compile_err_msg = this.result.compile_error;
-			if(~compile_err_msg.indexOf("error")){
-				judge_return_val = COMPILE_ERROR;
-			}
-			if(!judge_return_val) {
-				for (let i in this.result.result) {
-					time = Math.max(parseInt(this.result.result[i].time_usage), time);
-					memory = Math.max(parseInt(this.result.result[i].memory_usage), memory);
-					if ((judge_return_val = parseInt(this.result.result[i].runtime_flag))) {
-						judge_return_val = dockerJudger.sandboxCodeToJudger(judge_return_val);
-						break;
-					}
-					++pass_point;
-				}
-			}
-			if (status !== "OK" || judge_return_val) {
-				return parseResult(judge_return_val,time,memory,pass_point,compile_msg,compile_err_msg);
-			}
-			else {
-				const result = await checker.compareDiff(this.result.output_files, ...outfilelist);
-				//return parseResult(parseJudgerCodeToWeb(result),time,memory,pass_point,compile_err_msg)
-			}
 		}
+		else{
+			this.submit.setFileStdin("custominput.in");
+		}
+		this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
+		this.submit.setTimeLimit(this.time_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setTimeLimitReserve(this.time_limit_reserve);
+		this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
+		if (this.mode === 0) {
+			this.submit.setCompareFunction(checker.compareDiff);
+		}
+		await this.submit.pushInputRawFiles({
+			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
+			data: this.code
+		});
+		this.result = await this.Sandbox.runner(this.submit);
+		this.submit.emit("finish");
 	}
 
 }

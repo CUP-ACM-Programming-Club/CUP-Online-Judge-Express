@@ -19,12 +19,6 @@ function flipNoneTextCode(text) {
 	return text.split("\n").join("").split(" ").join("");
 }
 
-function parseResult(result,pass_point){
-	return {
-		result:result,
-		pass_point:pass_point
-	};
-}
 
 async function fileToRawText(...file) {
 	let result = [];
@@ -34,24 +28,10 @@ async function fileToRawText(...file) {
 	return result;
 }
 
-async function compareDiff(result, ...file_name) {
-	const _result = JSON.parse(JSON.stringify(result));
-	let userOutputText = [];
-	_result.map((file, index) => {
-		userOutputText[index] = file;
-	});
-	const rawText = await fileToRawText(...file_name);
-	let outputText = [];
-	rawText.map((file, index) => {
-		outputText[index] = file;
-	});
+async function compareDiff(out, user) {
 
-	let pass_point = 0;
-
-	for(let i in userOutputText){
-		if(userOutputText[i].length > outputText[i].left * 2){
-			return parseResult(-1,pass_point);
-		}
+	if (user.length > out.length * 2) {
+		return -1;
 	}
 
 
@@ -59,29 +39,22 @@ async function compareDiff(result, ...file_name) {
 		if (user.length !== out.length) {
 			return 0;
 		}
-		for (let i in user) {
-			const user_text = flipNoneTextCode(user[i]);
-			const out_text = flipNoneTextCode(out_text[i]);
-			if (user_text !== out_text) {
-				return 0;
-			}
-			++pass_point;
+		const user_text = flipNoneTextCode(user);
+		const out_text = flipNoneTextCode(out);
+		if (user_text !== out_text) {
+			return 0;
 		}
 		return 1;
-	})(userOutputText, outputText);
+	})(user, out);
 	if (judge_result) {
-		pass_point = 0;
 		judge_result += ((user, out) => {
-			for (let i in user) {
-				if (user[i] !== out[i]) {
-					return 0;
-				}
-				++pass_point;
+			if (user !== out) {
+				return 0;
 			}
 			return 1;
-		})(userOutputText, outputText);
+		})(user, out);
 	}
-	return parseResult(judge_result,pass_point);
+	return judge_result;
 }
 
 module.exports = {
