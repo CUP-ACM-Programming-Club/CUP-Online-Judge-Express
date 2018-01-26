@@ -11,7 +11,7 @@ const Promise = require("bluebird");
 const query = require("../module/mysql_query");
 const fs = Promise.promisifyAll(require("fs"));
 const checker = require("./docker/checker");
-const eventEmitter = require("events").eventEmitter;
+const eventEmitter = require("events").EventEmitter;
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
 const PRESENTATION_ERROR = 1;
@@ -104,7 +104,8 @@ class dockerJudger extends eventEmitter {
 			"kotlin": ".kt",
 			"bash": ".sh",
 			"pascal": ".pas",
-			"go": ".go"
+			"go": ".go",
+			"java":".java"
 		};
 		return languageSuffix[language];
 	}
@@ -215,24 +216,31 @@ class dockerJudger extends eventEmitter {
 
 	async run() {
 		if (this.problem_id) {
-			const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
-			const filelist = await fs.readdirAsync(dirname);
-			const outfilelist = [];
-			for (let i in filelist) {
-				if (filelist[i].indexOf(".in") > 0 && !~filelist[i].indexOf("~")) {
-					this.submit.setFileStdin(path.join(dirname, filelist[i]));
-				}
-				else if (filelist[i].indexOf(".out") > 0 && !~filelist[i].indexOf("~")) {
-					this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
-					outfilelist.push(path.join(dirname, filelist[i]));
+			if (!this.mode) {
+				const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
+				const filelist = await fs.readdirAsync(dirname);
+				const outfilelist = [];
+				for (let i in filelist) {
+					console.log(filelist[i]);
+					if (filelist[i].indexOf(".in") > 0) {
+						this.submit.pushFileStdin(path.join(dirname, filelist[i]));
+					}
+					else if (filelist[i].indexOf(".out") > 0) {
+						this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
+						outfilelist.push(path.join(dirname, filelist[i]));
+					}
 				}
 			}
+			else{
+				this.submit.setFileStdin("custominput.in");
+			}
+			console.log(this.submit.file_stdin);
 			this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
 			this.submit.setTimeLimit(this.time_limit);
 			this.submit.setTimeLimitReserve(this.time_limit_reserve);
 			this.submit.setMemoryLimit(this.memory_limit);
 			this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
-			if(!this.mode) {
+			if (!this.mode) {
 				this.submit.setCompareFunction(checker.compareDiff);
 			}
 			this.submit.pushInputRawFiles({
@@ -240,6 +248,9 @@ class dockerJudger extends eventEmitter {
 				data: this.code
 			});
 			console.log(this.submit);
+			this.submit.on("debug",function (data) {
+				console.log(data);
+			});
 			this.result = await this.Sandbox.runner(this.submit);
 			this.emit("finish");
 		}

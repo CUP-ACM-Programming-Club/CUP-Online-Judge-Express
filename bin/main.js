@@ -129,48 +129,69 @@ wss.on("connection", function (ws) {
 		}
 	});
 });
-function runJudger(task) {
+
+async function runJudger(task) {
 	const judger = docker_judger.pop();
 	const problem_id = Math.abs(parseInt(task.val.id));
 	let contest_id = NaN;
 	if (task.val.cid) {
 		contest_id = Math.abs(parseInt(task.val.cid));
 	}
-	if (contest_id !== parseInt(task.val.cid) || problem_id !== parseInt(task.val.id)) {
+	if ((contest_id && contest_id !== parseInt(task.val.cid)) || problem_id !== parseInt(task.val.id)) {
+		console.log("test_run");
 		judger.pushRawFile({
 			name: "custominput.in",
 			data: task.val.input_text
 		});
 		judger.setMode(1);
 	}
-	judger.setProblemID(task.val.id);
-	judger.setSolutionID(task.submission_id);
-	judger.setCode(task.val.source);
-	judger.setLanguage(task.val.language);
-	judger.run();
+	const solution_id = parseInt(task.submission_id);
+	const language = parseInt(task.val.language);
+	await judger.setProblemID(problem_id);
+	await judger.setSolutionID(solution_id);
+	await judger.setCode(task.val.source);
+	await judger.setLanguage(language);
+	console.log(judger);
+	await judger.run();
 }
 
 function makeJudger(oj_home) {
 	const judger = new dockerJudger(oj_home);
 	judger.on("processing", function (data) {
+		console.log(data);
 		const submission_id = judger.submit_id;
 		const time = data.time;
 		const memory = data.memory;
 		const pass_point = data.pass_point;
-		const compile_message = data.compile_msg || "";
-		query("UPDATE solution set time=?,memory=?,pass_point=? WHERE solution_id=?", [time, memory, pass_point, submission_id]);
-		if (compile_message.length > 0) {
-			query("INSERT INTO compile_info (solution_id,error) VALUES (?,?)", [submission_id, compile_message]);
+		let status = parseInt(data.status);
+		if (judger.mode === 1) {
+			status = status === 4 ? 13 : status;
+		}
+		const compile_message = data.compile_msg === "" ? undefined : data.compile_msg;
+		const test_run_result = data.test_run_result === "" ? undefined : data.test_run_result;
+		const sendData = {
+			solution_id: judger.submit_id,
+			time: time,
+			memory: memory,
+			state: status,
+			pass_point: pass_point,
+			compile_info: compile_message,
+			test_run_result: test_run_result
+		};
+		submissions[submission_id].emit("result", sendData);
+		query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id]);
+		if (compile_message && compile_message.length > 0) {
+			query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message]);
 		}
 	});
 	judger.on("finish", function () {
 		docker_judger.push(makeJudger(oj_home));
-		if(judger.user_id) {
+		if (judger.user_id) {
 			query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
-			query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'",[judger.user_id,judger.user_id]);
+			query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
 		}
-		query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'",[judger.problem_id,judger.problem_id]);
-		query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'",[judger.problem_id,judger.problem_id]);
+		query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+		query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
 		if (waiting_queue.length > 0) {
 			runJudger(waiting_queue.shift());
 		}
@@ -190,9 +211,10 @@ let docker_judger = initDockerJudger(judge_config["oj_home"], judge_config["oj_j
 
 function addJudgeTask(task) {
 	if (docker_judger.length) {
+		console.log(task);
 		runJudger(task);
 	}
-	else{
+	else {
 		waiting_queue.push(task);
 	}
 }
@@ -475,7 +497,8 @@ io.on("connection", async function (socket) {
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
 		const submission_id = parseInt(data["submission_id"]);
-		localJudge.addTask(submission_id);
+		//localJudge.addTask(submission_id);
+		addJudgeTask(data);
 		/*
 		runJudger(data);
 		 */
