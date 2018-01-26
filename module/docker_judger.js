@@ -224,40 +224,38 @@ class dockerJudger extends eventEmitter {
 	}
 
 	async run() {
-		if (this.problem_id) {
-			if (!this.mode) {
-				const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
-				const filelist = await fs.readdirAsync(dirname);
-				const outfilelist = [];
-				for (let i in filelist) {
-					console.log(filelist[i]);
-					if (filelist[i].indexOf(".in") > 0) {
-						this.submit.pushFileStdin(path.join(dirname, filelist[i]));
-					}
-					else if (filelist[i].indexOf(".out") > 0) {
-						this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
-						outfilelist.push(path.join(dirname, filelist[i]));
-					}
+		if (this.mode === 0) {
+			const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
+			const filelist = await fs.readdirAsync(dirname);
+			const outfilelist = [];
+			for (let i in filelist) {
+				//(filelist[i]);
+				if (filelist[i].indexOf(".in") > 0) {
+					this.submit.pushFileStdin(path.join(dirname, filelist[i]));
+				}
+				else if (filelist[i].indexOf(".out") > 0) {
+					this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
+					outfilelist.push(path.join(dirname, filelist[i]));
 				}
 			}
-			else{
-				this.submit.setFileStdin("custominput.in");
-			}
-			this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
-			this.submit.setTimeLimit(this.time_limit*dockerJudger.LanguageBonus(this.language));
-			this.submit.setTimeLimitReserve(this.time_limit_reserve);
-			this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
-			this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
-			if (!this.mode) {
-				this.submit.setCompareFunction(checker.compareDiff);
-			}
-			this.submit.pushInputRawFiles({
-				name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
-				data: this.code
-			});
-			this.result = await this.Sandbox.runner(this.submit);
-			this.emit("finish");
 		}
+		else{
+			this.submit.setFileStdin("custominput.in");
+		}
+		this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
+		this.submit.setTimeLimit(this.time_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setTimeLimitReserve(this.time_limit_reserve);
+		this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
+		if (this.mode === 0) {
+			this.submit.setCompareFunction(checker.compareDiff);
+		}
+		await this.submit.pushInputRawFiles({
+			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
+			data: this.code
+		});
+		this.result = await this.Sandbox.runner(this.submit);
+		this.submit.emit("finish");
 	}
 
 }
