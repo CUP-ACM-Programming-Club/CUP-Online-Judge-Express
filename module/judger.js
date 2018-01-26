@@ -27,7 +27,8 @@ class localJudger {
 			return new Error("Your platform doesn't support right now");
 		}
 		localJudger.startupInit();// Reset result whose solution didn't finish
-		this.startLoopJudge(3000);
+        //this.collectSubmissionFromDatabase();
+        this.startLoopJudge(3000);
 	}
 
 	/**
