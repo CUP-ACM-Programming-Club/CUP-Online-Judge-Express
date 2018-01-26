@@ -76,7 +76,6 @@ class dockerRunner {
 		const judger = new dockerJudger(oj_home);
 		const that = this;
 		judger.on("processing", function (data) {
-			if (!judger.status) judger.status = 0;
 			const submission_id = parseInt(judger.submit_id);
 			const time = parseInt(data.time);
 			const memory = parseInt(data.memory);
@@ -100,15 +99,33 @@ class dockerRunner {
 					state: status
 				});
 			}
-			if (status > judger.status) {
-				query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
-					.then(() => {
-					}).catch(() => {
-					});
-			}
+
+			query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
+				.then((row) => {
+					let affected_row = parseInt(row.affectedRows);
+					if (affected_row === 0) {
+						query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
+							.then(() => {
+							}).catch(() => {
+							});
+					}
+				}).catch(() => {
+				});
+
 			if (compile_message && compile_message.length > 0) {
 				query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message])
-					.then(() => {
+					.then((row) => {
+						let affected_row = parseInt(row.affectedRows);
+						if (affected_row === 0) {
+							query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message])
+								.then((row) => {
+									let affected_row = parseInt(row.affectedRows);
+									if (affected_row === 0) {
+
+									}
+								}).catch(() => {
+								});
+						}
 					}).catch(() => {
 					});
 			}
@@ -196,7 +213,7 @@ class dockerRunner {
 			judger.setMemoryLimit(256);
 			judger.setMemoryLimitReserve(128);
 		}
-		else{
+		else {
 			await judger.setProblemID(problem_id);
 		}
 		judger.setSolutionID(solution_id);
@@ -234,7 +251,7 @@ class dockerRunner {
 					code: code,
 					user_id: user_id,
 					input_text: input_text,
-					test_run:test_run
+					test_run: test_run
 				};
 				if (this.judge_queue.length) {
 					await this.runJudger(submitPack);
