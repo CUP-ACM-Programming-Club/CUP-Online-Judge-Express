@@ -130,73 +130,103 @@ wss.on("connection", function (ws) {
 	});
 });
 
+/*
+(async ()=>{
+    await query("UPDATE solution SET result = 1 WHERE result < 4");
+    const tasks = await query("SELECT * FROM solution WHERE result < 2 LEFT JOIN source ON source.solution_id = solution.solution_id");
+    let queue = [];
+    for(let i in tasks){
+        let task =
+    }
+})();
+*/
 async function runJudger(task) {
-	const judger = docker_judger.pop();
-	const problem_id = Math.abs(parseInt(task.val.id));
-	let contest_id = NaN;
-	if (task.val.cid) {
-		contest_id = Math.abs(parseInt(task.val.cid));
-	}
-	if ((contest_id && contest_id !== parseInt(task.val.cid)) || problem_id !== parseInt(task.val.id)) {
-		console.log("test_run");
-		judger.pushRawFile({
-			name: "custominput.in",
-			data: task.val.input_text
-		});
-		judger.setMode(1);
-	}
-	const solution_id = parseInt(task.submission_id);
-	const language = parseInt(task.val.language);
-	await judger.setProblemID(problem_id);
-	await judger.setSolutionID(solution_id);
-	await judger.setCode(task.val.source);
-	await judger.setLanguage(language);
-	console.log(judger);
-	await judger.run();
+    const judger = docker_judger.pop();
+    const problem_id = Math.abs(parseInt(task.val.id));
+    let contest_id = NaN;
+    const solution_id = parseInt(task.submission_id);
+    const language = parseInt(task.val.language);
+    await judger.setProblemID(problem_id);
+    if (task.val.cid) {
+        contest_id = Math.abs(parseInt(task.val.cid));
+    }
+    if ((contest_id && contest_id !== parseInt(task.val.cid)) || problem_id !== parseInt(task.val.id)) {
+        judger.pushRawFile({
+            name: "custominput.in",
+            data: task.val.input_text
+        });
+        judger.setMode(1);
+        judger.setTimeLimit(5);
+        judger.setTimeLimitReserve(2);
+        judger.setMemoryLimit(256);
+        judger.setMemoryLimitReserve(128);
+    }
+    judger.setSolutionID(solution_id);
+    judger.setCode(task.val.source);
+    await judger.setLanguage(language);
+    await judger.run();
 }
 
 function makeJudger(oj_home) {
-	const judger = new dockerJudger(oj_home);
-	judger.on("processing", function (data) {
-		console.log(data);
-		const submission_id = judger.submit_id;
-		const time = data.time;
-		const memory = data.memory;
-		const pass_point = data.pass_point;
-		let status = parseInt(data.status);
-		if (judger.mode === 1) {
-			status = status === 4 ? 13 : status;
-		}
-		const compile_message = data.compile_msg === "" ? undefined : data.compile_msg;
-		const test_run_result = data.test_run_result === "" ? undefined : data.test_run_result;
-		const sendData = {
-			solution_id: judger.submit_id,
-			time: time,
-			memory: memory,
-			state: status,
-			pass_point: pass_point,
-			compile_info: compile_message,
-			test_run_result: test_run_result
-		};
-		submissions[submission_id].emit("result", sendData);
-		query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id]);
-		if (compile_message && compile_message.length > 0) {
-			query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message]);
-		}
-	});
-	judger.on("finish", function () {
-		docker_judger.push(makeJudger(oj_home));
-		if (judger.user_id) {
-			query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
-			query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
-		}
-		query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
-		query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
-		if (waiting_queue.length > 0) {
-			runJudger(waiting_queue.shift());
-		}
-	});
-	return judger;
+    const judger = new dockerJudger(oj_home);
+    judger.on("processing", function (data) {
+        const submission_id = parseInt(judger.submit_id);
+        const time = parseInt(data.time);
+        const memory = parseInt(data.memory);
+        const pass_point = parseInt(data.pass_point);
+        const compile_message = data.compile_msg || "";
+        const test_run_result = data.test_run_result || undefined;
+        const problem_id = judger.problem_id;
+        let status = parseInt(data.status);
+        console.log(data);
+        if(judger.mode === 1){
+            if(status === 4){
+                status = 13;
+            }
+        }
+        submissions[submission_id].emit("result", {
+            solution_id: submission_id,
+            time: time,
+            memory: memory,
+            pass_point: pass_point,
+            compile_info: compile_message,
+            test_run_result: test_run_result,
+            state: status
+        });
+        query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
+            .then(resolve=>{
+                console.log("update database succeed!");
+                console.log({
+                   time:time,
+                   memory:memory,
+                   problem_id:problem_id,
+                   solution_id:submission_id,
+                    pass_point:pass_point
+                });
+            }).catch(err=>{
+                console.log(err);
+            });
+        if (compile_message && compile_message.length > 0) {
+            query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message])
+                .then(resolve=>{}).catch(err=>{console.log(err)});
+        }
+    });
+    judger.on("finish", function () {
+        docker_judger.push(makeJudger(oj_home));
+        if (judger.user_id) {
+            query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
+            query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
+        }
+        query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+        query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+        if (waiting_queue.length > 0) {
+            runJudger(waiting_queue.shift());
+        }
+    });
+    judger.on("debug",function(data){
+
+    });
+    return judger;
 }
 
 function initDockerJudger(oj_home, oj_judge_num) {
@@ -210,13 +240,12 @@ function initDockerJudger(oj_home, oj_judge_num) {
 let docker_judger = initDockerJudger(judge_config["oj_home"], judge_config["oj_judge_num"]);
 
 function addJudgeTask(task) {
-	if (docker_judger.length) {
-		console.log(task);
-		runJudger(task);
-	}
-	else {
-		waiting_queue.push(task);
-	}
+    if (docker_judger.length) {
+        runJudger(task);
+    }
+    else {
+        waiting_queue.push(task);
+    }
 }
 
 
@@ -491,52 +520,52 @@ io.on("connection", async function (socket) {
          * csrf: '3FEY3VDt7hTnsgvDtKEac3kbs5Ek5L3N' },
          * user_id: '2016011253',
          * nick: 'Ryan Lee(李昊元)' }
-		 *
-		 */
-		let data = Object.assign({}, _data);
-		data["user_id"] = socket.user_id || "";
-		data["nick"] = socket.user_nick;
-		const submission_id = parseInt(data["submission_id"]);
-		//localJudge.addTask(submission_id);
-		addJudgeTask(data);
-		/*
-		runJudger(data);
-		 */
-		submissions[submission_id] = socket;
-		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
-			const id_val = await cache_query("SELECT problem_id FROM " +
-				"contest_problem WHERE contest_id=? and num=?", [Math.abs(data["val"]["cid"]), data["val"]["pid"]]);
-			if (id_val.length && id_val[0].problem_id) {
-				data.val.id = id_val[0].problem_id;
-			}
-		}
-		if ((data["val"] && data["val"]["cid"])) {
-			const contest_id = Math.abs(parseInt(data["val"]["cid"])) || 0;
-			if (contest_id >= 1000) {
-				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
-				if (!submissionType.contest[contest_id]) {
-					submissionType.contest[contest_id] = [];
-				}
-				submissionType.contest[contest_id].push(parseInt(data["submission_id"]));
-				submissionOrigin[submission_id] = contest_id;
-			}
-		}
-		else {
-			sendMessage(pagePush.status, "submit", data, 1);
-			submissionType.normal.push(parseInt(data["submission_id"]));
-		}
-		sendMessage(admin_user, "judger", localJudge.getStatus());
-	});
-	/**
-	 * 全局推送功能
-	 */
-	socket.on("msg", function (data) {
-		socket.broadcast.emit("msg", data);
-		socket.emit("msg", data);
-	});
-	/**
-	 * 聊天功能，向目标用户发送聊天信息
-	 */
+         *
+         */
+        let data = Object.assign({}, _data);
+        data["user_id"] = socket.user_id || "";
+        data["nick"] = socket.user_nick;
+        const submission_id = parseInt(data["submission_id"]);
+        localJudge.addTask(submission_id);
+
+
+
+        submissions[submission_id] = socket;
+        if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
+            const id_val = await cache_query("SELECT problem_id FROM " +
+                "contest_problem WHERE contest_id=? and num=?", [Math.abs(data["val"]["cid"]), data["val"]["pid"]]);
+            if (id_val.length && id_val[0].problem_id) {
+                data.val.id = id_val[0].problem_id;
+            }
+        }
+        if ((data["val"] && data["val"]["cid"])) {
+            const contest_id = Math.abs(parseInt(data["val"]["cid"])) || 0;
+            if (contest_id >= 1000) {
+                sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
+                if (!submissionType.contest[contest_id]) {
+                    submissionType.contest[contest_id] = [];
+                }
+                submissionType.contest[contest_id].push(parseInt(data["submission_id"]));
+                submissionOrigin[submission_id] = contest_id;
+            }
+        }
+        else {
+            sendMessage(pagePush.status, "submit", data, 1);
+            submissionType.normal.push(parseInt(data["submission_id"]));
+        }
+        //addJudgeTask(data);
+        sendMessage(admin_user, "judger", localJudge.getStatus());
+    });
+    /**
+     * 全局推送功能
+     */
+    socket.on("msg", function (data) {
+        socket.broadcast.emit("msg", data);
+        socket.emit("msg", data);
+    });
+    /**
+     * 聊天功能，向目标用户发送聊天信息
+     */
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data["to"];

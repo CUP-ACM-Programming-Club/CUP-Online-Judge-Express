@@ -76,9 +76,18 @@ class dockerJudger extends eventEmitter {
 	static parseLanguage(language) {
 		language = parseInt(language);
 		const languageToName =
-			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99"];
+			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99","kotlin"];
 		if (language > -1 && language < languageToName.length) {
 			return languageToName[language];
+		}
+	}
+
+	static LanguageBonus(language){
+		if(language<3||language === 13||language===14||language>18){
+			return 1;
+		}
+		else{
+			return 2;
 		}
 	}
 
@@ -234,11 +243,10 @@ class dockerJudger extends eventEmitter {
 			else{
 				this.submit.setFileStdin("custominput.in");
 			}
-			console.log(this.submit.file_stdin);
 			this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
-			this.submit.setTimeLimit(this.time_limit);
+			this.submit.setTimeLimit(this.time_limit*dockerJudger.LanguageBonus(this.language));
 			this.submit.setTimeLimitReserve(this.time_limit_reserve);
-			this.submit.setMemoryLimit(this.memory_limit);
+			this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
 			this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
 			if (!this.mode) {
 				this.submit.setCompareFunction(checker.compareDiff);
@@ -246,10 +254,6 @@ class dockerJudger extends eventEmitter {
 			this.submit.pushInputRawFiles({
 				name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
 				data: this.code
-			});
-			console.log(this.submit);
-			this.submit.on("debug",function (data) {
-				console.log(data);
 			});
 			this.result = await this.Sandbox.runner(this.submit);
 			this.emit("finish");
