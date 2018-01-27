@@ -75,8 +75,8 @@ class dockerRunner {
 	makeJudger(oj_home) {
 		const judger = new dockerJudger(oj_home);
 		const that = this;
-		judger.on("processing", function (data) {
-			const submission_id = parseInt(judger.submit_id);
+		judger.on("processing",async function (data) {
+			const solution_id = parseInt(judger.submit_id);
 			const time = parseInt(data.time);
 			const memory = parseInt(data.memory);
 			const pass_point = parseInt(data.pass_point);
@@ -88,9 +88,9 @@ class dockerRunner {
 					status = 13;
 				}
 			}
-			if (global.submissions[submission_id]) {
-				global.submissions[submission_id].emit("result", {
-					solution_id: submission_id,
+			if (global.submissions[solution_id]) {
+				global.submissions[solution_id].emit("result", {
+					solution_id: solution_id,
 					time: time,
 					memory: memory,
 					pass_point: pass_point,
@@ -99,12 +99,13 @@ class dockerRunner {
 					state: status
 				});
 			}
-
-			query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
+			const select_version = await query("SELECT version FROM solution WHERE solution_id = ?",[solution_id]);
+			const version = select_version[0].version;
+			query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=? AND version = ", [time, memory, pass_point, status, solution_id,version])
 				.then((row) => {
 					let affected_row = parseInt(row.affectedRows);
 					if (affected_row === 0) {
-						query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, submission_id])
+						query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, solution_id])
 							.then(() => {
 							}).catch(() => {
 							});
@@ -113,11 +114,11 @@ class dockerRunner {
 				});
 
 			if (compile_message && compile_message.length > 0) {
-				query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message])
+				query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message])
 					.then((row) => {
 						let affected_row = parseInt(row.affectedRows);
 						if (affected_row === 0) {
-							query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [submission_id, compile_message])
+							query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message])
 								.then((row) => {
 									let affected_row = parseInt(row.affectedRows);
 									if (affected_row === 0) {
