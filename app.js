@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const app = express();
 const index = require("./routes/index");
+const homepage = require("./routes/homepage");
 const problem = require("./routes/problem");
 const user = require("./routes/user");
 const test = require("./routes/test");
@@ -15,21 +16,26 @@ const login = require("./routes/login");
 const logout = require("./routes/logout");
 const faq = require("./routes/faq");
 const auth = require("./middleware/auth");
+const performance = require("./middleware/performance");
 const helmet = require("helmet");
 const log4js = require("./module/logger");
 const log = log4js.logger("cheese", "info");
 const sessionMiddleware = require("./module/session").sessionMiddleware;
+global.Application = app;
+const oneDay = 86400000;
+app.use(performance);
 app.use(log4js.connectLogger(log, {level: "info"}));
 
-const oneDay = 86400000;
 app.set("views", path.join(__dirname, "views"));
-app.set("view engine", "jade");
+app.set("view engine", "pug");
 app.set("view cache", true);
 app.use("/static", express.static(__dirname + "/static", {
 	maxAge: oneDay * 30
 }));
 app.use(sessionMiddleware);
+
 app.use(compression());
+
 const expiryDate = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
 app.use(session({
 	name: "session",
@@ -37,7 +43,8 @@ app.use(session({
 	cookie: {
 		httpOnly: true,
 		expires: expiryDate
-	}})
+	}
+})
 );
 app.use(logger("dev"));
 app.use(helmet());
@@ -45,6 +52,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extend: false}));
 app.use(cookieParser());
 app.use("/", index);
+app.use("/homepage", homepage);
 app.use("/problem", auth, problem);
 app.use("/user", auth, user);
 app.use("/test", test);
@@ -66,5 +74,6 @@ app.use((err, req, res) => {
 	};
 	res.json(obj);
 });
+
 
 module.exports = app;

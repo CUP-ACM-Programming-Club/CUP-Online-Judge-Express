@@ -1,0 +1,118 @@
+// jQuery文件。务必在bootstrap.min.js 之前引入
+script(src='static/js/jquery.min.js')
+// 最新的 Bootstrap 核心 JavaScript 文件
+script(src='static/js/semantic.js')
+script(src='static/js/vue.js')
+script(src='static/js/cookie.js')
+script(src='static/js/browser.min.js')
+script(src='static/js/Chart.bundle.min.js')
+script(src='/socket.io/socket.io.js')
+script(src='static/js/timeago.js')
+script(src='static/js/clipboard.min.js')
+script(src='static/js/base64.js')
+script.
+	if ($.browser.Trident) {
+		location.href = "notie.php";
+	}
+	$(document)
+		.ready(function () {
+			if ($('.ui.accordion').html())
+				$('.ui.accordion')
+					.accordion({
+						'exclusive': false
+					})
+				;
+			if ($('.ui.menu .ui.dropdown').html())
+				$('.ui.menu .ui.dropdown').dropdown({
+					on: 'hover'
+				});
+			if ($('.ui.search.dropdown').html()) {
+				$('.ui.search.dropdown').dropdown({
+					on: 'hover'
+				});
+			}
+			if ($('.ui.dropdown.selection'))
+				$('.ui.dropdown.selection').dropdown({
+					on: 'hover'
+				});
+			// fix menu when passed
+			if ($('.fixed.menu').html())
+				$('.masthead')
+					.visibility({
+						once: false,
+						onBottomPassed: function () {
+							// $('.following.bar').addClass('light fixed');
+							$('.fixed.menu').transition('fade in');
+							//('.network.menu').addClass('secondary')
+							//$('.network.menu').removeClass('inverted');
+						},
+						onBottomPassedReverse: function () {
+							// $('.following.bar').removeClass('light fixed')
+							$('.fixed.menu').transition('fade out');
+							// $('.network.menu').removeClass('secondary');
+							// $('.network.menu').addClass('inverted');
+						}
+					})
+				;
+			// create sidebar and attach to menu open
+			if ($('.ui.sidebar.mobile').html())
+				$('.ui.sidebar.mobile')
+					.sidebar('attach events', '.toc.item')
+				;
+
+			function lightin() {
+				$('.following.bar').addClass('light fixed');
+				$('.fixed.menu').transition('fade in');
+				if(homepage)
+					$('.network.menu').removeClass('inverted');
+			}
+
+			function lightout() {
+				$('.following.bar').removeClass('light fixed')
+				$('.fixed.menu').transition('fade out');
+				if(homepage)
+					$('.network.menu').addClass('inverted');
+			}
+
+			$('body')
+				.visibility({
+					once: false,
+					offset: -10,
+					observeChanges: false,
+					continuous: false,
+					refreshOnLoad: true,
+					refreshOnResize: true,
+					onTopPassedReverse: lightout,
+					onTopPassed: lightin
+				});
+			$('.message .close')
+				.on('click', function () {
+					$(this).closest('.message').transition('fade');
+				});
+		});
+script(type = "text/x-mathjax-config").
+	MathJax.Hub.Config({
+		tex2jax: {
+			inlineMath: [
+				['$', '$'],
+				['\\\(', '\\)']
+			]
+		},
+		TeX: {
+			equationNumbers: {
+				autoNumber: ["AMS"],
+				useLabelIds: true
+			}
+		},
+		"HTML-CSS": {
+			linebreaks: {
+				automatic: true
+			}
+		},
+		SVG: {
+			linebreaks: {
+				automatic: true
+			}
+		}
+	});
+

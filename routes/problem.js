@@ -36,7 +36,7 @@ router.get("/module/search/:val", function (req, res) {
 	const val = "%" + req.params.val + "%";
 	const _res = cache.get("/module/search/" + req.session.isadmin + val);
 	if (_res === undefined) {
-		if (val.length < 5) {
+		if (val.length < 3) {
 			const obj = {
 				msg: "ERROR",
 				statement: "Value too short!"
@@ -45,7 +45,7 @@ router.get("/module/search/:val", function (req, res) {
 			return;
 		}
 		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ?", [val, val, val, val], function (rows) {
+			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 			}

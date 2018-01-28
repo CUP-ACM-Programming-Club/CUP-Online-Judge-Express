@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "1.8.0",
+  "version": "2.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
@@ -16,8 +16,7 @@
     "express": "^4.16.2",
     "express-session": "^1.15.6",
     "fs": "0.0.2",
-    "http": "~0.0.0",
-    "jade": "~1.11.0",
+    "pug": "^2.0.0-rc.4",
     "meteor-random": "0.0.3",
     "morgan": "~1.9.0",
     "mysql2": "~1.5.1",
@@ -35,7 +34,8 @@
     "cookie": "~0.3.1",
     "redis": "~2.8.0",
     "bluebird": "~3.5.1",
-    "ws": "~3.3.3"
+    "ws": "~3.3.3",
+    "connect-redis": "^3.3.3"
   },
   "main": "./bin/main.js",
   "scripts": {
@@ -43,5 +43,8 @@
     "start": "pm2 start pm2.json",
     "stop": "pm2 stop pm2.json",
     "restart": "pm2 restart pm2.json"
+  },
+  "devDependencies": {
+    "webpack": "^3.10.0"
   }
 }

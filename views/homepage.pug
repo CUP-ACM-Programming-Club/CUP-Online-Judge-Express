@@ -1,0 +1,147 @@
+doctype html
+html
+    head
+        title=title
+        meta(charset="utf-8")
+        meta(http-equiv="X-UA-Compatible" content="IE=edge,chrome=1")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0")
+        script.
+            var homepage = true;
+        include js.pug
+        include css.pug
+    body
+        div
+            #background.ui.inverted.vertical.masthead.center.aligned.segment.zoomed
+                .ui.container
+                    .ui.large.secondary.inverted.pointing.menu
+                .ui.text.container.transition
+                    h1.ui.inverted.header=OJ_NAME
+                    h2
+                        | 由
+                        a.club(href="https://github.com/CUP-ACM-Programming-Club" target="_blank") ACM程序设计俱乐部
+                        span.maintainer 维护开发
+                    h2
+                        a(href="cprogrammingcontest.php" target="_blank") 程序设计竞赛报名
+                        | (现已开始)
+                    h4.maintain
+                br
+                .ui.text.shape
+                    .sides
+                        .ui.header.side.text.inverted.active.typed-element
+                br
+                br
+                // <div class="ui huge primary button" onclick="location.href='<?php if (isset($_SESSION['user_id'])) echo "problemset.php"; else echo "newloginpage.php"; ?>'"><?php if (!isset($_SESSION['user_id'])) echo "Login"; else echo "Get Started"; ?><i class="right arrow icon"></i></div>
+        .ui.vertical.stripe.segment
+            .ui.middle.aligned.stackable.grid.container
+                .row
+                    .eight.wide.column
+                        h3.ui.header
+                            | 推荐使用
+                            a(href="https://www.jetbrains.com" target="_blank") JetBrains系列IDE套件
+                            | 完成编程
+                        p
+                            | ACM/ICPC World Final 指定IDE:
+                            b CLion,PyCharm,Intellij IDEA
+                            br
+                            br
+                            | 基于CMake与GNU Compile
+                            |                     Collection的CLion,业界推荐的Intellij Idea,简单容易上手的PyCharm，这些跨平台IDE将会减少许多做题过程中不必要的麻烦，更加集中精力打出AK
+                        h3.ui.header
+                            | 推荐使用高效的
+                            a.chrome(target="_blank" href="software/63.0.3239.84_chrome_installer.exe") Chrome浏览器
+                            | 使用评测系统
+                        p 一个优秀的浏览器可以更加完美高效的绘制页面，提升使用的舒适度。基于V8引擎的Chrome浏览器能够让每一个题目的启动和提交都能行云流水。
+                    .six.wide.right.floated.column
+                        img.ui.large.borderless.rounded.image(src="static/img/jetbrains.png")
+        //
+          <div class="ui vertical stripe quote segment">
+          <div class="ui equal width stackable internally celled grid">
+          <div class="center aligned row">
+          <div class="column">
+          <h3>"What a Company"</h3>
+          <p>That is what they all say about us</p>
+          </div>
+          <div class="column">
+          <h3>"I shouldn't have gone with their competitor."</h3>
+          <p>
+          <img src="assets/images/avatar/nan.jpg" class="ui avatar image"> <b>Nan</b> Chief Fun Officer Acme Toys
+          </p>
+          </div>
+          </div>
+          </div>
+          </div>
+        .ui.vertical.stripe.segment
+            .ui.text.container
+                h3.ui.header ACM/ICPC
+                p
+                    | ACM国际大学生程序设计竞赛（英语：ACM International Collegiate Programming Contest,
+                    | ICPC）是由美国电脑协会（ACM）主办的，一项旨在展示大学生创新能力、团队精神和在压力下编写程序、分析和解决问题能力的年度竞赛。经过30多年的发展，ACM国际大学生程序设计竞赛已经发展成为最具影响力的大学生计算机竞赛。（Wikipedia）
+                a.ui.large.button(href="icpc.php" target="_blank") More Information
+                h4.ui.horizontal.header.divider
+                    a(href="#") Developer
+                h3.ui.header 平台开发
+                h4.ui.content 技术栈:Linux + C/C++ + MySQL + PHP + Node.js + ExpressJS + Apache
+                h4.ui.content Vue.js/Backbone.js(Developing)
+                a.ui.large.disabled.button(href="https://coding.net/u/RyanLee/p/CUPOJ" target="_blank") 部分代码暂未开源
+        include bottom.pug
+        script.
+            function getRandomIntInclusive(min, max) {
+                min = Math.ceil(min);
+                max = Math.floor(max);
+                return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive
+            }
+            $(document).ready(function () {
+                window.picid = 'bg' + getRandomIntInclusive(14, 18);
+                $("#background")
+                    .addClass(window.picid)
+                    //   .addClass(picid)
+                    .removeClass('zoomed')
+                ;
+                /*
+                $(".masthead.segment").ready(
+                function () {
+                $(".pointing.menu").transition({
+                animation:'fade up',
+                duration:'1s',
+                });
+                $(".text.container").transition({
+                animation:'fade up',
+                duration:'1s'
+                });
+                }
+                );
+                */
+                //  setInterval(function(){
+                //$('.shape').shape('vertical flip right');
+                //    },5000);
+                $('.image').visibility({
+                    type: 'image',
+                    transition: 'vertical flip in',
+                    duration: 500
+                });
+                /*
+                window.backpic = setInterval(function () {
+                $("#background").addClass('zoomed');
+                setTimeout(function () {
+                $("#background")
+                .removeClass(window.picid)
+                .addClass((window.picid = 'bg' + getRandomIntInclusive(14, 18)))
+                .removeClass('zoomed')
+                ;
+                }, 1900);
+                }
+                , 15000)*/
+            });
+            $('.club').attr("data-title", "点击访问GitHub")
+                .popup({
+                    position: 'top center',
+                    on: 'hover'
+                })
+            ;
+            $('.maintainer').attr("data-html", "<div class='header'>Ryan Lee</div><div class='content'>Maintainer & Developer</div>")
+                .popup({
+                    position: 'top center',
+                    on: 'hover'
+                });
+        script(src="static/js/typed.min.js")
+        script(src="static/js/typed.js?v=1.0")
