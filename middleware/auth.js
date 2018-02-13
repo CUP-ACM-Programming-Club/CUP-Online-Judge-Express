@@ -15,12 +15,10 @@ module.exports = async (req, res, next) => {
 				// if (token === original_token) {//check token
 				req.session.user_id = user_id;
 				req.session.auth = true;
-				query("select count(1) as count from privilege where user_id=? and rightstr='administrator'",
-					[user_id])
-					.then((val) => {
-						if (val.length > 0 && val[0].count)
-							req.session.isadmin = parseInt(val[0].count) > 0;
-					});
+				let val = await query("select count(1) as count from privilege where user_id=? and rightstr='administrator'",
+					[user_id]);
+				if (val.length > 0 && val[0].count)
+					req.session.isadmin = parseInt(val[0].count) > 0;
 				//for session admin privilege
 				return next();
 			}
