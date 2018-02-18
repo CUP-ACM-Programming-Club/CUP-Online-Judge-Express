@@ -121,6 +121,45 @@ router.get("/:source/:id", function (req, res) {
 	}
 });
 
+router.post("/:source/:id",function(req,res){
+	const problem_id = parseInt(req.params.id);
+	if(req.session.isadmin){
+		let json;
+		try{
+			json = req.body.json;
+			console.log(json);
+			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
+			sample_input = ?,sample_output = ?,hint = ? where problem_id = ?`,
+				[json.title,json.time,json.memory,json.description,json.input,
+					json.output,json.sampleinput,json.sampleoutput,json.hint,
+				problem_id])
+				.then(row=>{
+					console.log(row);
+				})
+				.catch(err=>{
+					logger.fatal(err);
+					console.log(err);
+				});
+			send_json(res,{
+				status:"OK"
+			})
+		}
+		catch(e){
+			logger.fatal(e);
+			send_json(res,{
+				status:"error",
+				statement:"parse error"
+			});
+		}
+	}
+	else{
+		send_json(res,{
+			status:"error",
+			statement:"illegal request"
+		});
+	}
+});
+
 router.get("/:source/:id/:sid", function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
