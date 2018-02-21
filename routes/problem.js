@@ -13,10 +13,10 @@ const send_json = (res, val) => {
 	}
 };
 
-const problem_callback = (rows, res, source, id) => {
+const problem_callback = (rows, res, source, id, sql) => {
 	if (rows.length !== 0) {
 		send_json(res, rows[0]);
-		cache.set("source/id/" + source + id, rows[0], 60 * 60);
+		cache.set("source/id/" + source + id + sql, rows[0], 60 * 60);
 	}
 	else {
 		const obj = {
@@ -94,17 +94,44 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = (id, source, res) => {
+const make_cache = (id, source, res, req) => {
 	logger.info(id);
-	if (source.length === 0) {
-		query("SELECT * FROM problem WHERE problem_id=?", [id], (rows) => {
-			problem_callback(rows, res, source, id);
-		});
+	let sql;
+	if (req.session.isadmin) {
+		if (source.length === 0) {
+			sql = "SELECT * FROM problem WHERE problem_id=?";
+			query(sql, [id], (rows) => {
+				problem_callback(rows, res, source, id, sql);
+			});
+		}
+		else {
+			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
+			query(sql, [id, source], (rows) => {
+				problem_callback(rows, res, source, id, sql);
+			});
+		}
 	}
 	else {
-		query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source], (rows) => {
-			problem_callback(rows, res, source, id);
-		});
+		if (source.length === 0) {
+			sql = `SELECT * FROM problem WHERE problem_id = ? and defunct = 'N'
+			 and  problem_id NOT IN (SELECT problem_id FROM contest_problem WHERE 
+			 contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW() 
+			 OR private = 1`;
+			query(sql, [id])
+				.then(rows => {
+					problem_callback(rows, res, source, id, sql);
+				});
+		}
+		else {
+			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? and defunct = 'N' 
+			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
+			where contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
+			OR private = 1`;
+			query(sql, [id, source])
+				.then(rows => {
+					problem_callback(rows, res, source, id, sql);
+				});
+		}
 	}
 };
 
@@ -113,49 +140,49 @@ router.get("/:source/:id", function (req, res) {
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
-		make_cache(id, source, res);
+		make_cache(id, source, res, req);
 	}
 	else {
 		send_json(res, _res);
-		make_cache(id, source, null);
+		make_cache(id, source, null, req);
 	}
 });
 
-router.post("/:source/:id",function(req,res){
+router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
-	if(req.session.isadmin){
+	if (req.session.isadmin) {
 		let json;
-		try{
+		try {
 			json = req.body.json;
 			console.log(json);
 			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,hint = ? where problem_id = ?`,
-				[json.title,json.time,json.memory,json.description,json.input,
-					json.output,json.sampleinput,json.sampleoutput,json.hint,
-				problem_id])
-				.then(row=>{
+				[json.title, json.time, json.memory, json.description, json.input,
+					json.output, json.sampleinput, json.sampleoutput, json.hint,
+					problem_id])
+				.then(row => {
 					console.log(row);
 				})
-				.catch(err=>{
+				.catch(err => {
 					logger.fatal(err);
 					console.log(err);
 				});
-			send_json(res,{
-				status:"OK"
-			})
+			send_json(res, {
+				status: "OK"
+			});
 		}
-		catch(e){
+		catch (e) {
 			logger.fatal(e);
-			send_json(res,{
-				status:"error",
-				statement:"parse error"
+			send_json(res, {
+				status: "error",
+				statement: "parse error"
 			});
 		}
 	}
-	else{
-		send_json(res,{
-			status:"error",
-			statement:"illegal request"
+	else {
+		send_json(res, {
+			status: "error",
+			statement: "illegal request"
 		});
 	}
 });
