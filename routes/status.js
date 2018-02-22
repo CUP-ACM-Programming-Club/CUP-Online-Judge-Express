@@ -1,7 +1,40 @@
 const express = require("express");
 const router = express.Router();
-const query = require("../module/mysql_query");
+const query = require("../module/mysql_cache");
 const escape = require("escape-html");
+
+router.get("/", async function (req, res, next) {
+	let _res;
+	if (req.session.isadmin) {
+		console.log('isadmin');
+		_res = await query(`SELECT * FROM solution LEFT JOIN sim ON sim.s_id = solution.solution_id 
+		 ORDER BY solution.solution_id DESC LIMIT 20`);
+	}
+	else {
+		_res = await query(`select * from (SELECT * FROM solution where problem_id>0 and contest_id is null) sol 
+		LEFT JOIN sim ON sim.s_id = sol.solution_id 
+		ORDER BY sol.solution_id DESC LIMIT 20`);
+	}
+	let result = [];
+	for (const val of _res) {
+		result.push({
+			solution_id: val.solution_id,
+			user_id: val.user_id,
+			nick: (await query(`SELECT nick FROM users WHERE user_id = ?`, [val.user_id]))[0].nick,
+			problem_id: val.problem_id,
+			result: val.result,
+			contest_id: val.contest_id,
+			memory: val.memory,
+			time: val.time,
+			language: val.language,
+			length: val.code_length,
+			in_date: val.in_date,
+			judger: val.judger
+		});
+	}
+	res.json(result);
+});
+
 router.get("/:sid/:tr", function (req, res, next) {
 	const sid = parseInt(req.params.sid);
 	if (isNaN(sid)) {
