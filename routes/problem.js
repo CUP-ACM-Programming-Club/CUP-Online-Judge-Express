@@ -6,11 +6,16 @@ const router = express.Router();
 const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const query = require("../module/mysql_query");
+const cache_query = require("../module/mysql_cache");
 const send_json = (res, val) => {
 	if (res !== null) {
 		res.header("Content-Type", "application/json");
 		res.json(val);
 	}
+};
+
+const check = (req, cid) => {
+	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid];
 };
 
 const problem_callback = (rows, res, source, id, sql) => {
@@ -145,6 +150,26 @@ router.get("/:source/:id", function (req, res) {
 	else {
 		send_json(res, _res);
 		make_cache(id, source, null, req);
+	}
+});
+
+router.get("/:source/", async function (req, res) {
+	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
+	let cid = req.query.cid === undefined ? -1 : req.query.cid;
+	let pid = req.query.pid === undefined ? -1 : req.query.pid;
+	if (~cid && ~pid && check(req, cid)) {
+		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
+			"num = ?", [cid, pid]);
+		if (result.length > 0) {
+			let problem_id = result[0].problem_id;
+			make_cache(problem_id, source, res, req);
+		}
+		else {
+			res.json({
+				status: "error",
+				statement: "invalid parameter id"
+			});
+		}
 	}
 });
 
