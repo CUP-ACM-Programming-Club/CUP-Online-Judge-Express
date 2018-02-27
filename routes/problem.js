@@ -157,6 +157,7 @@ router.get("/:source/", async function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	let cid = req.query.cid === undefined ? -1 : req.query.cid;
 	let pid = req.query.pid === undefined ? -1 : req.query.pid;
+	let id = req.query.id === undefined ? -1:req.query.id;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
 			"num = ?", [cid, pid]);
@@ -170,6 +171,15 @@ router.get("/:source/", async function (req, res) {
 				statement: "invalid parameter id"
 			});
 		}
+	}
+	else if(~id){
+		make_cache(id,source,res,req);
+	}
+	else{
+		res.json({
+			status: "error",
+			statement: "invalid parameter id"
+		});
 	}
 });
 
