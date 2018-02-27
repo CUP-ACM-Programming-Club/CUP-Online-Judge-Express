@@ -179,18 +179,15 @@ router.post("/:source/:id", function (req, res) {
 		let json;
 		try {
 			json = req.body.json;
-			console.log(json);
 			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,hint = ? where problem_id = ?`,
-				[json.title, json.time, json.memory, json.description, json.input,
-					json.output, json.sampleinput, json.sampleoutput, json.hint,
-					problem_id])
-				.then(row => {
-					console.log(row);
+			[json.title, json.time, json.memory, json.description, json.input,
+				json.output, json.sampleinput, json.sampleoutput, json.hint,
+				problem_id])
+				.then(() => {
 				})
 				.catch(err => {
 					logger.fatal(err);
-					console.log(err);
 				});
 			send_json(res, {
 				status: "OK"
