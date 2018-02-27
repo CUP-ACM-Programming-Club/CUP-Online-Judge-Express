@@ -18,11 +18,20 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 		}
 	}
 	sql_arr.push(limit);
+	let _end = false;
 	if (req.session.isadmin) {
 		_res = await cache_query(`select * from (SELECT * FROM solution where 1=1 
 		 ${where_sql} ) sol
 		 LEFT JOIN sim ON sim.s_id = sol.solution_id 
 		 ORDER BY sol.solution_id DESC LIMIT ? , 20`,sql_arr);
+	}
+	else if(request_query.contest_id){
+		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?",[request_query.contest_id]);
+		_end = _end[0].cnt;
+		_res = await cache_query(`select * from (SELECT * FROM solution where problem_id>0 
+		${where_sql} ) sol 
+		LEFT JOIN sim ON sim.s_id = sol.solution_id 
+		ORDER BY sol.solution_id DESC LIMIT ?, 20`,sql_arr);
 	}
 	else {
 		_res = await cache_query(`select * from (SELECT * FROM solution where problem_id>0 and contest_id is null 
@@ -32,20 +41,47 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 	}
 	let result = [];
 	for (const val of _res) {
-		result.push({
-			solution_id: val.solution_id,
-			user_id: val.user_id,
-			nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick,
-			problem_id: val.problem_id,
-			result: val.result,
-			contest_id: val.contest_id,
-			memory: val.memory,
-			time: val.time,
-			language: val.language,
-			length: val.code_length,
-			in_date: val.in_date,
-			judger: val.judger
-		});
+		if((request_query.contest_id && req.session.isadmin)||!request_query.contest_id||_end) {
+			result.push({
+				solution_id: val.solution_id,
+				user_id: val.user_id,
+				nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick.trim(),
+				problem_id: val.problem_id,
+				result: val.result,
+				contest_id: val.contest_id,
+				memory: val.memory,
+				time: val.time,
+				language: val.language,
+				length: val.code_length,
+				in_date: val.in_date,
+				judger: val.judger
+			});
+		}
+		else{
+			const owner = req.user_id === val.user_id;
+			const check_owner = (data)=>{
+				if(owner){
+					return data;
+				}
+				else{
+					return "----";
+				}
+			};
+			result.push({
+				solution_id: val.solution_id,
+				user_id: val.user_id,
+				nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick.trim(),
+				problem_id: val.problem_id,
+				result: val.result,
+				contest_id: val.contest_id,
+				memory: check_owner(val.memory),
+				time: check_owner(val.time),
+				language: val.language,
+				length: check_owner(val.code_length),
+				in_date: val.in_date,
+				judger: val.judger
+			});
+		}
 	}
 	res.json({
 		result:result,
@@ -76,7 +112,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`,
 					[request_query.contest_id, request_query.contest_id]);
-					res.json(result);
+					res.json({
+						result:result,
+						label:["year","month"]
+					});
 				}
 				else if (diff_time.months * 30 + diff_time.days > 12) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.cnt as submit,accept.cnt as accepted FROM
@@ -91,7 +130,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
 												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year`,
 					[request_query.contest_id, request_query.contest_id]);
-					res.json(result);
+					res.json({
+						result:result,
+						label:["month","day"]
+					});
 				}
 				else if (diff_time.days * 24 + diff_time.hours > 12) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted FROM
@@ -106,7 +148,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) accept
 												ON sub.day = accept.day AND sub.hour = accept.hour AND sub.year = accept.year AND sub.month = accept.month`,
 					[request_query.contest_id, request_query.contest_id]);
-					res.json(result);
+					res.json({
+						result:result,
+						label:["day","hour"]
+					});
 				}
 				else if (diff_time.hours * 60 + diff_time.minutes > 12) {
 					const result = await cache_query(`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted FROM
@@ -121,7 +166,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY HOUR(in_date),MINUTE(in_date)) accept
 												ON sub.hour = accept.hour AND sub.minute = accept.minute`,
 					[request_query.contest_id, request_query.contest_id]);
-					res.json(result);
+					res.json({
+						result:result,
+						label:["hour","minute"]
+					});
 				}
 				else {
 					const result = await cache_query(`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted FROM
@@ -136,7 +184,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY MINUTE(in_date),SECOND(in_date)) accept
 												ON sub.minute = accept.minute AND sub.second = accept.second`,
 					[request_query.contest_id, request_query.contest_id]);
-					res.json(result);
+					res.json({
+						result:result,
+						label:["minute","second"]
+					});
 				}
 			}
 		}
@@ -151,7 +202,10 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`);
-			res.json(result);
+			res.json({
+				result:result,
+				label:["year","month"]
+			});
 		}
 	}
 	catch(e){
@@ -177,12 +231,12 @@ router.get("/:problem_id/:user_id/:language/:result/:limit",async function(req,r
 	},limit);
 });
 
-router.get("/:problen_id/:user_id/:language/:result/:limit/:contest_id",async function(req,res,next){
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id",async function(req,res,next){
 	const problem_id = req.params.problem_id === "null"?"":req.params.problem_id.toUpperCase().charCodeAt(0)-"A".charCodeAt(0);
 	const user_id = req.params.user_id === "null"?"":req.params.user_id;
 	const language = req.params.language === "null"?"":parseInt(req.params.language);
 	const result = req.params.result === "null"?"":parseInt(req.params.result);
-	const contest_id = req.params.result === "null"?"":parseInt(req.params.contest_id);
+	const contest_id = req.params.contest_id === "null"?"":parseInt(req.params.contest_id);
 	const limit = req.params.limit === "null"? 0:parseInt(req.params.limit);
 	await get_status(req,res,next,{
 		num:problem_id,
