@@ -82,11 +82,15 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 	}
 	let result = [];
 	for (const val of _res) {
+		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
+		const nick = _user_info[0].nick.trim();
+		const avatar = Boolean(_user_info[0].avatar);
 		if((request_query.contest_id && req.session.isadmin)||!request_query.contest_id||_end) {
 			result.push({
 				solution_id: val.solution_id,
 				user_id: val.user_id,
-				nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick.trim(),
+				nick: nick,
+				avatar:avatar,
 				problem_id: val.problem_id,
 				contest_id:val.contest_id,
 				num:val.num,
@@ -113,7 +117,8 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 			result.push({
 				solution_id: val.solution_id,
 				user_id: val.user_id,
-				nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick.trim(),
+				nick: nick,
+				avatar:avatar,
 				problem_id: val.problem_id,
 				result: val.result,
 				contest_id: val.contest_id,
