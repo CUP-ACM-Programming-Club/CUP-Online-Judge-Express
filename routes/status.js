@@ -141,20 +141,28 @@ async function getGraphData(req,res,request_query = {}){
 			if (result.length) {
 				const start_time = new Date(result[0].start_time);
 				const end_time = new Date(result[0].end_time);
-				let diff_time = timediff(start_time,end_time);
+				let diff_time = timediff(start_time,new Date(Math.min(new Date(),end_time)));
 				if (diff_time.years * 12 + diff_time.months > 10) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
 												FROM solution
+												WHERE contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
+												FROM vjudge_solution
 												WHERE contest_id = ?
 												GROUP BY YEAR(in_date),MONTH(in_date)) sub
 												LEFT JOIN
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
+												FROM vjudge_solution 
+												WHERE result = 4 AND contest_id = ?
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["year","month"]
@@ -165,14 +173,22 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM solution
 												WHERE contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
+												FROM vjudge_solution
+												WHERE contest_id = ?
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) sub
 												LEFT JOIN
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
+												FROM vjudge_solution 
+												WHERE result = 4 AND contest_id = ?
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
 												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year`,
-					[request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["month","day"]
@@ -183,14 +199,23 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM solution
 												WHERE contest_id = ?
+												UNION ALL
+												SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted FROM
+  												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
+												FROM vjudge_solution
+												WHERE contest_id = ?
 												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) sub
 												LEFT JOIN
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
+												FROM vjudge_solution 
+												WHERE result = 4 AND contest_id = ?
 												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) accept
 												ON sub.day = accept.day AND sub.hour = accept.hour AND sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["day","hour"]
@@ -201,14 +226,22 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM solution
 												WHERE contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
+												FROM vjudge_solution
+												WHERE contest_id = ?
 												GROUP BY HOUR(in_date),MINUTE(in_date)) sub
 												LEFT JOIN
 												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
+												FROM vjudge_solution 
+												WHERE result = 4 AND contest_id = ?
 												GROUP BY HOUR(in_date),MINUTE(in_date)) accept
 												ON sub.hour = accept.hour AND sub.minute = accept.minute`,
-					[request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["hour","minute"]
@@ -219,14 +252,22 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM solution
 												WHERE contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
+												FROM vjudge_solution
+												WHERE contest_id = ?
 												GROUP BY MINUTE(in_date),SECOND(in_date)) sub
 												LEFT JOIN
 												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												UNION ALL
+												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
+												FROM vjudge_solution 
+												WHERE result = 4 AND contest_id = ?
 												GROUP BY MINUTE(in_date),SECOND(in_date)) accept
 												ON sub.minute = accept.minute AND sub.second = accept.second`,
-					[request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["minute","second"]
