@@ -1,8 +1,12 @@
 module.exports = {
 	language_name:{
 		local:["C11","C++17","Pascal","Java","Ruby","Bash","Python 2","PHP","Perl",
-		"C#","Objective-C","FreeBasic","Schema","Clang","Clang++","Lua","JavaScript","Go",
-		"Python 3","C++11","C++98","C99","Kotlin","Other Language"],
+			"C#","Objective-C","FreeBasic","Schema","Clang","Clang++","Lua","JavaScript","Go",
+			"Python 3","C++11","C++98","C99","Kotlin","Other Language"],
+		hdu:["G++","","C++","GCC","","JAVA"],
+		poj:["G++","GCC","JAVA","Pascal","C++","C","Fortran"],
+		uva:["","ANSI C","JAVA","C++","Pascal","C++11","Python 3"],
+		jsk:["C","C++","C++14","Java","Python","Python3","Ruby","Blockly","Octave"]
 	},
 	judge_color:["waiting", "running", "compiling", "running",
 		"accepted", "wrong_answer", "wrong_answer", "time_limit_exceeded",
@@ -12,7 +16,7 @@ module.exports = {
 		"checkmark", "minus", "remove", "clock", "microchip",
 		"print", "bomb", "code", "spinner", "spinner", "spinner"],
 	result:{
-		cn:['等待','等待重判','编译中','运行并评判','答案正确','格式错误','答案错误','时间超限','内存超限','输出超限','运行错误','编译错误','编译成功','运行完成','已加入队列','提交被服务器拒绝',''],
+		cn:["等待","等待重判","编译中","运行并评判","答案正确","格式错误","答案错误","时间超限","内存超限","输出超限","运行错误","编译错误","编译成功","运行完成","已加入队列","提交被服务器拒绝",""],
 
 	},
 	language:{

@@ -17,27 +17,68 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 			sql_arr.push(request_query[i]);
 		}
 	}
-	sql_arr.push(limit);
 	let _end = false;
 	if (req.session.isadmin) {
-		_res = await cache_query(`select * from (SELECT * FROM solution where 1=1 
-		 ${where_sql} ) sol
-		 LEFT JOIN sim ON sim.s_id = sol.solution_id 
-		 ORDER BY sol.solution_id DESC LIMIT ? , 20`,sql_arr);
+		if(request_query.contest_id){
+			sql_arr.push(...sql_arr);
+			sql_arr.push(limit);
+			_res = await cache_query(`select * from
+								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								from solution
+								where 1=1
+								${where_sql}
+								union all select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								from vjudge_solution
+								where 1=1
+								${where_sql}
+								order by in_date) sol
+								left join sim on sim.s_id = sol.solution_id
+								order by sol.solution_id desc limit ?,20`, sql_arr);
+		}
+		else {
+			sql_arr.push(limit);
+			_res = await cache_query(`select * from
+								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								from solution
+								where 1=1
+								${where_sql}) sol
+								left join sim on sim.s_id = sol.solution_id
+								order by sol.solution_id desc limit ?,20`, sql_arr);
+		}
 	}
 	else if(request_query.contest_id){
+		sql_arr.push(...sql_arr);
+		sql_arr.push(limit);
 		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?",[request_query.contest_id]);
 		_end = _end[0].cnt;
-		_res = await cache_query(`select * from (SELECT * FROM solution where problem_id>0 
-		${where_sql} ) sol 
-		LEFT JOIN sim ON sim.s_id = sol.solution_id 
-		ORDER BY sol.solution_id DESC LIMIT ?, 20`,sql_arr);
+		_res = await cache_query(`select * from
+								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								from solution
+								where problem_id > 0 
+								${where_sql}
+								union all select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								from vjudge_solution
+								where problem_id > 0 
+								${where_sql}
+								order by in_date) sol
+								left join sim on sim.s_id = sol.solution_id
+								order by sol.solution_id desc limit ?,20`,sql_arr);
 	}
 	else {
-		_res = await cache_query(`select * from (SELECT * FROM solution where problem_id>0 and contest_id is null 
-		${where_sql} ) sol 
-		LEFT JOIN sim ON sim.s_id = sol.solution_id 
-		ORDER BY sol.solution_id DESC LIMIT ?, 20`,sql_arr);
+		sql_arr.push(...sql_arr);
+		sql_arr.push(limit);
+		_res = await cache_query(`select * from
+								(select solution_id,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								from solution
+								where problem_id > 0 and contest_id is null
+								${where_sql}
+								union all select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								from vjudge_solution
+								where problem_id > 0 and contest_id is null
+								${where_sql}
+								order by in_date) sol
+								left join sim on sim.s_id = sol.solution_id
+								order by sol.solution_id desc limit ?,20`,sql_arr);
 	}
 	let result = [];
 	for (const val of _res) {
@@ -47,8 +88,10 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				user_id: val.user_id,
 				nick: (await cache_query("SELECT nick FROM users WHERE user_id = ?", [val.user_id]))[0].nick.trim(),
 				problem_id: val.problem_id,
+				contest_id:val.contest_id,
+				num:val.num,
 				result: val.result,
-				contest_id: val.contest_id,
+				oj_name:val.oj_name,
 				memory: val.memory,
 				time: val.time,
 				language: val.language,
