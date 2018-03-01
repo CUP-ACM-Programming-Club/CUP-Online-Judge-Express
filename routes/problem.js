@@ -18,10 +18,24 @@ const check = (req, cid) => {
 	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid];
 };
 
-const problem_callback = (rows, res, source, id, sql) => {
+const problem_callback = (rows, res, source, id, sql, sid = -1) => {
 	if (rows.length !== 0) {
-		send_json(res, rows[0]);
-		cache.set("source/id/" + source + id + sql, rows[0], 60 * 60);
+		if (~sid) {
+			cache_query("SELECT source FROM source_code_user WHERE solution_id = ?", [sid])
+				.then(resolve => {
+					send_json(res, {
+						problem: rows[0],
+						source: resolve[0].source
+					});
+				});
+		}
+		else {
+			send_json(res, {
+				problem: rows[0],
+				source: ""
+			});
+			cache.set("source/id/" + source + id + sql, rows[0], 60 * 60);
+		}
 	}
 	else {
 		const obj = {
@@ -50,7 +64,7 @@ router.get("/module/search/:val", function (req, res) {
 			return;
 		}
 		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
+            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 			}
@@ -99,42 +113,42 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = (id, source, res, req) => {
+const make_cache = (id, source, res, req, sid) => {
 	logger.info(id);
 	let sql;
 	if (req.session.isadmin) {
 		if (source.length === 0) {
 			sql = "SELECT * FROM problem WHERE problem_id=?";
 			query(sql, [id], (rows) => {
-				problem_callback(rows, res, source, id, sql);
+				problem_callback(rows, res, source, id, sql, sid);
 			});
 		}
 		else {
 			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
 			query(sql, [id, source], (rows) => {
-				problem_callback(rows, res, source, id, sql);
+				problem_callback(rows, res, source, id, sql, sid);
 			});
 		}
 	}
 	else {
 		if (source.length === 0) {
-			sql = `SELECT * FROM problem WHERE problem_id = ? and defunct = 'N'
-			 and  problem_id NOT IN (SELECT problem_id FROM contest_problem WHERE 
-			 contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW() 
-			 OR private = 1`;
+			sql = `SELECT * FROM problem WHERE problem_id = ?
+			        AND defunct = 'N' AND problem_id NOT IN (
+			        select problem_id from contest_problem
+			where oj_name is null and contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1)))`;
 			query(sql, [id])
 				.then(rows => {
-					problem_callback(rows, res, source, id, sql);
+					problem_callback(rows, res, source, id, sql, sid);
 				});
 		}
 		else {
 			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? and defunct = 'N' 
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
-			where contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
-			OR private = 1`;
+			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
+			OR private = 1))`;
 			query(sql, [id, source])
 				.then(rows => {
-					problem_callback(rows, res, source, id, sql);
+					problem_callback(rows, res, source, id, sql, sid);
 				});
 		}
 	}
@@ -156,14 +170,16 @@ router.get("/:source/:id", function (req, res) {
 router.get("/:source/", async function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	let cid = req.query.cid === undefined ? -1 : req.query.cid;
+	let tid = req.query.tid === undefined ? -1 : req.query.tid;
 	let pid = req.query.pid === undefined ? -1 : req.query.pid;
-	let id = req.query.id === undefined ? -1:req.query.id;
+	let id = req.query.id === undefined ? -1 : req.query.id;
+	let sid = req.query.sid === undefined ? -1 : req.query.sid;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-			"num = ?", [cid, pid]);
+            "num = ?", [cid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(problem_id, source, res, req);
+			make_cache(problem_id, source, res, req, sid);
 		}
 		else {
 			res.json({
@@ -172,10 +188,24 @@ router.get("/:source/", async function (req, res) {
 			});
 		}
 	}
-	else if(~id){
-		make_cache(id,source,res,req);
+	else if (~tid && ~pid) {
+		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
+            "num = ?", [tid, pid]);
+		if (result.length > 0) {
+			let problem_id = result[0].problem_id;
+			make_cache(problem_id, source, res, req, sid);
+		}
+		else {
+			res.json({
+				status: "error",
+				statement: "invalid parameter id"
+			});
+		}
 	}
-	else{
+	else if (~id) {
+		make_cache(id, source, res, req, sid);
+	}
+	else {
 		res.json({
 			status: "error",
 			statement: "invalid parameter id"
