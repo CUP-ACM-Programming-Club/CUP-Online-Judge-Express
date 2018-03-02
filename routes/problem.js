@@ -1,6 +1,15 @@
 const express = require("express");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
+let cachePack = {};
+const md = require("markdown-it")({
+	html:true,
+	breaks:true
+});
+const mh = require("markdown-it-highlightjs");
+const mk = require("markdown-it-katex");
+md.use(mk);
+md.use(mh);
 const cache = require("../module/cachePool");
 const router = express.Router();
 const log4js = require("../module/logger");
@@ -18,23 +27,48 @@ const check = (req, cid) => {
 	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid];
 };
 
-const problem_callback = (rows, res, source, id, sql, sid = -1) => {
+const markdownPack = (html) => {
+	return ["<div class=\"markdown-body\">",html,"</div>"].join("");
+};
+
+const problem_callback = (rows, res, source, id, sql, sid = -1,raw = false) => {
+	let packed_problem;
 	if (rows.length !== 0) {
+		if(!raw && (packed_problem = cachePack[id])){
+			new Promise((resolve)=>{
+				let _packed_problem = Object.assign({},rows[0]);
+				_packed_problem.input = markdownPack(md.render(_packed_problem.input));
+				_packed_problem.output = markdownPack(md.render(_packed_problem.output));
+				_packed_problem.description = markdownPack(md.render(_packed_problem.description));
+				_packed_problem.hint = markdownPack(md.render(_packed_problem.hint));
+				cachePack[id] = _packed_problem;
+				resolve();
+			});
+		}
+		else{
+			packed_problem = Object.assign({},rows[0]);
+			if(!raw) {
+				packed_problem.input = markdownPack(md.render(packed_problem.input));
+				packed_problem.output = markdownPack(md.render(packed_problem.output));
+				packed_problem.description = markdownPack(md.render(packed_problem.description));
+				packed_problem.hint = markdownPack(md.render(packed_problem.hint));
+			}
+		}
 		if (~sid) {
 			cache_query("SELECT source FROM source_code_user WHERE solution_id = ?", [sid])
 				.then(resolve => {
 					send_json(res, {
-						problem: rows[0],
+						problem: packed_problem,
 						source: resolve[0].source
 					});
 				});
 		}
 		else {
 			send_json(res, {
-				problem: rows[0],
+				problem: packed_problem,
 				source: ""
 			});
-			cache.set("source/id/" + source + id + sql, rows[0], 60 * 60);
+			cache.set("source/id/" + source + id + sql, packed_problem, 60 * 60);
 		}
 	}
 	else {
@@ -113,21 +147,23 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = (id, source, res, req, sid) => {
+const make_cache = (id, source, res, req, sid,raw = false) => {
 	logger.info(id);
 	let sql;
 	if (req.session.isadmin) {
 		if (source.length === 0) {
 			sql = "SELECT * FROM problem WHERE problem_id=?";
-			query(sql, [id], (rows) => {
-				problem_callback(rows, res, source, id, sql, sid);
-			});
+			cache_query(sql, [id])
+				.then((rows) => {
+					problem_callback(rows, res, source, id, sql, sid,raw);
+				});
 		}
 		else {
 			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
-			query(sql, [id, source], (rows) => {
-				problem_callback(rows, res, source, id, sql, sid);
-			});
+			cache_query(sql, [id, source])
+				.then((rows) => {
+					problem_callback(rows, res, source, id, sql, sid,raw);
+				});
 		}
 	}
 	else {
@@ -136,9 +172,9 @@ const make_cache = (id, source, res, req, sid) => {
 			        AND defunct = 'N' AND problem_id NOT IN (
 			        select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1)))`;
-			query(sql, [id])
+			cache_query(sql, [id])
 				.then(rows => {
-					problem_callback(rows, res, source, id, sql, sid);
+					problem_callback(rows, res, source, id, sql, sid,raw);
 				});
 		}
 		else {
@@ -146,9 +182,9 @@ const make_cache = (id, source, res, req, sid) => {
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
 			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
 			OR private = 1))`;
-			query(sql, [id, source])
+			cache_query(sql, [id, source])
 				.then(rows => {
-					problem_callback(rows, res, source, id, sql, sid);
+					problem_callback(rows, res, source, id, sql, sid,raw);
 				});
 		}
 	}
@@ -174,12 +210,13 @@ router.get("/:source/", async function (req, res) {
 	let pid = req.query.pid === undefined ? -1 : req.query.pid;
 	let id = req.query.id === undefined ? -1 : req.query.id;
 	let sid = req.query.sid === undefined ? -1 : req.query.sid;
+	let raw = req.query.raw !== undefined;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
             "num = ?", [cid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(problem_id, source, res, req, sid);
+			make_cache(problem_id, source, res, req, sid,raw);
 		}
 		else {
 			res.json({
@@ -193,7 +230,7 @@ router.get("/:source/", async function (req, res) {
             "num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(problem_id, source, res, req, sid);
+			make_cache(problem_id, source, res, req, sid,raw);
 		}
 		else {
 			res.json({
@@ -203,7 +240,7 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(id, source, res, req, sid);
+		make_cache(id, source, res, req, sid,raw);
 	}
 	else {
 		res.json({
