@@ -8,6 +8,9 @@ module.exports = {
 		uva:["","ANSI C","JAVA","C++","Pascal","C++11","Python 3"],
 		jsk:["C","C++","C++14","Java","Python","Python3","Ruby","Blockly","Octave"]
 	},
+	language_template:{
+		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php","perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua","javascript","go","text","python","c_cpp","c_cpp","c_cpp","java"]
+	},
 	langmask:138676,
 	judge_color:["waiting", "running", "compiling", "running",
 		"accepted", "wrong_answer", "wrong_answer", "time_limit_exceeded",

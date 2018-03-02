@@ -3,8 +3,8 @@ const express = require("express");
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 let cachePack = {};
 const md = require("markdown-it")({
-	html:true,
-	breaks:true
+	html: true,
+	breaks: true
 });
 const mh = require("markdown-it-highlightjs");
 const mk = require("markdown-it-katex");
@@ -29,17 +29,20 @@ const check = (req, cid) => {
 };
 
 const markdownPack = (html) => {
-	return ["<div class=\"markdown-body\">",html,"</div>"].join("");
+	return ["<div class=\"markdown-body\">", html, "</div>"].join("");
 };
 
-const problem_callback = (rows, res,opt={source:"",sid:-1,raw:false}) => {
+const problem_callback = (rows, res, opt = {source: "", sid: -1, raw: false}) => {
 	let packed_problem;
 	if (rows.length !== 0) {
-		if(!opt.raw && (packed_problem = cachePack[opt.id])){
-			new Promise((resolve)=>{
-				let _packed_problem = Object.assign({},rows[0]);
-				_packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase()||"local"];
-				if(opt.source) {
+		if (!opt.raw && (packed_problem = cachePack[opt.id])) {
+			new Promise((resolve) => {
+				let _packed_problem = Object.assign({}, rows[0]);
+				_packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase() || "local"];
+				_packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
+				_packed_problem.prepend = opt.prepend;
+				_packed_problem.append = opt.append;
+				if (opt.source) {
 					_packed_problem.input = markdownPack(md.render(_packed_problem.input));
 					_packed_problem.output = markdownPack(md.render(_packed_problem.output));
 					_packed_problem.description = markdownPack(md.render(_packed_problem.description));
@@ -50,10 +53,13 @@ const problem_callback = (rows, res,opt={source:"",sid:-1,raw:false}) => {
 				resolve();
 			});
 		}
-		else{
-			packed_problem = Object.assign({},rows[0]);
-			packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase()||"local"];
-			if(!opt.raw &&!opt.source) {
+		else {
+			packed_problem = Object.assign({}, rows[0]);
+			packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase() || "local"];
+			packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
+			packed_problem.prepend = opt.prepend;
+			packed_problem.append = opt.append;
+			if (!opt.raw && !opt.source) {
 				packed_problem.input = markdownPack(md.render(packed_problem.input));
 				packed_problem.output = markdownPack(md.render(packed_problem.output));
 				packed_problem.description = markdownPack(md.render(packed_problem.description));
@@ -105,7 +111,7 @@ router.get("/module/search/:val", function (req, res) {
 			return;
 		}
 		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
+			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 			}
@@ -154,34 +160,44 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = ( res, req,opt={source:"",raw:false}) => {
+const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 	logger.info(opt.problem_id);
 	let sql;
+	const _prepend = await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.problem_id]);
+	let new_langmask = 0;
+	for (let i of _prepend) {
+		if (parseInt(i.prepend) === 1) {
+			if (!opt.prepend) {
+				opt.prepend = {};
+			}
+			opt.prepend[parseInt(i.type)] = i.code;
+		}
+		else {
+			if (!opt.append) {
+				opt.append = {};
+			}
+			opt.append[parseInt(i.type)] = i.code;
+		}
+		new_langmask |= (1 << parseInt(i.type));
+	}
+	if (new_langmask) {
+		opt.langmask = ~new_langmask;
+	}
 	if (req.session.isadmin) {
 		if (opt.source.length === 0) {
 			sql = "SELECT * FROM problem WHERE problem_id=?";
+			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then((rows) => {
-					problem_callback(rows, res, {
-						source:opt.source,
-						problem_id:opt.problem_id,
-						sql:sql,
-						solution_id:opt.solution_id,
-						raw:opt.raw
-					});
+					problem_callback(rows, res, opt);
 				});
 		}
 		else {
 			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
+			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then((rows) => {
-					problem_callback(rows, res,{
-						source:opt.source,
-						problem_id:opt.problem_id,
-						sql:sql,
-						solution_id:opt.solution_id,
-						raw:opt.raw
-					});
+					problem_callback(rows, res, opt);
 				});
 		}
 	}
@@ -191,15 +207,10 @@ const make_cache = ( res, req,opt={source:"",raw:false}) => {
 			        AND defunct = 'N' AND problem_id NOT IN (
 			        select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1)))`;
+			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
-					problem_callback(rows, res,{
-						source:opt.source,
-						problem_id:opt.problem_id,
-						sql:sql,
-						solution_id:opt.solution_id,
-						raw:opt.raw
-					});
+					problem_callback(rows, res, opt);
 				});
 		}
 		else {
@@ -207,15 +218,10 @@ const make_cache = ( res, req,opt={source:"",raw:false}) => {
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
 			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
 			OR private = 1))`;
+			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then(rows => {
-					problem_callback(rows, res,{
-						source:opt.source,
-						problem_id:opt.problem_id,
-						sql:sql,
-						solution_id:opt.solution_id,
-						raw:opt.raw
-					});
+					problem_callback(rows, res, opt);
 				});
 		}
 	}
@@ -226,11 +232,11 @@ router.get("/:source/:id", function (req, res) {
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
-		make_cache(res,req,{problem_id:id,source:source});
+		make_cache(res, req, {problem_id: id, source: source});
 	}
 	else {
 		send_json(res, _res);
-		make_cache(null,req,{problem_id:id,source:source});
+		make_cache(null, req, {problem_id: id, source: source});
 	}
 });
 
@@ -244,17 +250,17 @@ router.get("/:source/", async function (req, res) {
 	let raw = req.query.raw !== undefined;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-            "num = ?", [cid, pid]);
+			"num = ?", [cid, pid]);
 		if (result.length > 0) {
-			const _langmask = await cache_query("SELECT langmask FROM contest WHERE contest_id = ?",[cid]);
+			const _langmask = await cache_query("SELECT langmask FROM contest WHERE contest_id = ?", [cid]);
 			let problem_id = result[0].problem_id;
 			let langmask = _langmask[0].langmask;
-			make_cache(res, req,{
-				problem_id:problem_id,
-				source:source,
-				solution_id:sid,
-				raw:raw,
-				langmask:langmask
+			make_cache(res, req, {
+				problem_id: problem_id,
+				source: source,
+				solution_id: sid,
+				raw: raw,
+				langmask: langmask
 			});
 		}
 		else {
@@ -266,10 +272,10 @@ router.get("/:source/", async function (req, res) {
 	}
 	else if (~tid && ~pid) {
 		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
-            "num = ?", [tid, pid]);
+			"num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(res, req,{problem_id:problem_id,source:source,solution_id:sid,raw:raw});
+			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw});
 		}
 		else {
 			res.json({
@@ -279,7 +285,7 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req,{problem_id:id,source:source,solution_id:sid,raw:raw});
+		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw});
 	}
 	else {
 		res.json({
