@@ -152,6 +152,7 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
 												FROM solution
 												WHERE contest_id = ?
+												GROUP BY YEAR(in_date),MONTH(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
 												FROM vjudge_solution
@@ -161,6 +162,7 @@ async function getGraphData(req,res,request_query = {}){
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												GROUP BY YEAR(in_date),MONTH(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
 												FROM vjudge_solution 
@@ -178,6 +180,7 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM solution
 												WHERE contest_id = ?
+												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")
 												UNION ALL
 												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM vjudge_solution
@@ -187,12 +190,14 @@ async function getGraphData(req,res,request_query = {}){
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")
 												UNION ALL
 												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM vjudge_solution 
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
-												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year`,
+												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year
+												ORDER BY sub.year,sub.month,sub.day`,
 					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
@@ -204,6 +209,7 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM solution
 												WHERE contest_id = ?
+												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)
 												UNION ALL
 												SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
@@ -214,6 +220,7 @@ async function getGraphData(req,res,request_query = {}){
 												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM vjudge_solution 
@@ -231,6 +238,7 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM solution
 												WHERE contest_id = ?
+												GROUP BY HOUR(in_date),MINUTE(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM vjudge_solution
@@ -240,6 +248,7 @@ async function getGraphData(req,res,request_query = {}){
 												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												GROUP BY HOUR(in_date),MINUTE(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM vjudge_solution 
@@ -257,6 +266,7 @@ async function getGraphData(req,res,request_query = {}){
   												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM solution
 												WHERE contest_id = ?
+												GROUP BY MINUTE(in_date),SECOND(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM vjudge_solution
@@ -266,6 +276,7 @@ async function getGraphData(req,res,request_query = {}){
 												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM solution 
 												WHERE result = 4 AND contest_id = ?
+												GROUP BY MINUTE(in_date),SECOND(in_date)
 												UNION ALL
 												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
 												FROM vjudge_solution 
