@@ -32,7 +32,7 @@ const markdownPack = (html) => {
 	return ["<div class=\"markdown-body\">", html, "</div>"].join("");
 };
 
-const problem_callback = (rows, res, opt = {source: "", sid: -1, raw: false}) => {
+const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}) => {
 	let packed_problem;
 	if (rows.length !== 0) {
 		if (!opt.raw && (packed_problem = cachePack[opt.id])) {
@@ -68,11 +68,12 @@ const problem_callback = (rows, res, opt = {source: "", sid: -1, raw: false}) =>
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
 		if (~opt.solution_id) {
-			cache_query("SELECT source FROM source_code_user WHERE solution_id = ?", [opt.solution_id])
+			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
+			${req.session.isadmin?"":" AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id,req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
-						source: resolve[0].source
+						source: resolve?resolve[0]?resolve[0].source:"":""
 					});
 				});
 		}
@@ -189,7 +190,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then((rows) => {
-					problem_callback(rows, res, opt);
+					problem_callback(rows, req, res, opt);
 				});
 		}
 		else {
@@ -197,7 +198,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then((rows) => {
-					problem_callback(rows, res, opt);
+					problem_callback(rows, req, res, opt);
 				});
 		}
 	}
@@ -210,7 +211,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
-					problem_callback(rows, res, opt);
+					problem_callback(rows, req, res, opt);
 				});
 		}
 		else {
@@ -221,7 +222,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then(rows => {
-					problem_callback(rows, res, opt);
+					problem_callback(rows, req, res, opt);
 				});
 		}
 	}
@@ -303,9 +304,9 @@ router.post("/:source/:id", function (req, res) {
 			json = req.body.json;
 			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,hint = ? where problem_id = ?`,
-			[json.title, json.time, json.memory, json.description, json.input,
-				json.output, json.sampleinput, json.sampleoutput, json.hint,
-				problem_id])
+				[json.title, json.time, json.memory, json.description, json.input,
+					json.output, json.sampleinput, json.sampleoutput, json.hint,
+					problem_id])
 				.then(() => {
 				})
 				.catch(err => {
