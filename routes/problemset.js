@@ -27,7 +27,7 @@ async function cache_query(sql, sqlArr = []) {
 			.then(resolve => {
 				cache_pool[identified] = resolve;
 			})
-			.catch(err => {
+			.catch(() => {
 			});
 		return cache_pool[identified];
 	}
