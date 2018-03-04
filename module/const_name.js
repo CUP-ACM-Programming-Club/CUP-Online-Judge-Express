@@ -39,6 +39,15 @@ module.exports = {
 				length:"代码长度",
 				submit_time:"提交时间",
 				judger:"判题机"
+			},
+			ranklist:{
+				rank:"名次",
+				user:"用户名",
+				nick:"昵称",
+				accept:"通过",
+				submit:"提交",
+				ratio:"通过率",
+				vjudge_accept:"VJ通过"
 			}
 		},
 		jp:{
