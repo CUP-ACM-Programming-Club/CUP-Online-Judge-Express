@@ -169,7 +169,7 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+						[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["year","month"]
@@ -198,7 +198,7 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
 												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year
 												ORDER BY sub.year,sub.month,sub.day`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+						[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["month","day"]
@@ -227,7 +227,7 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) accept
 												ON sub.day = accept.day AND sub.hour = accept.hour AND sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+						[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["day","hour"]
@@ -255,7 +255,7 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY HOUR(in_date),MINUTE(in_date)) accept
 												ON sub.hour = accept.hour AND sub.minute = accept.minute`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+						[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["hour","minute"]
@@ -283,7 +283,7 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY MINUTE(in_date),SECOND(in_date)) accept
 												ON sub.minute = accept.minute AND sub.second = accept.second`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+						[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result:result,
 						label:["minute","second"]

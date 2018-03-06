@@ -1,5 +1,6 @@
 const express = require("express");
 //const query = require("../module/mysql_query");
+const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
 const router = express.Router();
 const page_cnt = 50;
@@ -55,7 +56,7 @@ const get_ranklist = async (req, res, opt = {}) => {
 	}
 	else if(!opt.time_stamp){
 		let search_name = `%${opt.search}%`;
-		result = await cache_query(`SELECT user_id,nick,solved,submit FROM users WHERE user_id 
+		result = await cache_query(`SELECT user_id,nick,solved,vjudge_solved,submit FROM users WHERE user_id 
 		LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
 			[search_name,page,page_cnt]);
@@ -67,7 +68,10 @@ const get_ranklist = async (req, res, opt = {}) => {
 		});
 		return;
 	}
-	res.json(result);
+	res.json({
+		ranklist:result,
+		_name:const_variable.language.cn.ranklist
+	});
 };
 
 router.get("/", async function (req, res) {
@@ -82,7 +86,7 @@ router.get("/", async function (req, res) {
 });
 
 router.get("/user",async function(req,res){
-	let result = await cache_query(`SELECT count(1) as tot_user,acm.acm_users FROM users
+	let result = await cache_query(`SELECT count(1) as tot_user,acm.acm_user FROM users
 									LEFT JOIN (SELECT count(1) as acm_user FROM acm_member)acm on 1=1`)
 		.catch(()=>{
 			//console.log(errs);

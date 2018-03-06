@@ -25,7 +25,7 @@ const send_json = (res, val) => {
 };
 
 const check = (req, cid) => {
-	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid];
+	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid] || true;
 };
 
 const markdownPack = (html) => {
@@ -205,12 +205,11 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 	else {
 		if (opt.source.length === 0) {
 			sql = `SELECT * FROM problem WHERE problem_id = ?
-			        AND defunct = 'N' AND problem_id NOT IN (
-			        select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1)))`;
+			        AND defunct = 'N' AND problem_id`;
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
+
 					problem_callback(rows, req, res, opt);
 				});
 		}
