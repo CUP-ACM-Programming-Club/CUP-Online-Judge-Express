@@ -214,7 +214,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 				});
 		}
 		else {
-			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? and defunct = 'N' 
+			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
 			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
 			OR private = 1))`;

@@ -31,6 +31,7 @@
     "memcached": "~2.2.2",
     "meteor-random": "0.0.3",
     "morgan": "~1.9.0",
+    "multer": "^1.3.0",
     "mysql2": "~1.5.1",
     "node-cache": "^4.1.1",
     "pug": "^2.0.0-rc.4",
