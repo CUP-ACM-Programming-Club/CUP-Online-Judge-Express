@@ -15,7 +15,9 @@ const status = require("./routes/status");
 const login = require("./routes/login");
 const logout = require("./routes/logout");
 const faq = require("./routes/faq");
+const ranklist = require("./routes/ranklist");
 const problemset = require("./routes/problemset");
+const upload = require("./routes/upload");
 const auth = require("./middleware/auth");
 const performance = require("./middleware/performance");
 const helmet = require("helmet");
@@ -62,6 +64,8 @@ app.use("/login", login);
 app.use("/logout", auth, logout);
 app.use("/status", auth, status);
 app.use("/faq", auth, faq);
+app.use("/ranklist",auth,ranklist);
+app.use("/upload",auth,upload);
 app.use((req, res, next) => {
 	let err = new Error("Not Found");
 	err.status = 404;

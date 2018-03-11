@@ -8,6 +8,10 @@ module.exports = {
 		uva:["","ANSI C","JAVA","C++","Pascal","C++11","Python 3"],
 		jsk:["C","C++","C++14","Java","Python","Python3","Ruby","Blockly","Octave"]
 	},
+	language_template:{
+		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php","perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua","javascript","go","text","python","c_cpp","c_cpp","c_cpp","java"]
+	},
+	langmask:138676,
 	judge_color:["waiting", "running", "compiling", "running",
 		"accepted", "wrong_answer", "wrong_answer", "time_limit_exceeded",
 		"memory_limit_exceeded", "output_limit_exceeded", "runtime_error",
@@ -35,6 +39,15 @@ module.exports = {
 				length:"代码长度",
 				submit_time:"提交时间",
 				judger:"判题机"
+			},
+			ranklist:{
+				rank:"名次",
+				user:"用户名",
+				nick:"昵称",
+				accept:"通过",
+				submit:"提交",
+				ratio:"通过率",
+				vjudge_accept:"VJ通过"
 			}
 		},
 		jp:{

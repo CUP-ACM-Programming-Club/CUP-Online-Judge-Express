@@ -27,7 +27,7 @@ async function cache_query(sql, sqlArr = []) {
 			.then(resolve => {
 				cache_pool[identified] = resolve;
 			})
-			.catch(err => {
+			.catch(() => {
 			});
 		return cache_pool[identified];
 	}
@@ -59,7 +59,7 @@ async function get_problem(req, res) {
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from problem
 			where title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or source like ? or label like ? order by ${order} limit ?,?`,
-				[search, search, search, search, search, search, search, start * 50, page_cnt]);
+			[search, search, search, search, search, search, search, start * 50, page_cnt]);
 		}
 		else {
 			_total = await cache_query(`select count(1) as cnt from problem order by ${order}`);
@@ -72,23 +72,23 @@ async function get_problem(req, res) {
 			_total = await cache_query(`select count(1) as cnt from problem
 			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or source like ? or label like ?) and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1))) 
+			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}`, [search, search, search, search, search, search, search]);
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from problem
 			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or source like ? or label like ?) and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1))) 
+			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
 		 	limit ?,?`, [search, search, search, search, search, search, search, start*50, page_cnt]);
 		}
 		else {
 			_total = await cache_query(`select count(1) as cnt from problem
 			where defunct='N' and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1))) 
+			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}`);
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from problem
 			where defunct='N' and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where defunct='N' and (end_time>NOW() or private=1))) 
+			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
 		 	limit ?,?`, [start*50, page_cnt]);
 		}
