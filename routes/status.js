@@ -33,7 +33,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
 		}
 		else {
 			sql_arr.push(limit);
@@ -62,7 +62,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc limit ?,20`,sql_arr);
+								order by sol.in_date desc, sol.solution_id desc limit ?,20`,sql_arr);
 	}
 	else {
 		sql_arr.push(...sql_arr);
@@ -121,13 +121,15 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				avatar:avatar,
 				problem_id: val.problem_id,
 				result: val.result,
+				num:val.num,
 				contest_id: val.contest_id,
+				oj_name:val.oj_name,
 				memory: check_owner(val.memory),
 				time: check_owner(val.time),
 				language: val.language,
 				length: check_owner(val.code_length),
 				in_date: val.in_date,
-				judger: val.judger
+				judger: val.judger,
 			});
 		}
 	}
@@ -135,7 +137,8 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 		result:result,
 		const_list:const_name,
 		self:req.session.user_id,
-		isadmin:req.session.isadmin
+		isadmin:req.session.isadmin,
+		end:Boolean(_end)
 	});
 }
 
@@ -354,6 +357,35 @@ router.get("/graph",async function(req,res){
 		contest_id:cid,
 		date_flag:date_flag
 	});
+});
+
+router.get("/solution",async function(req,res){
+	const sid = req.query.sid ? parseInt(req.query.sid):null;
+	if(sid){
+		const _result = await query("SELECT user_id,language from solution WHERE solution_id = ?",[sid]);
+		if(_result.length > 0&&_result[0].user_id === req.session.user_id || req.session.isadmin){
+			res.json({
+				status:"OK",
+				data:{
+					solution_id:sid,
+					user_id:_result[0].user_id,
+					language:_result[0].language
+				}
+			});
+		}
+		else{
+			res.json({
+				status:"error",
+				statement:"error sid / not privilege"
+			});
+		}
+	}
+	else{
+		res.json({
+			status:"error",
+			statement:"invalid parameter"
+		});
+	}
 });
 
 router.get("/:sid/:tr", function (req, res, next) {
