@@ -13,11 +13,11 @@ const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
-//const _localJudge = require("../module/judger");
-const _dockerRunner = require("../module/docker_runner");
+const _localJudge = require("../module/judger");
+//const _dockerRunner = require("../module/docker_runner");
 const querystring = require("querystring");
-//const localJudge = new _localJudge(judge_config["oj_home"], judge_config["oj_judge_num"]);
-const dockerRunner = new _dockerRunner(config.judger.oj_home,config.judger.oj_judge_num);
+const localJudge = new _localJudge(config.judger.oj_home,config.judger.oj_judge_num);
+//const dockerRunner = new _dockerRunner(config.judger.oj_home,config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 /**
@@ -384,7 +384,8 @@ io.on("connection", async function (socket) {
 		if (socket.privilege) {
 			const request = data["request"];
 			if (request && request === "judger") {
-				socket.emit(dockerRunner.getStatus());
+				//socket.emit(dockerRunner.getStatus());
+				socket.emit(localJudge.getStatus());
 			}
 		}
 	});
@@ -409,10 +410,7 @@ io.on("connection", async function (socket) {
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
 		const submission_id = parseInt(data["submission_id"]);
-		//localJudge.addTask(submission_id);
-
-
-
+		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
 		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
 			const id_val = await cache_query("SELECT problem_id FROM " +
@@ -436,8 +434,9 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-		dockerRunner.addTask(data);
-		sendMessage(admin_user, "judger", dockerRunner.getStatus());
+		//dockerRunner.addTask(data);
+		//sendMessage(admin_user, "judger", dockerRunner.getStatus());
+		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
      * 全局推送功能
