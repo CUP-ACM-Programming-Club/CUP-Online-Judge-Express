@@ -31,9 +31,7 @@ async function cache_query(sql, sqlArr = []) {
 			});
 		return cache_pool[identified];
 	}
-	else {
-		return (cache_pool[identified] = await query(sql, sqlArr));
-	}
+	return (cache_pool[identified] = await query(sql, sqlArr));
 }
 
 async function get_problem(req, res) {
@@ -98,7 +96,7 @@ async function get_problem(req, res) {
 	for (let i of result) {
 		let acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
 		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`,
-			[req.session.user_id, i.problem_id,req.session.user_id,i.problem_id]);
+		[req.session.user_id, i.problem_id,req.session.user_id,i.problem_id]);
 		let ac = parseInt(acnum[0].cnt);
 		let submit = parseInt(acnum[1].cnt);
 		send_problem_list.push({

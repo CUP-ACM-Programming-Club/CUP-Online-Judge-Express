@@ -98,7 +98,7 @@ router.post("/", async function (req, res) {
 			if (val.length && val.length > 0) {
 				ans = val[0].password;
 				newpass = val[0].newpassword;
-				if (checkPassword(ans, password, reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length))) {
+				if (checkPassword(ans, password,null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
 					if (!newpass) {
 						query("update users set newpassword=? where user_id=?",
 							[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
