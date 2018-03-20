@@ -52,14 +52,14 @@ const get_ranklist = async (req, res, opt = {}) => {
 		vsol WHERE result = 4 GROUP BY user_id ORDER BY solved LIMIT ?,?) v
 		ON users.user_id = v.user_id
 		ORDER BY s.solved DESC,t.submit,reg_time LIMIT 0,50`,
-			[time_start,page,page_cnt,time_start,page,page_cnt,time_start,time_start,page,page_cnt]);
+		[time_start,page,page_cnt,time_start,page,page_cnt,time_start,time_start,page,page_cnt]);
 	}
 	else if(!opt.time_stamp){
 		let search_name = `%${opt.search}%`;
 		result = await cache_query(`SELECT user_id,nick,solved,vjudge_solved,submit FROM users WHERE user_id 
-		LIKE ? ORDER BY solved DESC,submit,user_id
+		LIKE ? OR nick LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
-			[search_name,page,page_cnt]);
+		[search_name,search_name,page,page_cnt]);
 	}
 	else{
 		res.json({
