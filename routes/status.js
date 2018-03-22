@@ -23,11 +23,11 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}
-								union all select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all select solution_id,0.00 as pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where 1=1
 								${where_sql}
@@ -38,7 +38,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 		else {
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}) sol
@@ -68,11 +68,11 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 		sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
 		_res = await cache_query(`select * from
-								(select solution_id,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where problem_id > 0 and contest_id is null
 								${where_sql}
-								union all select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all select solution_id,0.00 as pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where problem_id > 0 and contest_id is null
 								${where_sql}
@@ -95,6 +95,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				sim_id:val.sim_s_id,
 				problem_id: val.problem_id,
 				contest_id:val.contest_id,
+				pass_rate:val.pass_rate,
 				num:val.num,
 				result: val.result,
 				oj_name:val.oj_name,
@@ -123,6 +124,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				avatar:avatar,
 				problem_id: val.problem_id,
 				result: val.result,
+				pass_rate:val.pass_rate,
 				sim_id:val.sim_s_id,
 				sim:val.sim,
 				num:val.num,
