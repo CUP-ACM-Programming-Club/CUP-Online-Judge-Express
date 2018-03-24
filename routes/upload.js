@@ -5,6 +5,7 @@ const Promise = require("bluebird");
 const fsPromise = Promise.promisifyAll(require("fs"));
 const fs = require("fs");
 const zlib = require("zlib");
+const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const upload = multer({dest: "/home/uploads/"});
 const path = require("path");
@@ -17,7 +18,7 @@ const convertLanguage = (language_name) => {
 		".py": 18,
 	};
 	for (let i in language_file_name) {
-		if (language_name.indexOf(i) !== -1) {
+		if (/*language_name.indexOf(i) !== -1*/path.extname(language_name) === i) {
 			return language_file_name[i];
 		}
 	}
@@ -36,8 +37,8 @@ const make_problem = (problem_id, problems = {}) => {
 		source: "",
 		label: "",
 		in_date: "",
-		time_limit: 0,
-		memory_limit: 0,
+		time: 0,
+		memory: 0,
 		defunct: "N",
 		accepted: 0,
 		submit: 0,
@@ -49,10 +50,10 @@ const make_problem = (problem_id, problems = {}) => {
 		defunct,accepted,submit,solved)
 		VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?,?)
 		`, [problem_id, save_problem.title, save_problem.description, save_problem.input,
-				save_problem.output, save_problem.sample_input, save_problem.sample_output,
-				Number(Boolean(save_problem.special_judge && save_problem.special_judge.length > 0)),
-				save_problem.hint, save_problem.source, save_problem.label.join(" "), save_problem.time_limit,
-				save_problem.memory_limit, save_problem.defunct, 0, 0, 0])
+			save_problem.output, save_problem.sample_input, save_problem.sample_output,
+			Number(Boolean(save_problem.special_judge && save_problem.special_judge.length > 0)),
+			save_problem.hint, save_problem.source, save_problem.label.join(" "), save_problem.time,
+			save_problem.memory, save_problem.defunct, 0, 0, 0])
 
 			.then(rows => {
 				resolve(rows);
@@ -90,8 +91,8 @@ const submitProblem = async (req, pid, files) => {
 	for (let i of files) {
 		const content = new Buffer(i.content, "base64").toString();
 		await new Promise((resolve, reject) => {
-			query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length)
-		VALUES(?,?,?,NOW(),?)`, [pid, convertLanguage(i.name), req.session.user_id, content.length])
+			query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
+		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name), req.session.user_id, content.length])
 				.then(rows => {
 					const solution_id = rows.insertId;
 					query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${content}')`
@@ -115,9 +116,14 @@ const make_files = async (req, pid, problems = {}) => {
 	const outputFiles = problems.output_files;
 	const prependFiles = problems.prepend_files;
 	const appendFiles = problems.append_files;
-	const solutionFiles = problems.solution_files;
+	const solutionFiles = problems.solution;
 	const save_path = path.join("/home/judge/data", pid.toString());
-	await new Promise((resolve, reject) => {
+	await new Promise(async (resolve, reject) => {
+		if (fs.existsSync(save_path)) {
+			await new Promise(resolve=>{
+				rimraf(save_path,()=>{resolve();});
+			});
+		}
 		fs.mkdir(save_path, 0o755, function (err) {
 			if (err) {
 				reject(err);

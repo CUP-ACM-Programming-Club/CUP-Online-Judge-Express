@@ -26,17 +26,17 @@ module.exports = {
 	language:{
 		cn:{
 			status:{
-				solution_id:"运行编号",
+				solution_id:"运行号",
 				user:"用户",
 				user_id:"帐号",
 				nick:"昵称",
 				problem_id:"问题",
 				result:"结果",
 				language:"语言",
-				contest_id:"竞赛编号",
+				contest_id:"竞赛号",
 				memory:"内存",
 				time:"耗时",
-				length:"代码长度",
+				length:"长度",
 				submit_time:"提交时间",
 				judger:"判题机"
 			},

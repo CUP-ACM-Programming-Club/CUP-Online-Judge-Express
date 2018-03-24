@@ -11,7 +11,7 @@ const query = require("../module/mysql_query");
 const cachePool = require("../module/cachePool");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-const client = require("../module/redis");
+// const client = require("../module/redis");
 const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
 //const _dockerRunner = require("../module/docker_runner");
@@ -218,6 +218,14 @@ io.use((socket, next) => {
 io.use(async (socket, next) => {
 	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
 	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
+	if(!socket.user_id){
+		next(new Error("Auth failed"));
+	}
+	else{
+		socket.auth = true;
+		next();
+	}
+	/*
 	if (!socket.request.session.auth && !socket.auth) {
 		const token = parse_cookie["token"] || "";
 		const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
@@ -226,12 +234,13 @@ io.use(async (socket, next) => {
 			next();
 		}
 		else {
-			next(new Error("Auth failed"));
+
 		}
 	}
 	else {
 		next();
 	}
+	*/
 })
 ;
 
@@ -384,6 +393,7 @@ io.on("connection", async function (socket) {
 		if (socket.privilege) {
 			const request = data["request"];
 			if (request && request === "judger") {
+				//socket.emit(dockerRunner.getStatus());
 				socket.emit(localJudge.getStatus());
 			}
 		}
@@ -409,10 +419,7 @@ io.on("connection", async function (socket) {
 		data["user_id"] = socket.user_id || "";
 		data["nick"] = socket.user_nick;
 		const submission_id = parseInt(data["submission_id"]);
-		//localJudge.addTask(submission_id);
-
-
-
+		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
 		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
 			const id_val = await cache_query("SELECT problem_id FROM " +

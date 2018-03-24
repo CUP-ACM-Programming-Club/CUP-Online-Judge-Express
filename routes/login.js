@@ -98,7 +98,7 @@ router.post("/", async function (req, res) {
 			if (val.length && val.length > 0) {
 				ans = val[0].password;
 				newpass = val[0].newpassword;
-				if (checkPassword(ans, password, reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length))) {
+				if (checkPassword(ans, password,null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
 					if (!newpass) {
 						query("update users set newpassword=? where user_id=?",
 							[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
@@ -109,11 +109,26 @@ router.post("/", async function (req, res) {
 					}
 					req.session.user_id = user_id;
 					req.session.auth = true;
-					res.json(ok.ok);
-					await query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [user_id])
-						.then((val) => {
-							req.session.isadmin = parseInt(val[0].count) > 0;
-						});
+					req.session.contest = {};
+					req.session.contest_maker = {};
+					req.session.problem_maker = {};
+					let val;
+					//for session admin privilege
+					val = await query("select rightstr from privilege where user_id = ?", [user_id]);
+					for (let i of val) {
+						if (i.rightstr === "administrator") {
+							req.session.isadmin = true;
+						}
+						else if (i.rightstr.indexOf("c") !== -1) {
+							req.session.contest[i.rightstr] = true;
+						}
+						else if (i.rightstr.indexOf("m") === 0) {
+							req.session.contest_maker[i.rightstr] = true;
+						}
+						else if (i.rightstr.indexOf("p") === 0) {
+							req.session.problem_maker[i.rightstr] = true;
+						}
+					}
 				}
 				else {
 					res.json(error.invalidUser);
