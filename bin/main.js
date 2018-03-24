@@ -16,7 +16,7 @@ const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
 //const _dockerRunner = require("../module/docker_runner");
 const querystring = require("querystring");
-const localJudge = new _localJudge(config.judger.oj_home,config.judger.oj_judge_num);
+const localJudge = new _localJudge(config.judger.oj_home, config.judger.oj_judge_num);
 //const dockerRunner = new _dockerRunner(config.judger.oj_home,config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
@@ -443,9 +443,8 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-		//dockerRunner.addTask(data);
-		//sendMessage(admin_user, "judger", dockerRunner.getStatus());
-		sendMessage(admin_user, "judger", localJudge.getStatus());
+		localJudge.addTask(data);
+		sendMessage(admin_user, "judger",localJudge.getStatus());
 	});
 	/**
      * 全局推送功能
