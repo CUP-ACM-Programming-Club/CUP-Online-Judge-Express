@@ -215,7 +215,7 @@ io.use((socket, next) => {
  * 验证用户身份合法性
  */
 
-io.use(async (socket, next) => {
+io.use((socket, next) => {
 	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
 	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
 	if(!socket.user_id){
