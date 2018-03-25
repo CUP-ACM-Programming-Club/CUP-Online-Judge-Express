@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
@@ -36,6 +36,7 @@
     "node-cache": "^4.1.1",
     "pug": "^2.0.0-rc.4",
     "redis": "~2.8.0",
+    "rimraf": "^2.6.2",
     "serve-favicon": "~2.4.5",
     "session-file-store": "^1.1.2",
     "sha1": "^1.1.1",
