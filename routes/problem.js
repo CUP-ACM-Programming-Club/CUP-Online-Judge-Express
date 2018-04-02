@@ -186,7 +186,7 @@ const make_cache = async (res, req, opt = {source: "", raw: false}) => {
 	}
 	if (req.session.isadmin) {
 		if (opt.source.length === 0) {
-			sql = "SELECT * FROM problem WHERE problem_id=?";
+			sql = "SELECT * FROM problem WHERE problem_id = ?";
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then((rows) => {
@@ -302,10 +302,10 @@ router.post("/:source/:id", function (req, res) {
 		try {
 			json = req.body.json;
 			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
-			sample_input = ?,sample_output = ?,hint = ? where problem_id = ?`,
-				[json.title, json.time, json.memory, json.description, json.input,
-					json.output, json.sampleinput, json.sampleoutput, json.hint,
-					problem_id])
+			sample_input = ?,sample_output = ?,hint = ?,label = ? where problem_id = ?`,
+			[json.title, json.time, json.memory, json.description, json.input,
+				json.output, json.sampleinput, json.sampleoutput, json.hint,json.label,
+				problem_id])
 				.then(() => {
 				})
 				.catch(err => {
