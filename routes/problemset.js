@@ -36,7 +36,7 @@ async function cache_query(sql, sqlArr = []) {
 
 async function get_problem(req, res) {
 	const target = req.query.source || "local";
-	let search_table = target === "local" ? "problem" : target === "virtual" ? "virtual_problem" : "problem";
+	let search_table = target === "local" ? "problem" : target === "virtual" ? "vjudge_problem" : "problem";
 	const start = parseInt(req.params.start);
 	let search = req.params.search;
 	if (search === "none") {
