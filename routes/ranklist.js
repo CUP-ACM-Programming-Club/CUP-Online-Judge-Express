@@ -42,13 +42,13 @@ const get_ranklist = async (req, res, opt = {}) => {
 		users.nick,s.solved,t.submit,v.solved as vjudge_solved FROM users
 		RIGHT JOIN (SELECT count(distinct problem_id) solved,user_id
 		FROM solution WHERE in_date >= ? AND result = 4 GROUP BY user_id
-		ORDER BY solved DESC LIMIT ?,?) s
+		ORDER BY solved DESC) s
 		ON users.user_id = s.user_id
 		LEFT JOIN
 		(SELECT count(problem_id) submit,user_id FROM solution WHERE
 		in_date >= ?
 		GROUP BY user_id ORDER BY submit DESC
-		LIMIT ?,?) t
+		) t
 		ON users.user_id = t.user_id
 		LEFT JOIN (SELECT count(distinct CONCAT(oj_name,problem_id)) solved,user_id
 		FROM (select oj_name,problem_id,user_id,result FROM vjudge_solution
@@ -56,26 +56,26 @@ const get_ranklist = async (req, res, opt = {}) => {
 		UNION ALL
 		SELECT oj_name,problem_id,user_id,4 as result FROM vjudge_record
 		WHERE time >= ?)
-		vsol WHERE result = 4 GROUP BY user_id ORDER BY solved LIMIT ?,?) v
+		vsol WHERE result = 4 GROUP BY user_id ORDER BY solved) v
 		ON users.user_id = v.user_id
-		ORDER BY s.solved DESC,t.submit,reg_time LIMIT 0,50`,
-			[time_start, page, page_cnt, time_start, page, page_cnt, time_start, time_start, page, page_cnt]);
+		ORDER BY s.solved DESC,t.submit,reg_time LIMIT ?,?`,
+			[time_start, time_start, time_start, time_start, page, page_cnt]);
 		}
 		else {
 			result = await cache_query(`SELECT users.user_id,
 		users.nick,s.solved as vjudge_accept,t.submit as vjudge_submit FROM users
 		RIGHT JOIN (SELECT count(distinct CONCAT(oj_name,problem_id)) solved,user_id
 		FROM vjudge_solution WHERE in_date >= ? AND result = 4 GROUP BY user_id
-		ORDER BY solved DESC LIMIT ?,?) s
+		ORDER BY solved DESC) s
 		ON users.user_id = s.user_id
 		LEFT JOIN
 		(SELECT count(CONCAT(oj_name,problem_id)) submit,user_id FROM vjudge_solution WHERE
 		in_date >= ?
 		GROUP BY user_id ORDER BY submit DESC
-		LIMIT ?,?) t
+		) t
 		ON users.user_id = t.user_id
-		ORDER BY s.solved DESC,t.submit,reg_time LIMIT 0,50`,
-			[time_start, page, page_cnt, time_start, page, page_cnt]);
+		ORDER BY s.solved DESC,t.submit,reg_time LIMIT ?,?`,
+			[time_start, time_start, page, page_cnt]);
 		}
 	}
 	else if (!opt.time_stamp) {

@@ -7,19 +7,20 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
-async function get_status(req,res,next,request_query = {},limit = 0){
+
+async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
 	let where_sql = "";
 	let sql_arr = [];
-	for(let i in request_query){
-		if(request_query[i]) {
+	for (let i in request_query) {
+		if (typeof request_query[i] !== "undefined") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
 		}
 	}
 	let _end = false;
 	if (req.session.isadmin) {
-		if(request_query.contest_id){
+		if (request_query.contest_id) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
@@ -46,10 +47,10 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 								order by sol.solution_id desc limit ?,20`, sql_arr);
 		}
 	}
-	else if(request_query.contest_id){
+	else if (request_query.contest_id) {
 		sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
-		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?",[request_query.contest_id]);
+		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
 		_end = _end[0].cnt;
 		_res = await cache_query(`select * from
 								(select solution_id,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
@@ -62,7 +63,7 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc, sol.solution_id desc limit ?,20`,sql_arr);
+								order by sol.in_date desc, sol.solution_id desc limit ?,20`, sql_arr);
 	}
 	else {
 		sql_arr.push(...sql_arr);
@@ -78,27 +79,27 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc limit ?,20`,sql_arr);
+								order by sol.solution_id desc limit ?,20`, sql_arr);
 	}
 	let result = [];
 	for (const val of _res) {
 		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
 		const nick = _user_info[0].nick.trim();
 		const avatar = Boolean(_user_info[0].avatar);
-		if((request_query.contest_id && req.session.isadmin)||!request_query.contest_id||_end) {
+		if ((request_query.contest_id && req.session.isadmin) || !request_query.contest_id || _end) {
 			result.push({
 				solution_id: val.solution_id,
 				user_id: val.user_id,
 				nick: nick,
-				avatar:avatar,
-				sim:val.sim,
-				sim_id:val.sim_s_id,
+				avatar: avatar,
+				sim: val.sim,
+				sim_id: val.sim_s_id,
 				problem_id: val.problem_id,
-				contest_id:val.contest_id,
-				pass_rate:val.pass_rate,
-				num:val.num,
+				contest_id: val.contest_id,
+				pass_rate: val.pass_rate,
+				num: val.num,
 				result: val.result,
-				oj_name:val.oj_name,
+				oj_name: val.oj_name,
 				memory: val.memory,
 				time: val.time,
 				language: val.language,
@@ -107,13 +108,13 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				judger: val.judger
 			});
 		}
-		else{
+		else {
 			const owner = req.user_id === val.user_id;
-			const check_owner = (data)=>{
-				if(owner){
+			const check_owner = (data) => {
+				if (owner) {
 					return data;
 				}
-				else{
+				else {
 					return "----";
 				}
 			};
@@ -121,15 +122,15 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 				solution_id: val.solution_id,
 				user_id: val.user_id,
 				nick: nick,
-				avatar:avatar,
+				avatar: avatar,
 				problem_id: val.problem_id,
 				result: val.result,
-				pass_rate:val.pass_rate,
-				sim_id:val.sim_s_id,
-				sim:val.sim,
-				num:val.num,
+				pass_rate: val.pass_rate,
+				sim_id: val.sim_s_id,
+				sim: val.sim,
+				num: val.num,
 				contest_id: val.contest_id,
-				oj_name:val.oj_name,
+				oj_name: val.oj_name,
 				memory: check_owner(val.memory),
 				time: check_owner(val.time),
 				language: val.language,
@@ -140,22 +141,22 @@ async function get_status(req,res,next,request_query = {},limit = 0){
 		}
 	}
 	res.json({
-		result:result,
-		const_list:const_name,
-		self:req.session.user_id,
-		isadmin:req.session.isadmin,
-		end:Boolean(_end)
+		result: result,
+		const_list: const_name,
+		self: req.session.user_id,
+		isadmin: req.session.isadmin,
+		end: Boolean(_end)
 	});
 }
 
-async function getGraphData(req,res,request_query = {}){
+async function getGraphData(req, res, request_query = {}) {
 	try {
 		if (request_query.contest_id) {
 			const result = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [request_query.contest_id]);
 			if (result.length) {
 				const start_time = new Date(result[0].start_time);
 				const end_time = new Date(result[0].end_time);
-				let diff_time = timediff(start_time,new Date(Math.min(new Date(),end_time)));
+				let diff_time = timediff(start_time, new Date(Math.min(new Date(), end_time)));
 				if (diff_time.years * 12 + diff_time.months > 10) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
@@ -178,10 +179,10 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
-						result:result,
-						label:["year","month"]
+						result: result,
+						label: ["year", "month"]
 					});
 				}
 				else if (diff_time.months * 30 + diff_time.days > 12) {
@@ -207,10 +208,10 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
 												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year
 												ORDER BY sub.year,sub.month,sub.day`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
-						result:result,
-						label:["month","day"]
+						result: result,
+						label: ["month", "day"]
 					});
 				}
 				else if (diff_time.days * 24 + diff_time.hours > 12) {
@@ -235,10 +236,10 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) accept
 												ON sub.day = accept.day AND sub.hour = accept.hour AND sub.year = accept.year AND sub.month = accept.month`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
-						result:result,
-						label:["day","hour"]
+						result: result,
+						label: ["day", "hour"]
 					});
 				}
 				else if (diff_time.hours * 60 + diff_time.minutes > 12) {
@@ -263,10 +264,10 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY HOUR(in_date),MINUTE(in_date)) accept
 												ON sub.hour = accept.hour AND sub.minute = accept.minute`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
-						result:result,
-						label:["hour","minute"]
+						result: result,
+						label: ["hour", "minute"]
 					});
 				}
 				else {
@@ -291,10 +292,10 @@ async function getGraphData(req,res,request_query = {}){
 												WHERE result = 4 AND contest_id = ?
 												GROUP BY MINUTE(in_date),SECOND(in_date)) accept
 												ON sub.minute = accept.minute AND sub.second = accept.second`,
-					[request_query.contest_id, request_query.contest_id,request_query.contest_id, request_query.contest_id]);
+					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
-						result:result,
-						label:["minute","second"]
+						result: result,
+						label: ["minute", "second"]
 					});
 				}
 			}
@@ -311,84 +312,84 @@ async function getGraphData(req,res,request_query = {}){
 												GROUP BY YEAR(in_date),MONTH(in_date)) accept
 												ON sub.year = accept.year AND sub.month = accept.month`);
 			res.json({
-				result:result,
-				label:["year","month"]
+				result: result,
+				label: ["year", "month"]
 			});
 		}
 	}
-	catch(e){
+	catch (e) {
 		logger.fatal(e);
 	}
 }
 
 router.get("/", async function (req, res, next) {
-	await get_status(req,res,next);
+	await get_status(req, res, next);
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit",async function(req,res,next){
-	const problem_id = req.params.problem_id === "null"?"":parseInt(req.params.problem_id);
-	const user_id = req.params.user_id === "null"?"":req.params.user_id;
-	const language = req.params.language === "null"?"":parseInt(req.params.language);
-	const result = req.params.result === "null"?"":parseInt(req.params.result);
-	const limit = req.params.limit === "null"? 0:parseInt(req.params.limit);
-	await get_status(req,res,next,{
-		problem_id:problem_id,
-		user_id:user_id,
-		language:language,
-		result:result
-	},limit);
+router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req, res, next) {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		problem_id: problem_id,
+		user_id: user_id,
+		language: language,
+		result: result
+	}, limit);
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id",async function(req,res,next){
-	const problem_id = req.params.problem_id === "null"?"":req.params.problem_id.toUpperCase().charCodeAt(0)-"A".charCodeAt(0);
-	const user_id = req.params.user_id === "null"?"":req.params.user_id;
-	const language = req.params.language === "null"?"":parseInt(req.params.language);
-	const result = req.params.result === "null"?"":parseInt(req.params.result);
-	const contest_id = req.params.contest_id === "null"?"":parseInt(req.params.contest_id);
-	const limit = req.params.limit === "null"? 0:parseInt(req.params.limit);
-	await get_status(req,res,next,{
-		num:problem_id,
-		user_id:user_id,
-		language:language,
-		result:result,
-		contest_id:contest_id
-	},limit);
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
+	const problem_id = req.params.problem_id === "null" ? undefined : req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		num: problem_id,
+		user_id: user_id,
+		language: language,
+		result: result,
+		contest_id: contest_id
+	}, limit);
 });
 
-router.get("/graph",async function(req,res){
-	const cid = req.query.cid ? parseInt(req.query.cid):null;
+router.get("/graph", async function (req, res) {
+	const cid = req.query.cid ? parseInt(req.query.cid) : null;
 	const date_flag = req.query.date;
-	await getGraphData(req,res,{
-		contest_id:cid,
-		date_flag:date_flag
+	await getGraphData(req, res, {
+		contest_id: cid,
+		date_flag: date_flag
 	});
 });
 
-router.get("/solution",async function(req,res){
-	const sid = req.query.sid ? parseInt(req.query.sid):null;
-	if(sid){
-		const _result = await query("SELECT user_id,language from solution WHERE solution_id = ?",[sid]);
-		if(_result.length > 0&&_result[0].user_id === req.session.user_id || req.session.isadmin){
+router.get("/solution", async function (req, res) {
+	const sid = req.query.sid ? parseInt(req.query.sid) : null;
+	if (sid) {
+		const _result = await query("SELECT user_id,language from solution WHERE solution_id = ?", [sid]);
+		if (_result.length > 0 && _result[0].user_id === req.session.user_id || req.session.isadmin) {
 			res.json({
-				status:"OK",
-				data:{
-					solution_id:sid,
-					user_id:_result[0].user_id,
-					language:_result[0].language
+				status: "OK",
+				data: {
+					solution_id: sid,
+					user_id: _result[0].user_id,
+					language: _result[0].language
 				}
 			});
 		}
-		else{
+		else {
 			res.json({
-				status:"error",
-				statement:"error sid / not privilege"
+				status: "error",
+				statement: "error sid / not privilege"
 			});
 		}
 	}
-	else{
+	else {
 		res.json({
-			status:"error",
-			statement:"invalid parameter"
+			status: "error",
+			statement: "invalid parameter"
 		});
 	}
 });
