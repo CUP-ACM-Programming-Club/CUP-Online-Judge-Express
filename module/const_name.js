@@ -8,6 +8,10 @@ module.exports = {
 		uva:["","ANSI C","JAVA","C++","Pascal","C++11","Python 3"],
 		jsk:["C","C++","C++14","Java","Python","Python3","Ruby","Blockly","Octave"]
 	},
+	language_suffix:{
+		local:["c","cpp","pas","java","rb","sh","py","php","perl","cs","objc","fbc","","c","cpp","lua",
+			"js","go","py","cpp","cpp","c","kt"]
+	},
 	language_template:{
 		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php",
 			"perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua",
