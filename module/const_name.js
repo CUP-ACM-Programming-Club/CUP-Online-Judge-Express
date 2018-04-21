@@ -8,17 +8,24 @@ module.exports = {
 		uva:["","ANSI C","JAVA","C++","Pascal","C++11","Python 3"],
 		jsk:["C","C++","C++14","Java","Python","Python3","Ruby","Blockly","Octave"]
 	},
+	language_suffix:{
+		local:["c","cpp","pas","java","rb","sh","py","php","perl","cs","objc","fbc","","c","cpp","lua",
+			"js","go","py","cpp","cpp","c","kt"]
+	},
 	language_template:{
-		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php","perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua","javascript","go","text","python","c_cpp","c_cpp","c_cpp","java"]
+		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php",
+			"perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua",
+			"javascript","go","text","python","c_cpp","c_cpp","c_cpp","java",
+			"python","python"]
 	},
 	langmask:138676,
 	judge_color:["waiting", "running", "compiling", "running",
 		"accepted", "wrong_answer", "wrong_answer", "time_limit_exceeded",
 		"memory_limit_exceeded", "output_limit_exceeded", "runtime_error",
-		"compile_error", "running", "running", "running"],
+		"compile_error", "running", "running", "running","wrong_answer"],
 	icon_list:["hourglass half", "spinner", "spinner", "spinner",
 		"checkmark", "minus", "remove", "clock", "microchip",
-		"print", "bomb", "code", "spinner", "spinner", "spinner"],
+		"print", "bomb", "code", "spinner", "spinner", "spinner","remove"],
 	result:{
 		cn:["等待","等待重判","编译中","运行并评判","答案正确","格式错误","答案错误","时间超限","内存超限","输出超限","运行错误","编译错误","编译成功","运行完成","已加入队列","提交被服务器拒绝",""],
 

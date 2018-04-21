@@ -36,6 +36,11 @@ error.nologin = {
 	statement: "not login"
 };
 
+error.noprivilege = {
+	status:"error",
+	statement:"Permission denied"
+};
+
 ok.logined = {
 	status: "OK",
 	statment: "logined"
