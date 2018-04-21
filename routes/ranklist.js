@@ -120,8 +120,7 @@ router.get("/", async function (req, res) {
 });
 
 router.get("/user", async function (req, res) {
-	let result = await cache_query(`SELECT count(1) as tot_user,acm.acm_user FROM users
-									LEFT JOIN (SELECT count(1) as acm_user FROM acm_member)acm on 1=1`)
+	let result = await cache_query("SELECT count(1) as tot_user FROM users")
 		.catch(() => {
 			//console.log(errs);
 			res.json({
@@ -129,7 +128,14 @@ router.get("/user", async function (req, res) {
 				statement: "database error"
 			});
 		});
-	res.json(result);
+	const tot_user = result[0].tot_user;
+	result = await cache_query("SELECT count(1) as acm_user FROM acm_member");
+	const acm_user = result[0].acm_user;
+	result = {
+		tot_user: tot_user,
+		acm_user: acm_user
+	};
+	res.json([result]);
 });
 
 module.exports = router;
