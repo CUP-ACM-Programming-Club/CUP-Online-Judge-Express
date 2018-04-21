@@ -4,7 +4,7 @@ const fs = promise.promisifyAll(require("fs"));
 const router = require("express").Router();
 const path = require("path");
 const query = require("../module/mysql_cache");
-// const suffix = require("../module/const_name").language_suffix.local;
+const suffix = require("../module/const_name").language_suffix.local;
 const zlib = require("zlib");
 const home_dir = path.join(require("../config.json").judger.oj_home, "data");
 const middleWare = require("../middleware/admin");
@@ -49,6 +49,13 @@ const readDir = async (dir) => {
 		}
 	});
 	return _dir;
+};
+
+const pack_solultion = (solution, language) => {
+	return {
+		code: solution,
+		language: language
+	};
 };
 
 const readFile = async (file_list) => {
@@ -130,7 +137,18 @@ const pack_file = async (req, res, opt = {}) => {
 				res.json(error_cb);
 				return;
 			}
+			let _solution = await query(`select * from (
+select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
+sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 			const problem_details = await pack_problem(_problem_detail[0], problem_dir);
+			if (_solution.length > 0) {
+				_solution = _solution[0];
+				problem_details.solution.push({
+					code: _solution.source,
+					language: _solution.language,
+					name: `solution.${suffix[_solution.language]}`
+				});
+			}
 			send_file(req, res, [problem_details], opt.problem_id);
 		}
 		else if (typeof opt.contest_id !== "undefined" && !isNaN(opt.contest_id)) {
@@ -151,7 +169,19 @@ const pack_file = async (req, res, opt = {}) => {
 						res.json(error_cb);
 						return;
 					}
+					let _solution = await query(`select * from (
+select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
+sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
+
 					const problem_details = await pack_problem(_problem_detail[0], problem_dir);
+					if (_solution.length > 0) {
+						_solution = _solution[0];
+						problem_details.solution.push({
+							code: _solution.source,
+							language: _solution.language,
+							name: `solution.${suffix[_solution.language]}`
+						});
+					}
 					result.push(problem_details);
 					resolve();
 				}).then(() => {
