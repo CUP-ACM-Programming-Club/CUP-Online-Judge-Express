@@ -51,13 +51,6 @@ const readDir = async (dir) => {
 	return _dir;
 };
 
-const pack_solultion = (solution, language) => {
-	return {
-		code: solution,
-		language: language
-	};
-};
-
 const readFile = async (file_list) => {
 	let target = [];
 	for (let i of file_list) {
