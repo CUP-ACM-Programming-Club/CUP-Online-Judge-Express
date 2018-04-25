@@ -15,7 +15,7 @@ module.exports = {
 	language_template:{
 		local:["c_cpp","c_cpp","pascal","java","ruby","bash","python","php",
 			"perl","csharp","objectivec","text","scheme","c_cpp","c_cpp","lua",
-			"javascript","go","text","python","c_cpp","c_cpp","c_cpp","java",
+			"javascript","go","python","c_cpp","c_cpp","c_cpp","java",
 			"python","python"]
 	},
 	langmask:138676,
