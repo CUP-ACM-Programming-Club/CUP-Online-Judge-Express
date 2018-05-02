@@ -4,4 +4,4 @@ router.get("/", (req, res) => {
 	res.render("faq", {title: "CUP Online Judge FAQ"});
 });
 
-module.exports = router;
+module.exports = ["/faq", router];

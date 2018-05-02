@@ -2,6 +2,8 @@ const express = require("express");
 const NodeCache = require("node-cache");
 const router = express.Router();
 const query = require("../module/mysql_query");
+const auth = require("../middleware/auth");
+
 const cache = new NodeCache({stdTTL: 10, checkperiod: 15});
 Date.prototype.Format = function (fmt) { //author: meizz
 	const o = {
@@ -222,4 +224,4 @@ router.get("/info/:user_id", async function (req, res) {
 	}
 });
 
-module.exports = router;
+module.exports = ["/user", auth, router];

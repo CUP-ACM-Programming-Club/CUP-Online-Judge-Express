@@ -3,6 +3,7 @@ const query = require("../module/mysql_query");
 const router = express.Router();
 const page_cnt = 50;
 let cache_pool = {};
+const auth = require("../middleware/auth");
 
 function sort_string(sort) {
 	const _sort = ["asc", "desc"];
@@ -42,6 +43,12 @@ async function get_problem(req, res) {
 	if (search === "none") {
 		search = false;
 	}
+	const _from = req.query.from || "";
+	let from = undefined;
+	if (_from && _from.length >= 3 && _from.length <= 6) {
+		from = _from;
+	}
+	const has_from = from !== undefined;
 	let order = req.params.order || "problem_id";
 	let rule = req.params.order_rule || 0;
 	order = order_rule(order, sort_string(rule));
@@ -54,51 +61,63 @@ async function get_problem(req, res) {
 	if (req.session.isadmin) {
 		if (search) {
 			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or source like ? or label like ? order by ${order}`, [search, search, search, search, search, search, search]);
+			where (title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} order by ${order}`, [search, search, search, search, search, search, has_from ? from : search]);
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or source like ? or label like ? order by ${order} limit ?,?`,
-			[search, search, search, search, search, search, search, start * 50, page_cnt]);
+			where (title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} 
+			order by ${order} limit ?,?`,
+			[search, search, search, search, search, search, has_from ? from : search, start * 50, page_cnt]);
 		}
 		else {
-			_total = await cache_query(`select count(1) as cnt from ${search_table} order by ${order}`);
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} order by ${order} limit ?,?`,
-				[start * 50, page_cnt]);
+			_total = await cache_query(`select count(1) as cnt from ${search_table} 
+			${has_from ? "where source = ?" : ""} order by ${order}`, (() => has_from ? [from] : [])());
+			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
+			${has_from ? "where source = ?" : ""} order by ${order} limit ?,?`,
+			(() => has_from ? [from, start * 50, page_cnt] : [start * 50, page_cnt])());
 		}
 	}
 	else {
 		if (search) {
 			_total = await cache_query(`select count(1) as cnt from ${search_table}
 			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or source like ? or label like ?) and problem_id not in(select problem_id from contest_problem
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"} and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			order by ${order}`, [search, search, search, search, search, search, search]);
+			order by ${order}`, [search, search, search, search, search, search, has_from ? from : search]);
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or source like ? or label like ?) and problem_id not in(select problem_id from contest_problem
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"} and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
-		 	limit ?,?`, [search, search, search, search, search, search, search, start * 50, page_cnt]);
+		 	limit ?,?`, [search, search, search, search, search, search, has_from ? from : search, start * 50, page_cnt]);
 		}
 		else {
 			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' and problem_id not in(select problem_id from contest_problem
+			where defunct='N' ${has_from ? "and source = ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			order by ${order}`);
+			order by ${order}`, (() => has_from ? [from] : [])());
 			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' and problem_id not in(select problem_id from contest_problem
+			where defunct='N' ${has_from ? "and source = ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
-		 	limit ?,?`, [start * 50, page_cnt]);
+		 	limit ?,?`, (() => has_from ? [from, start * 50, page_cnt] : [start * 50, page_cnt])());
 		}
 	}
 	total_num = parseInt(_total[0].cnt);
 	let send_problem_list = [];
 	for (let i of result) {
-		let acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
+		let acnum;
+		if (target === "local") {
+			acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
 		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`,
-		[req.session.user_id, i.problem_id, req.session.user_id, i.problem_id]);
+			[req.session.user_id, i.problem_id, req.session.user_id, i.problem_id]);
+		}
+		else {
+			acnum = await cache_query(`select count(1) as cnt from vjudge_solution where user_id = ? and problem_id = ?
+			and oj_name = ? and result = 4 union all select count(1) as cnt from vjudge_solution where user_id = ? 
+			and oj_name = ? and problem_id = ?`, [req.session.user_id, i.problem_id, i.source, req.session.user_id,
+				i.source, i.problem_id]);
+		}
 		let ac = parseInt(acnum[0].cnt);
 		let submit = parseInt(acnum[1].cnt);
 		send_problem_list.push({
@@ -112,12 +131,25 @@ async function get_problem(req, res) {
 		});
 	}
 	result = await cache_query("select value from global_setting where label='label_color'");
-	res.json({
+	let send_target = {
 		problem: send_problem_list,
 		color: JSON.parse(result[0].value),
 		total: total_num,
 		step: page_cnt
-	});
+	};
+	if (search_table === "vjudge_problem") {
+		send_target.from = await new Promise(resolve => {
+			cache_query("select name from vjudge_source")
+				.then(rows => {
+					let source = [];
+					for (let i of rows) {
+						source.push(i.name);
+					}
+					resolve(source);
+				});
+		});
+	}
+	res.json(send_target);
 	return;
 }
 
@@ -137,4 +169,4 @@ router.get("/:start/:search/:order/:order_rule", async function (req, res) {
 	await get_problem(req, res);
 });
 
-module.exports = router;
+module.exports = ["/problemset",auth,router];

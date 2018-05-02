@@ -1,8 +1,11 @@
 const express = require("express");
 //const query = require("../module/mysql_query");
+const dayjs = require("dayjs");
 const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
 const router = express.Router();
+const auth = require("../middleware/auth");
+
 const page_cnt = 50;
 const get_ranklist = async (req, res, opt = {}) => {
 	let page = opt.page * 50;
@@ -20,19 +23,23 @@ const get_ranklist = async (req, res, opt = {}) => {
 	else if (!opt.search) {
 		let time_start;
 		if (opt.time_stamp === "Y") {
-			time_start = new Date().getFullYear() + "-01-01";
+			// time_start = new Date().getFullYear() + "-01-01";
+			time_start = dayjs().subtract(1, "year").format("YYYY-MM-DD");
 		}
 		else if (opt.time_stamp === "M") {
-			time_start = new Date().getFullYear() + "-" + (new Date().getMonth() + 1) + "-01";
+			//time_start = new Date().getFullYear() + "-" + (new Date().getMonth() + 1) + "-01";
+			time_start = dayjs().subtract(1, "month").format("YYYY-MM-DD");
 		}
 		else if (opt.time_stamp === "W") {
-			let _temp_date = new Date();
-			let week_time = new Date(0).setDate(_temp_date.getDay() + 1);
-			_temp_date = new Date(_temp_date - week_time);
-			time_start = _temp_date.getFullYear() + "-" + (_temp_date.getMonth() + 1) + "-" + (_temp_date.getDate());
+			//let _temp_date = new Date();
+			//let week_time = new Date(0).setDate(_temp_date.getDay() + 1);
+			//_temp_date = new Date(_temp_date - week_time);
+			//time_start = _temp_date.getFullYear() + "-" + (_temp_date.getMonth() + 1) + "-" + (_temp_date.getDate());
+			time_start = dayjs().subtract(1, "week").format("YYYY-MM-DD");
 		}
 		else if (opt.time_stamp === "D") {
-			time_start = new Date().getFullYear() + "-" + (new Date().getMonth() + 1) + "-" + new Date().getDate();
+			//time_start = new Date().getFullYear() + "-" + (new Date().getMonth() + 1) + "-" + new Date().getDate();
+			time_start = dayjs().subtract(1, "day").format("YYYY-MM-DD");
 		}
 		else {
 			time_start = "1970-01-01";
@@ -120,8 +127,7 @@ router.get("/", async function (req, res) {
 });
 
 router.get("/user", async function (req, res) {
-	let result = await cache_query(`SELECT count(1) as tot_user,acm.acm_user FROM users
-									LEFT JOIN (SELECT count(1) as acm_user FROM acm_member)acm on 1=1`)
+	let result = await cache_query("SELECT count(1) as tot_user FROM users")
 		.catch(() => {
 			//console.log(errs);
 			res.json({
@@ -129,7 +135,14 @@ router.get("/user", async function (req, res) {
 				statement: "database error"
 			});
 		});
-	res.json(result);
+	const tot_user = result[0].tot_user;
+	result = await cache_query("SELECT count(1) as acm_user FROM acm_member");
+	const acm_user = result[0].acm_user;
+	result = {
+		tot_user: tot_user,
+		acm_user: acm_user
+	};
+	res.json([result]);
 });
 
-module.exports = router;
+module.exports = ["/ranklist", auth, router];

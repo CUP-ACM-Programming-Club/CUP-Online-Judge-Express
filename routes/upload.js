@@ -9,6 +9,12 @@ const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const upload = multer({dest: "/home/uploads/"});
 const path = require("path");
+const auth = require("../middleware/auth");
+
+const base64ToString = (base64) => {
+	return new Buffer(base64, "base64").toString();
+};
+
 const convertLanguage = (language_name) => {
 	const language_file_name = {
 		".c": 21,
@@ -52,7 +58,7 @@ const make_problem = (problem_id, problems = {}) => {
 		`, [problem_id, save_problem.title, save_problem.description, save_problem.input,
 			save_problem.output, save_problem.sample_input, save_problem.sample_output,
 			Number(Boolean(save_problem.special_judge && save_problem.special_judge.length > 0)),
-			save_problem.hint, save_problem.source, save_problem.label.join(" "), save_problem.time,
+			save_problem.hint, save_problem.source, save_problem.label.length > 0 ? save_problem.label.join(" ") : "", save_problem.time,
 			save_problem.memory, save_problem.defunct, 0, 0, 0])
 
 			.then(rows => {
@@ -68,7 +74,7 @@ const make_problem = (problem_id, problems = {}) => {
 const writeFiles = async (_path, files) => {
 	for (let i of files) {
 		const name = i.name;
-		const data = new Buffer(i.content, "base64").toString();
+		const data = base64ToString(i.content);
 		await new Promise((resolve, reject) => {
 			fs.writeFile(path.join(_path, name), data, function (err) {
 				if (err) {
@@ -87,18 +93,42 @@ const writeFiles = async (_path, files) => {
 	}
 };
 
-const submitProblem = async (req, pid, files) => {
+const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 	for (let i of files) {
 		const content = new Buffer(i.content, "base64").toString();
+		const language = convertLanguage(i.name);
+		let prepend_code = prepend.find((el) => convertLanguage(el.name) === language) || "";
+		let append_code = append.find((el) => convertLanguage(el.name) === language) || "";
+		if (prepend_code !== "") {
+			prepend_code = base64ToString(prepend_code.content);
+		}
+		if (append_code !== "") {
+			append_code = base64ToString(append_code.content);
+		}
 		await new Promise((resolve, reject) => {
 			query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
 		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name), req.session.user_id, content.length])
 				.then(rows => {
+					let flag = 0;
+					let feedback = [];
+					const check = (row) => {
+						if (row) {
+							feedback.push(row);
+						}
+						if (++flag >= 1) resolve();
+					};
 					const solution_id = rows.insertId;
-					query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${content}')`
+					query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${prepend_code + content + append_code}')`
 						, [solution_id])
 						.then(rows => {
-							resolve(rows);
+							check(rows);
+						})
+						.catch(err => {
+							reject(err);
+						});
+					query(`INSERT INTO source_code_user(solution_id,source)VALUES(?,'${content}')`, [solution_id])
+						.then(rows => {
+							check(rows);
 						})
 						.catch(err => {
 							reject(err);
@@ -116,12 +146,16 @@ const make_files = async (req, pid, problems = {}) => {
 	const outputFiles = problems.output_files;
 	const prependFiles = problems.prepend_files;
 	const appendFiles = problems.append_files;
+	const sample_input = problems.sample_input;
+	const sample_output = problems.sample_output;
 	const solutionFiles = problems.solution;
 	const save_path = path.join("/home/judge/data", pid.toString());
 	await new Promise(async (resolve, reject) => {
 		if (fs.existsSync(save_path)) {
-			await new Promise(resolve=>{
-				rimraf(save_path,()=>{resolve();});
+			await new Promise(resolve => {
+				rimraf(save_path, () => {
+					resolve();
+				});
 			});
 		}
 		fs.mkdir(save_path, 0o755, function (err) {
@@ -135,8 +169,17 @@ const make_files = async (req, pid, problems = {}) => {
 	});
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
-	await writeFiles(save_path, prependFiles);
-	await writeFiles(save_path, appendFiles);
+	await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
+	await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
+	for (let i of prependFiles) {
+		query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 1, base64ToString(i.content), convertLanguage(i.name)]);
+	}
+
+	for (let i of appendFiles) {
+		query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 0, base64ToString(i.content), convertLanguage(i.name)]);
+	}
+	// await writeFiles(save_path, prependFiles);
+	// await writeFiles(save_path, appendFiles);
 	await new Promise((resolve, reject) => {
 		fs.chown(save_path, 48, 48, function (err) {
 			if (err) {
@@ -147,7 +190,7 @@ const make_files = async (req, pid, problems = {}) => {
 			}
 		});
 	});
-	await submitProblem(req, pid, solutionFiles);
+	await submitProblem(req, pid, solutionFiles, prependFiles, appendFiles);
 };
 
 router.post("/", upload.single("fps"), async (req, res) => {
@@ -165,14 +208,14 @@ router.post("/", upload.single("fps"), async (req, res) => {
 		await make_problem(max_pid + i + 1, problems[i]);
 		await make_files(req, max_pid + i + 1, problems[i]);
 		problem_list.push({
-			problem_id:max_pid + i + 1,
-			title:problems[i].title
+			problem_id: max_pid + i + 1,
+			title: problems[i].title
 		});
 	}
 	res.json({
 		status: "OK",
-		data:problem_list
+		data: problem_list
 	});
 });
 
-module.exports = router;
+module.exports = ["/upload", auth, router];

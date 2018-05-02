@@ -17,6 +17,8 @@ const logger = log4js.logger("cheese", "info");
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const const_variable = require("../module/const_name");
+const auth = require("../middleware/auth");
+
 const send_json = (res, val) => {
 	if (res !== null) {
 		res.header("Content-Type", "application/json");
@@ -69,11 +71,11 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 		}
 		if (~opt.solution_id) {
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${req.session.isadmin?"":" AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id,req.session.user_id])
+			${req.session.isadmin ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
-						source: resolve?resolve[0]?resolve[0].source:"":""
+						source: resolve ? resolve[0] ? resolve[0].source : "" : ""
 					});
 				});
 		}
@@ -112,7 +114,7 @@ router.get("/module/search/:val", function (req, res) {
 			return;
 		}
 		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
+            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 			}
@@ -250,7 +252,7 @@ router.get("/:source/", async function (req, res) {
 	let raw = req.query.raw !== undefined;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-			"num = ?", [cid, pid]);
+            "num = ?", [cid, pid]);
 		if (result.length > 0) {
 			const _langmask = await cache_query("SELECT langmask FROM contest WHERE contest_id = ?", [cid]);
 			let problem_id = result[0].problem_id;
@@ -272,7 +274,7 @@ router.get("/:source/", async function (req, res) {
 	}
 	else if (~tid && ~pid) {
 		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
-			"num = ?", [tid, pid]);
+            "num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
 			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw});
@@ -304,7 +306,7 @@ router.post("/:source/:id", function (req, res) {
 			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,hint = ?,label = ? where problem_id = ?`,
 			[json.title, json.time, json.memory, json.description, json.input,
-				json.output, json.sampleinput, json.sampleoutput, json.hint,json.label,
+				json.output, json.sampleinput, json.sampleoutput, json.hint, json.label,
 				problem_id])
 				.then(() => {
 				})
@@ -378,4 +380,4 @@ router.get("/:source/:id/:sid", function (req, res) {
 });
 
 
-module.exports = router;
+module.exports = ["/problem", auth, router];

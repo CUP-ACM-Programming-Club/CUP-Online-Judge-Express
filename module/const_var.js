@@ -26,6 +26,11 @@ error.invalidUser = {
 	statement: "invalid user"
 };
 
+error.invalidParams = {
+	status:"error",
+	statememt:"invalid params"
+};
+
 error.memcahceError = {
 	status: "error",
 	statememt: "memcache error"
