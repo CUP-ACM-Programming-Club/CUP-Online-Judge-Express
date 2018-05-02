@@ -9,6 +9,7 @@ const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const upload = multer({dest: "/home/uploads/"});
 const path = require("path");
+const auth = require("../middleware/auth");
 
 const base64ToString = (base64) => {
 	return new Buffer(base64, "base64").toString();
@@ -217,4 +218,4 @@ router.post("/", upload.single("fps"), async (req, res) => {
 	});
 });
 
-module.exports = router;
+module.exports = ["/upload", auth, router];

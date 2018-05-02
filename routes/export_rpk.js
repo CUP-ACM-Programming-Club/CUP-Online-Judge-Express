@@ -8,6 +8,7 @@ const suffix = require("../module/const_name").language_suffix.local;
 const zlib = require("zlib");
 const home_dir = path.join(require("../config.json").judger.oj_home, "data");
 const middleWare = require("../middleware/admin");
+const auth = require("../middleware/auth");
 
 const error_cb = {
 	status: "ERROR",
@@ -198,4 +199,4 @@ router.get("/", middleWare, (req, res) => {
 	});
 });
 
-module.exports = router;
+module.exports = ["/export", auth, router];

@@ -7,6 +7,7 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
+const auth = require("../middleware/auth");
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
@@ -457,4 +458,4 @@ router.get("/:sid/:tr", async function (req, res) {
 	});
 });
 
-module.exports = router;
+module.exports = ["/status", auth, router];

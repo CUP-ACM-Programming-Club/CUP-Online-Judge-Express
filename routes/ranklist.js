@@ -4,6 +4,8 @@ const dayjs = require("dayjs");
 const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
 const router = express.Router();
+const auth = require("../middleware/auth");
+
 const page_cnt = 50;
 const get_ranklist = async (req, res, opt = {}) => {
 	let page = opt.page * 50;
@@ -143,4 +145,4 @@ router.get("/user", async function (req, res) {
 	res.json([result]);
 });
 
-module.exports = router;
+module.exports = ["/ranklist", auth, router];
