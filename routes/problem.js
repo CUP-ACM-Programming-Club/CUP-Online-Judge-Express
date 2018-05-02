@@ -75,14 +75,18 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
-						source: resolve ? resolve[0] ? resolve[0].source : "" : ""
+						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
+						isadmin: req.session.isadmin,
+						editor: req.session.editor || false
 					});
 				});
 		}
 		else {
 			send_json(res, {
 				problem: packed_problem,
-				source: ""
+				source: "",
+				isadmin: req.session.isadmin,
+				editor: req.session.editor || false
 			});
 			cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);
 		}
@@ -299,7 +303,7 @@ router.get("/:source/", async function (req, res) {
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
-	if (req.session.isadmin) {
+	if (req.session.isadmin || req.session.editor) {
 		let json;
 		try {
 			json = req.body.json;

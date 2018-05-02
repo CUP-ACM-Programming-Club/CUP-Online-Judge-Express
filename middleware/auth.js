@@ -34,6 +34,9 @@ module.exports = async (req, res, next) => {
 					else if (i.rightstr.indexOf("p") === 0) {
 						req.session.problem_maker[i.rightstr] = true;
 					}
+					else if (i.rightstr.indexOf("editor") === 0) {
+						req.session.editor = true;
+					}
 				}
 				return next();
 			}
