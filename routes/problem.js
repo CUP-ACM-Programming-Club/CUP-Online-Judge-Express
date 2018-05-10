@@ -253,6 +253,7 @@ router.get("/:source/", async function (req, res) {
 	let pid = req.query.pid === undefined ? -1 : req.query.pid;
 	let id = req.query.id === undefined ? -1 : req.query.id;
 	let sid = req.query.sid === undefined ? -1 : req.query.sid;
+	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
 	if (~cid && ~pid && check(req, cid)) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
@@ -292,6 +293,36 @@ router.get("/:source/", async function (req, res) {
 	}
 	else if (~id) {
 		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw});
+	}
+	else if (labels) {
+		cache_query("select label from problem")
+			.then(rows => {
+				let all_label = [];
+				for (let i of rows) {
+					if (typeof i.label === "string" && i.label.length > 0) {
+						for (let j of i.label.split(" ")) {
+							all_label.push(j);
+						}
+					}
+				}
+				const data = [...new Set(all_label)];
+				res.json({
+					status: "OK",
+					data: data
+				});
+				(async () => {
+					for (let i of data) {
+						await query(`INSERT INTO label_list (label_name)
+SELECT * FROM (SELECT ?) AS tmp
+WHERE NOT EXISTS (
+    SELECT label_name FROM label_list WHERE label_name = ?
+) LIMIT 1;`, [i, i]);
+					}
+				})();
+
+			})
+			.catch(() => {
+			});
 	}
 	else {
 		res.json({

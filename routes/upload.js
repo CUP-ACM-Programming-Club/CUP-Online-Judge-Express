@@ -146,8 +146,8 @@ const make_files = async (req, pid, problems = {}) => {
 	const outputFiles = problems.output_files;
 	const prependFiles = problems.prepend_files;
 	const appendFiles = problems.append_files;
-	const sample_input = problems.sample_input;
-	const sample_output = problems.sample_output;
+	// const sample_input = problems.sample_input;
+	// const sample_output = problems.sample_output;
 	const solutionFiles = problems.solution;
 	const save_path = path.join("/home/judge/data", pid.toString());
 	await new Promise(async (resolve, reject) => {
@@ -169,8 +169,9 @@ const make_files = async (req, pid, problems = {}) => {
 	});
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
-	await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
-	await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
+	// sample maybe have wrong data
+	// await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
+	// await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
 	for (let i of prependFiles) {
 		query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 1, base64ToString(i.content), convertLanguage(i.name)]);
 	}
@@ -193,16 +194,23 @@ const make_files = async (req, pid, problems = {}) => {
 	await submitProblem(req, pid, solutionFiles, prependFiles, appendFiles);
 };
 
-router.post("/", upload.single("fps"), async (req, res) => {
-	const data = await fsPromise.readFileAsync(req.file.path);
+const make_file = async (req, res, file_path, pid) => {
+	const data = await fsPromise.readFileAsync(file_path || req.file.path);
 	const unzip_data = await new Promise((resolve) => {
 		zlib.gunzip(data, (err, data) => {
 			resolve(data.toString());
 		});
 	});
 	const problems = JSON.parse(unzip_data);
-	const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
-	let max_pid = parseInt(_max_pid[0].max_id);
+	let max_pid;
+
+	if (pid) {
+		max_pid = pid;
+	}
+	else {
+		const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
+		max_pid = parseInt(_max_pid[0].max_id);
+	}
 	let problem_list = [];
 	for (let i = 0; i < problems.length; ++i) {
 		await make_problem(max_pid + i + 1, problems[i]);
@@ -212,9 +220,59 @@ router.post("/", upload.single("fps"), async (req, res) => {
 			title: problems[i].title
 		});
 	}
+	return problem_list;
+};
+
+router.post("/", upload.single("fps"), (req, res) => {
+	make_file(req, res)
+		.then(problem_list => {
+			res.json({
+				status: "OK",
+				data: problem_list
+			});
+		})
+		.catch(() => {
+			res.json({
+				status: "ERROR",
+				statement: "upload file error"
+			});
+		});
+});
+
+router.get("/", async (req, res) => {
+	const problem_dir = "/home/upload_problems";
+	const dir_list = await new Promise((resolve, reject) => {
+		fs.readdir(problem_dir, (err, data) => {
+			if (err) {
+				reject();
+			}
+			resolve(data);
+		});
+	});
+	let file_list = [];
+	dir_list.forEach((el) => {
+		if (el.match(/\.rpk/)) {
+			file_list.push(el);
+		}
+	});
+	dir_list.sort();
+	const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
+	let max_pid = parseInt(_max_pid[0].max_id);
+	let problem_lists = [];
+	let start_id = max_pid + 1;
+	for (let el of file_list) {
+		const filename = path.join(problem_dir, el);
+		const problem_list = await make_file(req, res, filename, start_id++);
+		await new Promise(resolve => {
+			fs.unlink(filename, () => {
+				resolve();
+			});
+		});
+		problem_lists.push(problem_list);
+	}
 	res.json({
 		status: "OK",
-		data: problem_list
+		data: problem_lists
 	});
 });
 
