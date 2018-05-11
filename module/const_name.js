@@ -18,7 +18,7 @@ module.exports = {
 			"javascript","go","python","c_cpp","c_cpp","c_cpp","java",
 			"python","python"]
 	},
-	langmask:138676,
+	langmask:29597104,
 	judge_color:["waiting", "running", "compiling", "running",
 		"accepted", "wrong_answer", "wrong_answer", "time_limit_exceeded",
 		"memory_limit_exceeded", "output_limit_exceeded", "runtime_error",
