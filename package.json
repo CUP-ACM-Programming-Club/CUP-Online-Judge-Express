@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git"
@@ -47,10 +47,10 @@
   },
   "main": "./bin/main.js",
   "scripts": {
-    "test": "node ./bin/main.js",
-    "start": "pm2 start pm2.json",
+    "test": "node --max-old-space-size=5000 ./bin/main.js",
+    "start": "pm2 start pm2.json --node-args=\"--max-old-space-size=5000\"",
     "stop": "pm2 stop pm2.json",
-    "restart": "pm2 restart pm2.json"
+    "restart": "pm2 stop pm2.json && pm2 start pm2.json"
   },
   "devDependencies": {
     "webpack": "^3.10.0"
