@@ -31,7 +31,7 @@ const check = (req, cid) => {
 };
 
 const markdownPack = (html) => {
-	return ["<div class=\"markdown-body\">", html, "</div>"].join("");
+	return `<div class="markdown-body">${html}</div>`;
 };
 
 const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}) => {
@@ -295,7 +295,19 @@ router.get("/:source/", async function (req, res) {
 		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw});
 	}
 	else if (labels) {
-		cache_query("select label from problem")
+		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
+		cache_query(`select label_name from ${vjudge}label_list`)
+			.then(rows => {
+				let data = [];
+				for (let i of rows) {
+					data.push(i.label_name);
+				}
+				res.json({
+					status: "OK",
+					data: data
+				});
+			});
+		cache_query(`select label from ${vjudge}problem`)
 			.then(rows => {
 				let all_label = [];
 				for (let i of rows) {
@@ -306,16 +318,12 @@ router.get("/:source/", async function (req, res) {
 					}
 				}
 				const data = [...new Set(all_label)];
-				res.json({
-					status: "OK",
-					data: data
-				});
 				(async () => {
 					for (let i of data) {
-						await query(`INSERT INTO label_list (label_name)
+						await query(`INSERT INTO ${vjudge}label_list (label_name)
 SELECT * FROM (SELECT ?) AS tmp
 WHERE NOT EXISTS (
-    SELECT label_name FROM label_list WHERE label_name = ?
+    SELECT label_name FROM ${vjudge}label_list WHERE label_name = ?
 ) LIMIT 1;`, [i, i]);
 					}
 				})();
