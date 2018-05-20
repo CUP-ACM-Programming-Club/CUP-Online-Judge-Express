@@ -76,14 +76,14 @@ let submissionOrigin = {};
  */
 wss.on("connection", function (ws) {
 	/**
-	 * 绑定judger发送的事件
-	 */
-	ws.on("judger", async function (message) {
+     * 绑定judger发送的事件
+     */
+	ws.on("judger", function (message) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = parseInt(solution_pack.solution_id);
 		if (submissions[solution_id]) {
-			await submissions[solution_id].emit("result", solution_pack);
+			submissions[solution_id].emit("result", solution_pack);
 			if (submissionOrigin[solution_id]) {
 				sendMessage(pagePush.contest_status[submissionOrigin[solution_id]], "result", solution_pack, 1);
 			}
@@ -107,9 +107,9 @@ wss.on("connection", function (ws) {
 		}
 	});
 	/**
-	 * 获得推送信息，根据信息类型emit对应事件
-	 */
-	ws.on("message", async function (message) {
+     * 获得推送信息，根据信息类型emit对应事件
+     */
+	ws.on("message", function (message) {
 		let request;
 		try {
 			request = JSON.parse(message);
@@ -129,7 +129,6 @@ wss.on("connection", function (ws) {
 		}
 	});
 });
-
 
 
 /**
@@ -218,29 +217,29 @@ io.use((socket, next) => {
 io.use((socket, next) => {
 	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
 	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
-	if(!socket.user_id){
+	if (!socket.user_id) {
 		next(new Error("Auth failed"));
 	}
-	else{
+	else {
 		socket.auth = true;
 		next();
 	}
 	/*
-	if (!socket.request.session.auth && !socket.auth) {
-		const token = parse_cookie["token"] || "";
-		const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
-		if (~cache_token.indexOf(token)) {
-			socket.auth = true;
-			next();
-		}
-		else {
+    if (!socket.request.session.auth && !socket.auth) {
+        const token = parse_cookie["token"] || "";
+        const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
+        if (~cache_token.indexOf(token)) {
+            socket.auth = true;
+            next();
+        }
+        else {
 
-		}
-	}
-	else {
-		next();
-	}
-	*/
+        }
+    }
+    else {
+        next();
+    }
+    */
 })
 ;
 
@@ -256,8 +255,8 @@ io.use(async (socket, next) => {
 		}
 		else {
 			const privilege = await
-				query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-					"user_id=?", [socket.user_id]);
+			query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
+                    "user_id=?", [socket.user_id]);
 			socket.privilege = parseInt(privilege[0].cnt) > 0;
 			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
 		}
@@ -269,7 +268,7 @@ io.use(async (socket, next) => {
 		}
 		else {
 			const nick = await
-				query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
+			query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
 			socket.user_nick = nick[0].nick;
 			cachePool.set(`${socket.user_id}nick`, socket.user_nick, 60);
 		}
@@ -386,8 +385,8 @@ io.on("connection", async function (socket) {
 	});
 
 	/**
-	 * 获取状态信息
-	 */
+     * 获取状态信息
+     */
 
 	socket.on("status", function (data) {
 		if (socket.privilege) {
@@ -399,11 +398,11 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-	 * 提交推送处理
-	 */
+     * 提交推送处理
+     */
 	socket.on("submit", async function (_data) {
 		/**
-		 * { submission_id: 61459,
+         * { submission_id: 61459,
          * val:
          * { id: '1000',
          * input_text: '1 2',
@@ -444,7 +443,7 @@ io.on("connection", async function (socket) {
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
 		localJudge.addTask(data);
-		sendMessage(admin_user, "judger",localJudge.getStatus());
+		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
      * 全局推送功能
@@ -477,8 +476,8 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-	 * 断开连接销毁所有保存的数据
-	 */
+     * 断开连接销毁所有保存的数据
+     */
 	socket.on("disconnect", function () {
 		let pos = onlineUser[socket.user_id];
 		if (pos !== undefined && !socket.hasClosed) {
