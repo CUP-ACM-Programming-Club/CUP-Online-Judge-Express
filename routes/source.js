@@ -14,6 +14,8 @@ const cnameList = require("../module/const_name");
 const const_name = cnameList.markdown_language;
 const language_name = cnameList.language_name;
 const result = cnameList.result.cn;
+const judge_color = cnameList.judge_color;
+const icon_list = cnameList.icon_list;
 const markdownPack = (html) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
@@ -40,7 +42,7 @@ router.get("/:source/:id", async (req, res) => {
 	const source = req.params.source === "local" ? "source_code_user" : "vjudge_source_code";
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
-	const sql = `select * from (select problem_id,time,memory,result,source,language,user_id,${solution}.solution_id from ${source} left join
+	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
 where solution_id = ? ${req.session.isadmin ? "" : "and user_id = ?"}`;
 	// noinspection JSAnnotator
@@ -59,8 +61,13 @@ where solution_id = ? ${req.session.isadmin ? "" : "and user_id = ?"}`;
 				code: make_code(data[0]),
 				problem: data[0].problem_id,
 				user_id: data[0].user_id,
-				language: language_name.local[data[0].language],
-				result: result[data[0].result]
+				language: language_name[data[0].oj_name ? data[0].oj_name.toLowerCase() : "local"][data[0].language],
+				result: result[data[0].result],
+				memory: data[0].memory,
+				time: data[0].time,
+				judge_color: judge_color[data[0].result],
+				icon: icon_list[data[0].result],
+				from: data[0].oj_name,
 			}
 		});
 	}

@@ -6,7 +6,9 @@ module.exports = {
 		hdu: ["G++", "", "C++", "GCC", "", "JAVA"],
 		poj: ["G++", "GCC", "JAVA", "Pascal", "C++", "C", "Fortran"],
 		uva: ["", "ANSI C", "JAVA", "C++", "Pascal", "C++11", "Python 3"],
-		jsk: ["C", "C++", "C++14", "Java", "Python", "Python3", "Ruby", "Blockly", "Octave"]
+		jsk: ["C", "C++", "C++14", "Java", "Python", "Python3", "Ruby", "Blockly", "Octave"],
+		vijos: ["C","C++","C#","Pascal","Java","Python 2","Python 3","PHP","Rust","Haskell","JavaScript","Go","Ruby"],
+		bzoj:["C","C++","C#","Pascal","Java","Python 2","Python 3","PHP","Rust","Haskell","JavaScript","Go","Ruby"]
 	},
 	language_suffix: {
 		local: ["c", "cpp", "pas", "java", "rb", "sh", "py", "php", "perl", "cs", "objc", "fbc", "", "c", "cpp", "lua",
