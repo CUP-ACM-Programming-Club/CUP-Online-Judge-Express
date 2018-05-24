@@ -14,10 +14,10 @@ const sessionMiddleware = require("../module/session").sessionMiddleware;
 // const client = require("../module/redis");
 const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
-//const _dockerRunner = require("../module/docker_runner");
+const _dockerRunner = require("../module/docker_runner");
 const querystring = require("querystring");
 const localJudge = new _localJudge(config.judger.oj_home, config.judger.oj_judge_num);
-//const dockerRunner = new _dockerRunner(config.judger.oj_home,config.judger.oj_judge_num);
+const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 /**
@@ -442,7 +442,17 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data["submission_id"]));
 		}
-		localJudge.addTask(data);
+		const language = parseInt(data.val.language);
+		switch (language) {
+		case 15:
+		case 16:
+		case 22:
+			dockerRunner.addTask(data);
+			break;
+		default:
+			localJudge.addTask(data);
+
+		}
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
