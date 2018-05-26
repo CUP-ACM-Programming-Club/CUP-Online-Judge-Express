@@ -27,7 +27,7 @@ const send_json = (res, val) => {
 };
 
 const check = (req, cid) => {
-	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid] || true;
+	return req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
 const markdownPack = (html) => {
@@ -70,13 +70,15 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
 		if (~opt.solution_id) {
+			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${req.session.isadmin ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
+			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
 						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
 						isadmin: req.session.isadmin,
+						browse_code: req.session.source_browser,
 						editor: req.session.editor || false
 					});
 				});
@@ -86,6 +88,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				problem: packed_problem,
 				source: "",
 				isadmin: req.session.isadmin,
+				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
 			});
 			cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);

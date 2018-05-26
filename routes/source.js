@@ -42,11 +42,12 @@ router.get("/:source/:id", async (req, res) => {
 	const source = req.params.source === "local" ? "source_code_user" : "vjudge_source_code";
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
+	const browse_code = req.session.isadmin || req.session.source_browser;
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
-where solution_id = ? ${req.session.isadmin ? "" : "and user_id = ?"}`;
+where solution_id = ? ${browse_code ? "" : "and user_id = ?"}`;
 	// noinspection JSAnnotator
-	const sqlArr = req.session.isadmin ? [id] : [id, req.session.user_id];
+	const sqlArr = browse_code ? [id] : [id, req.session.user_id];
 	const data = await query(sql, sqlArr);
 	if (data.length === 0) {
 		res.json({
