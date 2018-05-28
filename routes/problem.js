@@ -18,6 +18,7 @@ const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const const_variable = require("../module/const_name");
 const auth = require("../middleware/auth");
+const cheerio = require("cheerio");
 
 const send_json = (res, val) => {
 	if (res !== null) {
@@ -124,6 +125,7 @@ router.get("/module/search/:val", function (req, res) {
             " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
+				rows[i].source = cheerio.load(rows[i].source).text();
 			}
 			const result = {
 				items: rows

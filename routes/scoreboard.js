@@ -41,19 +41,24 @@ router.get("/:cid", async (req, res) => {
         and num>=0 and problem_id>0)vsol
         left join users on users.user_id=vsol.user_id
         ORDER BY user_id,in_date`;
-	const _data = await query(sql, [cid, cid]);
-	if (_data.length === 0) {
-		res.json({
-			status: "error",
-			statement: "no such contest"
-		});
-	}
-	else {
-		res.json({
-			status: "OK",
-			data: _data
-		});
-	}
+	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
+	const _data = query(sql, [cid, cid]);
+	const _total = query(sql2, [cid]);
+	Promise.all([_data, _total]).then((result) => {
+		if (result[0].length === 0) {
+			res.json({
+				status: "error",
+				statement: "no such contest"
+			});
+		}
+		else {
+			res.json({
+				status: "OK",
+				data: result[0],
+				total: result[1][0].total_problem
+			});
+		}
+	});
 });
 
 module.exports = ["/scoreboard", auth, router];
