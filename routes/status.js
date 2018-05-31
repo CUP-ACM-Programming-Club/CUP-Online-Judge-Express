@@ -111,7 +111,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			});
 		}
 		else {
-			const owner = req.user_id === val.user_id;
+			const owner = req.session.user_id === val.user_id;
 			const check_owner = (data) => {
 				if (owner) {
 					return data;

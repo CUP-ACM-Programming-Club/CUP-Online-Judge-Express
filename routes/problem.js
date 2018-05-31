@@ -1,4 +1,5 @@
 const express = require("express");
+const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 let cachePack = {};
@@ -69,6 +70,9 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				packed_problem.hint = markdownPack(md.render(packed_problem.hint));
 			}
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
+		}
+		if (!opt.after_contest) {
+			packed_problem.source = "";
 		}
 		if (~opt.solution_id) {
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
@@ -172,7 +176,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = async (res, req, opt = {source: "", raw: false}) => {
+const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
 	logger.info(opt.problem_id);
 	let sql;
 	const _prepend = await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.problem_id]);
@@ -264,15 +268,17 @@ router.get("/:source/", async function (req, res) {
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
             "num = ?", [cid, pid]);
 		if (result.length > 0) {
-			const _langmask = await cache_query("SELECT langmask FROM contest WHERE contest_id = ?", [cid]);
+			const _langmask = await cache_query("SELECT langmask,end_time FROM contest WHERE contest_id = ?", [cid]);
 			let problem_id = result[0].problem_id;
 			let langmask = _langmask[0].langmask;
+			let end_time = _langmask[0].end_time;
 			make_cache(res, req, {
 				problem_id: problem_id,
 				source: source,
 				solution_id: sid,
 				raw: raw,
-				langmask: langmask
+				langmask: langmask,
+				after_contest: dayjs().isAfter(dayjs(end_time))
 			});
 		}
 		else {
