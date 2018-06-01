@@ -264,7 +264,15 @@ router.get("/:source/", async function (req, res) {
 	let sid = req.query.sid === undefined ? -1 : req.query.sid;
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
-	if (~cid && ~pid && check(req, cid)) {
+	if (~cid && ~pid) {
+		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+		if (contest[0].private === "Y" && !check(req, cid)) {
+			res.json({
+				status: "error",
+				statement: "invalid parameter id"
+			});
+			return;
+		}
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
             "num = ?", [cid, pid]);
 		if (result.length > 0) {
