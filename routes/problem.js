@@ -301,7 +301,7 @@ router.get("/:source/", async function (req, res) {
             "num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw});
+			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw, after_contest:true});
 		}
 		else {
 			res.json({
@@ -311,7 +311,7 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw});
+		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest:true});
 	}
 	else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
