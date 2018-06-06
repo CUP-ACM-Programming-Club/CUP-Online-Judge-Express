@@ -64,65 +64,82 @@ async function get_problem(req, res) {
 	let _total;
 	if (req.session.isadmin) {
 		if (search) {
-			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"}`, [search, search, search, search, search, search, has_from ? from : search]);
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} 
-			order by ${order} limit ?,?`,
-			[search, search, search, search, search, search, has_from ? from : search, start * 50, page_cnt]);
-		}
-		else if (label) {
-			_total = await cache_query(`select count(1) as cnt from ${search_table} where  
-			${has_from ? "source = ? and" : ""} label like ?`, (() => has_from ? [from, `%${label}%`] : [`%${label}%`])());
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} where 
-			${has_from ? "source = ? and" : ""} label like ? order by ${order} limit ?,?`,
-			(() => has_from ? [from, `%${label}%`, start * 50, page_cnt] : [`%${label}%`, start * 50, page_cnt])());
+			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
+			if (label) {
+				sqlArr.push(`%${label}%`);
+			}
+			sqlArr.push(start * 50, page_cnt);
+			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
+			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
+			 `, [search, search, search, search, search, search, has_from ? from : search, label ? `%${label}%` : ""]),
+			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} ) ${label ? "and label like ?" : ""}
+			order by ${order} limit ?,?`, sqlArr)]);
 		}
 		else {
-			_total = await cache_query(`select count(1) as cnt from ${search_table} 
-			${has_from ? "where source = ?" : ""}`, (() => has_from ? [from] : [])());
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
-			${has_from ? "where source = ?" : ""} order by ${order} limit ?,?`,
-			(() => has_from ? [from, start * 50, page_cnt] : [start * 50, page_cnt])());
+			let sqlArr = [];
+			if (has_from) {
+				sqlArr.push(from);
+			}
+			if (label) {
+				sqlArr.push(`%${label}%`);
+			}
+			sqlArr.push(start * 50, page_cnt);
+			const sqlState = () => {
+				const where = (has_from || label) ? "where" : "";
+				let statmentArr = [];
+				if (has_from) {
+					statmentArr.push("source = ?");
+				}
+				if (label) {
+					statmentArr.push("label like ?");
+				}
+				return where + " " + statmentArr.join(" and ");
+			};
+			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table} ${sqlState()}`, (() => has_from ? [from, label] : [label])()), cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
+			${sqlState()} order by ${order} limit ?,?`, sqlArr)]);
 		}
 	}
 	else {
 		if (search) {
-			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or label like ?) ${has_from ? "and source = ?" : "or source like ?"} and problem_id not in(select problem_id from contest_problem
+			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
+			if (label) {
+				sqlArr.push(`%${label}%`);
+			}
+			sqlArr.push(start * 50, page_cnt);
+			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
+			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
+			 and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, [search, search, search, search, search, search, has_from ? from : search]);
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' and (title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or label like ?) ${has_from ? "and source = ?" : "or source like ?"} and problem_id not in(select problem_id from contest_problem
+			`, [search, search, search, search, search, search, has_from ? from : search, label ? `%${label}%` : ""]),
+			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
-		 	limit ?,?`, [search, search, search, search, search, search, has_from ? from : search, start * 50, page_cnt]);
-		}
-		else if (label) {
-			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} and label like ? and problem_id not in(select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, (() => has_from ? [from,`%${label}%`] : [`%${label}%`])());
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} and label like ? and problem_id not in(select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			order by ${order}
-		 	limit ?,?`, (() => has_from ? [from, `%${label}%`, start * 50, page_cnt] : [`%${label}%`, start * 50, page_cnt])());
+		 	limit ?,?`, sqlArr)]);
 		}
 		else {
-			_total = await cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} and problem_id not in(select problem_id from contest_problem
+			let sqlArr = [];
+			if (has_from) {
+				sqlArr.push(from);
+			}
+			if (label) {
+				sqlArr.push(`%${label}%`);
+			}
+			sqlArr.push(start * 50, page_cnt);
+			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
+			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, (() => has_from ? [from] : [])());
-			result = await cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} and problem_id not in(select problem_id from contest_problem
+			`, (() => has_from ? [from, `%${label}%`] : [`%${label}%`])()),
+			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
-		 	limit ?,?`, (() => has_from ? [from, start * 50, page_cnt] : [start * 50, page_cnt])());
+		 	limit ?,?`, sqlArr)]);
 		}
 	}
 	total_num = parseInt(_total[0].cnt);
@@ -172,7 +189,6 @@ async function get_problem(req, res) {
 		});
 	}
 	res.json(send_target);
-	return;
 }
 
 router.get("/:start", async function (req, res) {

@@ -8,6 +8,7 @@ const crypto = require("../module/encrypt");
 const memcache = require("../module/memcached");
 const [error, ok] = require("../module/const_var");
 const salt = "thisissalt";
+const login_action = require("../module/login_action");
 
 
 const reverse = (val) => {
@@ -46,15 +47,7 @@ router.post("/token", async function (req, res) {
 			req.session.user_id = token["user_id"];
 			req.session.auth = true;
 			res.json(ok.ok);
-			if (typeof token["password"] === "string") {
-				query("update users set newpassword=? where user_id=?",
-					[crypto.encryptAES(reverse(token["password"]) + salt, reverse(salt)), token["user_id"]]).catch(log.fatal);
-
-			}
-			query("select count(1) as count from privilege where user_id=? and rightstr='administrator'", [token["user_id"]])
-				.then((val) => {
-					req.session.isadmin = parseInt(val[0].count) > 0;
-				});
+			await login_action(req, req.session.user_id);
 		}
 		else {
 			res.json(error.invalidToken);
@@ -107,7 +100,6 @@ router.post("/", async function (req, res) {
 								log.fatal(e);
 							});
 					}
-					const login_action = require("../module/login_action");
 					await login_action(req, user_id);
 					res.json({
 						status: "OK"

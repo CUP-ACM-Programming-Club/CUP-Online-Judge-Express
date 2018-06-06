@@ -14,13 +14,15 @@ const cnameList = require("../module/const_name");
 const const_name = cnameList.markdown_language;
 const language_name = cnameList.language_name;
 const result = cnameList.result.cn;
+const judge_color = cnameList.judge_color;
+const icon_list = cnameList.icon_list;
 const markdownPack = (html) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
 
 
-const make_code = (data) => {
-	return markdownPack(md.render(["```" + const_name.local[data.language], data.source, "```"].join("\n")));
+const make_code = (data,source = "local") => {
+	return markdownPack(md.render(["```" + const_name[source.toLowerCase()][data.language], data.source, "```"].join("\n")));
 };
 
 router.get("/:source/:id", (req, res, next) => {
@@ -37,15 +39,22 @@ router.get("/:source/:id", (req, res, next) => {
 });
 
 router.get("/:source/:id", async (req, res) => {
-	const source = req.params.source === "local" ? "source_code_user" : "vjudge_source_code";
+	let local;
+	const source = (local = req.params.source === "local") ? "source_code_user" : "vjudge_source_code";
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
-	const sql = `select * from (select problem_id,time,memory,result,source,language,user_id,${solution}.solution_id from ${source} left join
+	const browse_code = req.session.isadmin || req.session.source_browser;
+	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
-where solution_id = ? ${req.session.isadmin ? "" : "and user_id = ?"}`;
+where solution_id = ? ${browse_code ? "" : "and user_id = ?"}`;
 	// noinspection JSAnnotator
-	const sqlArr = req.session.isadmin ? [id] : [id, req.session.user_id];
-	const data = await query(sql, sqlArr);
+	const sqlArr = browse_code ? [id] : [id, req.session.user_id];
+	let promiseArray = [];
+	promiseArray.push(query(sql, sqlArr));
+	if(!local) {
+		promiseArray.push(query("select oj_name from vjudge_solution where solution_id = ?",[id]));
+	}
+	const [data,_source] = await Promise.all(promiseArray);
 	if (data.length === 0) {
 		res.json({
 			status: "error",
@@ -56,11 +65,16 @@ where solution_id = ? ${req.session.isadmin ? "" : "and user_id = ?"}`;
 		res.json({
 			status: "OK",
 			data: {
-				code: make_code(data[0]),
+				code: local ? make_code(data[0]) : make_code(data[0],_source[0].oj_name),
 				problem: data[0].problem_id,
 				user_id: data[0].user_id,
-				language: language_name.local[data[0].language],
-				result: result[data[0].result]
+				language: language_name[data[0].oj_name ? data[0].oj_name.toLowerCase() : "local"][data[0].language],
+				result: result[data[0].result],
+				memory: data[0].memory,
+				time: data[0].time,
+				judge_color: judge_color[data[0].result],
+				icon: icon_list[data[0].result],
+				from: data[0].oj_name,
 			}
 		});
 	}

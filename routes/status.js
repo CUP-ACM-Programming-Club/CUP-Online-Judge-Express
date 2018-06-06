@@ -20,7 +20,8 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		}
 	}
 	let _end = false;
-	if (req.session.isadmin) {
+	const browser_privilege = req.session.isadmin || req.session.source_browser;
+	if (browser_privilege) {
 		if (request_query.contest_id) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
@@ -87,7 +88,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
 		const nick = _user_info[0].nick.trim();
 		const avatar = Boolean(_user_info[0].avatar);
-		if ((request_query.contest_id && req.session.isadmin) || !request_query.contest_id || _end) {
+		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
 			result.push({
 				solution_id: val.solution_id,
 				user_id: val.user_id,
@@ -110,7 +111,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			});
 		}
 		else {
-			const owner = req.user_id === val.user_id;
+			const owner = req.session.user_id === val.user_id;
 			const check_owner = (data) => {
 				if (owner) {
 					return data;
@@ -146,6 +147,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		const_list: const_name,
 		self: req.session.user_id,
 		isadmin: req.session.isadmin,
+		browse_code: req.session.source_browser,
 		end: Boolean(_end)
 	});
 }
@@ -368,9 +370,10 @@ router.get("/graph", async function (req, res) {
 
 router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
+	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
 		const _result = await query("SELECT user_id,language from solution WHERE solution_id = ?", [sid]);
-		if (_result.length > 0 && _result[0].user_id === req.session.user_id || req.session.isadmin) {
+		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege)) {
 			res.json({
 				status: "OK",
 				data: {

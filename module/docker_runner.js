@@ -75,7 +75,7 @@ class dockerRunner {
 	makeJudger(oj_home) {
 		const judger = new dockerJudger(oj_home);
 		const that = this;
-		judger.on("processing",async function (data) {
+		judger.on("processing", async function (data) {
 			const solution_id = parseInt(judger.submit_id);
 			const time = parseInt(data.time);
 			const memory = parseInt(data.memory);
@@ -99,20 +99,23 @@ class dockerRunner {
 					state: status
 				});
 			}
-			const select_version = await query("SELECT version FROM solution WHERE solution_id = ?",[solution_id]);
-			const version = select_version[0].version;
-			query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=? AND version = ", [time, memory, pass_point, status, solution_id,version])
-				.then((row) => {
-					let affected_row = parseInt(row.affectedRows);
-					if (affected_row === 0) {
-						query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?", [time, memory, pass_point, status, solution_id])
-							.then(() => {
-							}).catch(() => {
-							});
-					}
-				}).catch(() => {
-				});
-
+			if (status > 3) {
+				query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?",
+					[time, memory, pass_point, status, solution_id])
+					.then((row) => {
+						let affected_row = parseInt(row.affectedRows);
+						if (affected_row === 0) {
+							query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?",
+								[time, memory, pass_point, status, solution_id])
+								.then(() => {
+								}).catch((err) => {
+									console.log(err);
+								});
+						}
+					}).catch((err) => {
+						console.log(err);
+					});
+			}
 			if (compile_message && compile_message.length > 0) {
 				query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message])
 					.then((row) => {
@@ -122,9 +125,10 @@ class dockerRunner {
 								.then((row) => {
 									let affected_row = parseInt(row.affectedRows);
 									if (affected_row === 0) {
-
+										console.log(row);
 									}
-								}).catch(() => {
+								}).catch((err) => {
+									console.log(err);
 								});
 						}
 					}).catch(() => {
@@ -170,7 +174,7 @@ class dockerRunner {
 			const user_id = task.user_id;
 			const input_text = task.val.input_text;
 			if (!~this.judging_queue.indexOf(solution_id) &&
-				!~this.waiting_queue.indexOf(solution_id)) {
+                !~this.waiting_queue.indexOf(solution_id)) {
 				const submitPack = {
 					solution_id: solution_id,
 					language: language,
@@ -224,7 +228,11 @@ class dockerRunner {
 	}
 
 	async collectSubmissionFromDatabase() {
-		let result = await query("SELECT * FROM (SELECT solution.solution_id,solution.num,solution.user_id,solution.language,solution.problem_id,source_code.source,solution.result,solution.contest_id,custominput.input_text FROM solution left join source_code on source_code.solution_id = solution.solution_id left join custominput on custominput.solution_id = solution.solution_id)sol WHERE sol.result<2 limit 20");
+		let result = await query(`SELECT * FROM (SELECT solution.solution_id,solution.num,solution.user_id,
+		solution.language,solution.problem_id,source_code.source,solution.result,solution.contest_id,
+		custominput.input_text FROM solution left join source_code on
+		 source_code.solution_id = solution.solution_id left join custominput on
+		  custominput.solution_id = solution.solution_id)sol WHERE sol.result<2 and sol.language in (15,16,22) limit 20`);
 		for (let i in result) {
 			const solution_id = parseInt(result[i].solution_id);
 			let problem_id = parseInt(result[i].problem_id);
@@ -243,7 +251,7 @@ class dockerRunner {
 			const code = result[i].source;
 			const user_id = result[i].user_id ? result[i].user_id.toString() : result[i].user_id;
 			if (!~this.judging_queue.indexOf(solution_id) &&
-				!~this.waiting_queue.indexOf(solution_id)) {
+                !~this.waiting_queue.indexOf(solution_id)) {
 				const submitPack = {
 					solution_id: solution_id,
 					language: language,
