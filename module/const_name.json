@@ -147,6 +147,73 @@
       "c++",
       "kotlin",
       ""
+    ],
+    "hdu": [
+      "c++",
+      "",
+      "c++",
+      "c++",
+      "",
+      "java"
+    ],
+    "poj": [
+      "c++",
+      "c++",
+      "java",
+      "pascal",
+      "c++",
+      "c++",
+      "fortran"
+    ],
+    "uva": [
+      "",
+      "c++",
+      "java",
+      "c++",
+      "pascal",
+      "c++",
+      "python"
+    ],
+    "jsk": [
+      "c++",
+      "c++",
+      "c++",
+      "java",
+      "python",
+      "python",
+      "ruby",
+      "blockly",
+      "octave"
+    ],
+    "vijos": [
+      "c++",
+      "c++",
+      "csharp",
+      "pascal",
+      "java",
+      "python",
+      "python",
+      "php",
+      "rust",
+      "haskell",
+      "javascript",
+      "go",
+      "ruby"
+    ],
+    "bzoj": [
+      "c++",
+      "c++",
+      "csharp",
+      "pascal",
+      "java",
+      "python",
+      "python",
+      "php",
+      "rust",
+      "haskell",
+      "javascript",
+      "go",
+      "ruby"
     ]
   },
   "language_template": {
