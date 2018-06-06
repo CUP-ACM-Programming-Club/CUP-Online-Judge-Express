@@ -1,4 +1,5 @@
 const express = require("express");
+const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 let cachePack = {};
@@ -18,6 +19,7 @@ const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const const_variable = require("../module/const_name");
 const auth = require("../middleware/auth");
+const cheerio = require("cheerio");
 
 const send_json = (res, val) => {
 	if (res !== null) {
@@ -27,7 +29,7 @@ const send_json = (res, val) => {
 };
 
 const check = (req, cid) => {
-	return req.session.isadmin || req.session.contest[cid] || req.session.contest_maker[cid] || true;
+	return req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
 const markdownPack = (html) => {
@@ -69,14 +71,19 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			}
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
+		if (!opt.after_contest) {
+			packed_problem.source = "";
+		}
 		if (~opt.solution_id) {
+			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${req.session.isadmin ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
+			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
 						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
 						isadmin: req.session.isadmin,
+						browse_code: req.session.source_browser,
 						editor: req.session.editor || false
 					});
 				});
@@ -86,6 +93,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				problem: packed_problem,
 				source: "",
 				isadmin: req.session.isadmin,
+				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
 			});
 			cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);
@@ -121,6 +129,7 @@ router.get("/module/search/:val", function (req, res) {
             " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
+				rows[i].source = cheerio.load(rows[i].source).text();
 			}
 			const result = {
 				items: rows
@@ -167,7 +176,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = async (res, req, opt = {source: "", raw: false}) => {
+const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
 	logger.info(opt.problem_id);
 	let sql;
 	const _prepend = await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.problem_id]);
@@ -255,19 +264,29 @@ router.get("/:source/", async function (req, res) {
 	let sid = req.query.sid === undefined ? -1 : req.query.sid;
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
-	if (~cid && ~pid && check(req, cid)) {
+	if (~cid && ~pid) {
+		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+		if (contest[0].private === "Y" && !check(req, cid)) {
+			res.json({
+				status: "error",
+				statement: "invalid parameter id"
+			});
+			return;
+		}
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
             "num = ?", [cid, pid]);
 		if (result.length > 0) {
-			const _langmask = await cache_query("SELECT langmask FROM contest WHERE contest_id = ?", [cid]);
+			const _langmask = await cache_query("SELECT langmask,end_time FROM contest WHERE contest_id = ?", [cid]);
 			let problem_id = result[0].problem_id;
 			let langmask = _langmask[0].langmask;
+			let end_time = _langmask[0].end_time;
 			make_cache(res, req, {
 				problem_id: problem_id,
 				source: source,
 				solution_id: sid,
 				raw: raw,
-				langmask: langmask
+				langmask: langmask,
+				after_contest: dayjs().isAfter(dayjs(end_time))
 			});
 		}
 		else {
@@ -282,7 +301,7 @@ router.get("/:source/", async function (req, res) {
             "num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw});
+			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw, after_contest:true});
 		}
 		else {
 			res.json({
@@ -292,7 +311,7 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw});
+		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest:true});
 	}
 	else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
