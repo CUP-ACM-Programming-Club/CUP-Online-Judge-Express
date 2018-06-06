@@ -45,8 +45,8 @@ const get_ranklist = async (req, res, opt = {}) => {
 			time_start = "1970-01-01";
 		}
 		if (!opt.vjudge) {
-			result = await cache_query(`SELECT users.user_id,users.avatar
-		users.nick,s.solved,t.submit,v.solved as vjudge_solved,avatar FROM users
+			result = await cache_query(`SELECT users.user_id,users.avatar,
+		users.nick,s.solved,t.submit,v.solved as vjudge_solved FROM users
 		RIGHT JOIN (SELECT count(distinct problem_id) solved,user_id
 		FROM solution WHERE in_date >= ? AND result = 4 GROUP BY user_id
 		ORDER BY solved DESC) s
