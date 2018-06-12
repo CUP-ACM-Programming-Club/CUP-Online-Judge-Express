@@ -6,14 +6,16 @@ const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 const os = require("os");
+const eventEmitter = require("events").EventEmitter;
 
-class localJudger {
+class localJudger extends eventEmitter {
 	/**
-	 * 构造判题机
-	 * @param {String} home_dir 评测机所在的目录
-	 * @param {Number} judger_num 评测机数量
-	 */
+     * 构造判题机
+     * @param {String} home_dir 评测机所在的目录
+     * @param {Number} judger_num 评测机数量
+     */
 	constructor(home_dir, judger_num) {
+		super();
 		this.oj_home = home_dir;
 		this.judge_queue = [...Array(judger_num).keys()].map(x => x + 1);
 		this.waiting_queue = [];
@@ -32,17 +34,17 @@ class localJudger {
 	}
 
 	/**
-	 * 开启时更新数据库状态
-	 */
+     * 开启时更新数据库状态
+     */
 
 	static startupInit() {
 		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
 	}
 
 	/**
-	 * 返回Judger状态
-	 * @returns {{judging: Array, free_judger: Array, waiting: Array, last_solution_id: number|*, is_looping: *, oj_home: String|*}} 返回评测机的所有状态
-	 */
+     * 返回Judger状态
+     * @returns {{judging: Array, free_judger: Array, waiting: Array, last_solution_id: number|*, is_looping: *, oj_home: String|*}} 返回评测机的所有状态
+     */
 
 	getStatus() {
 		return {
@@ -52,20 +54,22 @@ class localJudger {
 			last_solution_id: this.latestSolutionID,
 			is_looping: this.isLooping(),
 			oj_home: this.oj_home,
-			cpu_details:this.CPUDetails,
-			platform:this.platform
+			cpu_details: this.CPUDetails,
+			cpu_model:this.CPUModel,
+			cpu_speed:this.CPUSpeed,
+			platform: this.platform
 		};
 	}
 
 	/**
-	 * 添加一个提交任务
-	 * @param {Number} solution_id 提交ID
-	 */
+     * 添加一个提交任务
+     * @param {Number} solution_id 提交ID
+     */
 
 	addTask(solution_id) {
 		if (solution_id > this.latestSolutionID &&
-			!~this.judging_queue.indexOf(solution_id) &&
-			!~this.waiting_queue.indexOf(solution_id)) {
+            !~this.judging_queue.indexOf(solution_id) &&
+            !~this.waiting_queue.indexOf(solution_id)) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
 				this.runJudger(solution_id, this.judge_queue.shift());
@@ -78,8 +82,8 @@ class localJudger {
 	}
 
 	/**
-	 * （回调）获取剩余的任务
-	 */
+     * （回调）获取剩余的任务
+     */
 
 	getRestTask() {
 		if (this.judge_queue.length && this.waiting_queue.length) {
@@ -88,10 +92,10 @@ class localJudger {
 	}
 
 	/**
-	 * 启动查询数据库的轮询
-	 * @param {Number} time 轮询事件间隔
-	 * @returns {TypeError}
-	 */
+     * 启动查询数据库的轮询
+     * @param {Number} time 轮询事件间隔
+     * @returns {TypeError}
+     */
 
 	startLoopJudge(time = 1000) {
 		if (typeof time !== "number") {
@@ -107,17 +111,17 @@ class localJudger {
 	}
 
 	/**
-	 * 返回judger是否轮询拾取数据库数据
-	 * @returns {boolean} 轮询开始返回true 否则返回false
-	 */
+     * 返回judger是否轮询拾取数据库数据
+     * @returns {boolean} 轮询开始返回true 否则返回false
+     */
 
 	isLooping() {
 		return this.loopingFlag;
 	}
 
 	/**
-	 * 停止轮询
-	 */
+     * 停止轮询
+     */
 
 	stopLoopJudge() {
 		this.loopingFlag = false;
@@ -125,20 +129,22 @@ class localJudger {
 	}
 
 	/**
-	 * 运行后台判题机
-	 * @param {Number} solution_id 提交ID
-	 * @param {Number} runner_id 判题机ID
-	 * @returns {Promise<void>} 返回一个空Promise
-	 */
+     * 运行后台判题机
+     * @param {Number} solution_id 提交ID
+     * @param {Number} runner_id 判题机ID
+     * @returns {Promise<void>} 返回一个空Promise
+     */
 
 	async runJudger(solution_id, runner_id) {
 		const judger = spawn(`${process.cwd()}/wsjudged`, [solution_id, runner_id, this.oj_home]);
+		this.emit("change",this.getStatus().free_judger);
 		judger.on("close", EXITCODE => {
 			this.judge_queue.push(runner_id);
 			const solutionPOS = this.judging_queue.indexOf(solution_id);
 			if (~solutionPOS) {
 				this.judging_queue.splice(solutionPOS, 1);
 			}
+			this.emit("change",this.getStatus().free_judger);
 			this.getRestTask();
 			if (EXITCODE) logger.fatal(`Fatal Error:\n
 				solution_id:${solution_id}\n
@@ -154,17 +160,17 @@ class localJudger {
 	}
 
 	/**
-	 * 从数据库收集提交
-	 * @returns {Promise<void>} 返回一个空Promise
-	 */
+     * 从数据库收集提交
+     * @returns {Promise<void>} 返回一个空Promise
+     */
 
 	async collectSubmissionFromDatabase() {
 		let result = await query("SELECT solution_id FROM solution WHERE result<2");
 		for (let i in result) {
 			const solution_id = parseInt(result[i].solution_id);
 			if (!isNaN(solution_id) &&
-				!~this.waiting_queue.indexOf(solution_id) &&
-				!~this.judging_queue.indexOf(solution_id)) {
+                !~this.waiting_queue.indexOf(solution_id) &&
+                !~this.judging_queue.indexOf(solution_id)) {
 				if (this.judge_queue.length) {
 					this.runJudger(solution_id, this.judge_queue.shift());
 					this.judging_queue.push(solution_id);
