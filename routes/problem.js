@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const express = require("express");
 const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
@@ -20,12 +21,37 @@ const cache_query = require("../module/mysql_cache");
 const const_variable = require("../module/const_name");
 const auth = require("../middleware/auth");
 const cheerio = require("cheerio");
+const ENVIRONMENT = process.env.NODE_ENV;
+const path = require("path");
 
 const send_json = (res, val) => {
 	if (res !== null) {
 		res.header("Content-Type", "application/json");
 		res.json(val);
 	}
+};
+
+const _judgeValidNumber = (num) => {
+	if (isNaN(num)) {
+		return -1;
+	}
+	else {
+		return parseInt(num);
+	}
+};
+
+const judgeValidNumber = (num) => {
+	if (Array.isArray(num)) {
+		let returnArr = [];
+		for (let i of num) {
+			returnArr.push(_judgeValidNumber(i));
+		}
+		return returnArr;
+	}
+	else {
+		return _judgeValidNumber(num);
+	}
+
 };
 
 const check = (req, cid) => {
@@ -177,7 +203,12 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 });
 
 const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
-	logger.info(opt.problem_id);
+	if (ENVIRONMENT) {
+		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
+	}
+	else {
+		logger.info(opt.problem_id);
+	}
 	let sql;
 	const _prepend = await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.problem_id]);
 	let new_langmask = 0;
@@ -264,9 +295,10 @@ router.get("/:source/", async function (req, res) {
 	let sid = req.query.sid === undefined ? -1 : req.query.sid;
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
+	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
 	if (~cid && ~pid) {
 		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
-		if (contest[0].private === "Y" && !check(req, cid)) {
+		if (contest[0].private === 1 && !check(req, cid)) {
 			res.json({
 				status: "error",
 				statement: "invalid parameter id"
@@ -301,7 +333,13 @@ router.get("/:source/", async function (req, res) {
             "num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
-			make_cache(res, req, {problem_id: problem_id, source: source, solution_id: sid, raw: raw, after_contest:true});
+			make_cache(res, req, {
+				problem_id: problem_id,
+				source: source,
+				solution_id: sid,
+				raw: raw,
+				after_contest: true
+			});
 		}
 		else {
 			res.json({
@@ -311,7 +349,7 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest:true});
+		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
 	}
 	else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
@@ -373,7 +411,13 @@ router.post("/:source/:id", function (req, res) {
 				.then(() => {
 				})
 				.catch(err => {
-					logger.fatal(err);
+					if (ENVIRONMENT === "test") {
+						console.error(`${path.basename(__filename)} line 414:`);
+						console.error(err);
+					}
+					else {
+						logger.fatal(err);
+					}
 				});
 			send_json(res, {
 				status: "OK"

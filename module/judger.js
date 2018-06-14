@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Class LocalJudger
  */
@@ -7,6 +8,14 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 const os = require("os");
 const eventEmitter = require("events").EventEmitter;
+
+const SECOND = {
+	ONE_SECOND: 1000,
+	TWO_SECOND: 2000,
+	THREE_SECOND: 3000,
+	FIVE_SECOND: 5000,
+	TEN_SECOND: 10000
+};
 
 class localJudger extends eventEmitter {
 	/**
@@ -30,7 +39,7 @@ class localJudger extends eventEmitter {
 		}
 		localJudger.startupInit();// Reset result whose solution didn't finish
 		//this.collectSubmissionFromDatabase();
-		this.startLoopJudge(3000);
+		this.startLoopJudge(SECOND.THREE_SECOND);
 	}
 
 	/**
@@ -55,8 +64,8 @@ class localJudger extends eventEmitter {
 			is_looping: this.isLooping(),
 			oj_home: this.oj_home,
 			cpu_details: this.CPUDetails,
-			cpu_model:this.CPUModel,
-			cpu_speed:this.CPUSpeed,
+			cpu_model: this.CPUModel,
+			cpu_speed: this.CPUSpeed,
 			platform: this.platform
 		};
 	}
@@ -97,7 +106,7 @@ class localJudger extends eventEmitter {
      * @returns {TypeError}
      */
 
-	startLoopJudge(time = 1000) {
+	startLoopJudge(time = SECOND.ONE_SECOND) {
 		if (typeof time !== "number") {
 			return new TypeError("variable time must be a number");
 		}
@@ -137,19 +146,27 @@ class localJudger extends eventEmitter {
 
 	async runJudger(solution_id, runner_id) {
 		const judger = spawn(`${process.cwd()}/wsjudged`, [solution_id, runner_id, this.oj_home]);
-		this.emit("change",this.getStatus().free_judger);
+		this.emit("change", this.getStatus().free_judger);
 		judger.on("close", EXITCODE => {
 			this.judge_queue.push(runner_id);
 			const solutionPOS = this.judging_queue.indexOf(solution_id);
 			if (~solutionPOS) {
 				this.judging_queue.splice(solutionPOS, 1);
 			}
-			this.emit("change",this.getStatus().free_judger);
+			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
-			if (EXITCODE) logger.fatal(`Fatal Error:\n
+			if (EXITCODE) {
+				logger.fatal(`Fatal Error:\n
 				solution_id:${solution_id}\n
 				runner_id:${runner_id}\n
 				`);
+				if (process.env.NODE_ENV === "test") {
+					console.error(`Fatal Error:\n
+				solution_id:${solution_id}\n
+				runner_id:${runner_id}\n
+				`);
+				}
+			}
 		});
 		judger.stdout.on("data", () => {
 
