@@ -68,11 +68,11 @@ async function get_problem(req, res) {
 			if (label) {
 				sqlArr.push(`%${label}%`);
 			}
-			sqlArr.push(start * 50, page_cnt);
+			sqlArr.push(start * page_cnt, page_cnt);
 			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
 			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
-			 `, [search, search, search, search, search, search, has_from ? from : search, label ? `%${label}%` : ""]),
+			 `, sqlArr),
 			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
 			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} ) ${label ? "and label like ?" : ""}
@@ -86,7 +86,7 @@ async function get_problem(req, res) {
 			if (label) {
 				sqlArr.push(`%${label}%`);
 			}
-			sqlArr.push(start * 50, page_cnt);
+			sqlArr.push(start * page_cnt, page_cnt);
 			const sqlState = () => {
 				const where = (has_from || label) ? "where" : "";
 				let statmentArr = [];
@@ -98,7 +98,8 @@ async function get_problem(req, res) {
 				}
 				return where + " " + statmentArr.join(" and ");
 			};
-			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table} ${sqlState()}`, (() => has_from ? [from, label] : [label])()), cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
+			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table} ${sqlState()}`,
+				sqlArr), cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
 			${sqlState()} order by ${order} limit ?,?`, sqlArr)]);
 		}
 	}
@@ -108,13 +109,13 @@ async function get_problem(req, res) {
 			if (label) {
 				sqlArr.push(`%${label}%`);
 			}
-			sqlArr.push(start * 50, page_cnt);
+			sqlArr.push(start * page_cnt, page_cnt);
 			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
 			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
 			 and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, [search, search, search, search, search, search, has_from ? from : search, label ? `%${label}%` : ""]),
+			`, sqlArr),
 			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
@@ -130,11 +131,11 @@ async function get_problem(req, res) {
 			if (label) {
 				sqlArr.push(`%${label}%`);
 			}
-			sqlArr.push(start * 50, page_cnt);
+			sqlArr.push(start * page_cnt, page_cnt);
 			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, (() => has_from ? [from, `%${label}%`] : [`%${label}%`])()),
+			`, sqlArr),
 			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
