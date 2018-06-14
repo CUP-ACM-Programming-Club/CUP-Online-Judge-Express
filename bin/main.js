@@ -106,6 +106,11 @@ wss.on("connection", function (ws) {
 			delete submissions[solution_id];
 		}
 	});
+
+	ws.on("vjudgeJudgerStatus", (data) => {
+
+	});
+
 	/**
      * 获得推送信息，根据信息类型emit对应事件
      */
@@ -162,6 +167,11 @@ function sendMessage(userArr, type, value, dimension = 2) {
 	}
 }
 
+localJudge.on("change", (freeJudger) => {
+	sendMessage(normal_user, "judgerChange", freeJudger);
+	sendMessage(admin_user, "judgerChange", freeJudger);
+});
+
 /**
  * 向不同权限的用户广播用户信息
  */
@@ -171,9 +181,13 @@ function onlineUserBroadcast() {
 	let userArr = {
 		user_cnt: online.length
 	};
-	sendMessage(normal_user, "user", userArr);
+	sendMessage(normal_user, "user", {
+		user: userArr, judger: localJudge.getStatus().free_judger
+	});
 	userArr["user"] = online;
-	sendMessage(admin_user, "user", userArr);
+	sendMessage(admin_user, "user", {
+		user: userArr, judger: localJudge.getStatus().free_judger
+	});
 }
 
 function whiteBoardBroadCast(socket, content) {
