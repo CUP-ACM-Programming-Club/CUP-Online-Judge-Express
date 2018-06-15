@@ -45,7 +45,7 @@ router.get("/:cid", async (req, res) => {
 	const _data = query(sql, [cid, cid]);
 	const _total = query(sql2, [cid]);
 	Promise.all([_data, _total]).then((result) => {
-		if (result[0].length === 0) {
+		if (result[1][0].total_problem === 0) {
 			res.json({
 				status: "error",
 				statement: "no such contest"
