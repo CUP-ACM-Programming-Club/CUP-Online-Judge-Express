@@ -122,7 +122,8 @@ order by pnum;`, [cid, cid, cid, cid, cid, cid]);
 router.get("/statistics/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && cid >= 1000) {
-		const contest_statistics_detail = await cache_query(`SELECT
+		const [contest_statistics_detail, total] = await Promise.all([
+			cache_query(`SELECT
   \`result\`,
   \`num\`,
   \`language\`
@@ -133,10 +134,15 @@ union all SELECT
             \`num\`,
             \`language\`
           FROM \`vjudge_solution\`
-          WHERE \`contest_id\` = ? and num >= 0`, [cid, cid]);
+          WHERE \`contest_id\` = ? and num >= 0`, [cid, cid])
+			,
+			cache_query("select count(1)total_problem,contest_id from contest_problem where contest_id = ?", [cid])
+		])
+        ;
 		res.json({
 			status: "OK",
-			data: contest_statistics_detail
+			data: contest_statistics_detail,
+			total: total[0].total_problem
 		});
 	}
 	else {
