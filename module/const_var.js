@@ -41,6 +41,12 @@ error.nologin = {
 	statement: "not login"
 };
 
+error.contestNotStart = {
+	status:"error",
+	statement: "contest not start!",
+	error_code: 101
+};
+
 error.noprivilege = {
 	status:"error",
 	statement:"Permission denied"
