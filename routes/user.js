@@ -178,49 +178,52 @@ router.get("/info/:user_id", async function (req, res) {
 	const user_id = req.params.user_id;
 	const _user_msg = cache.get("user_id/user_info" + user_id);
 	if (_user_msg === undefined) {
-		let result = await query("select school,email,nick from users where user_id=?", [user_id]);
-		if (result.length === 0) {
+		let _result, result, result1, result2;
+		[_result, result, result1, result2] = await Promise.all([
+			query("select school,email,nick from users where user_id=?", [user_id]),
+			query(`select language as lang,count(1) as cnt from solution where user_id=? and
+                    result=4 group by lang order by lang`, [user_id])
+			, query(`select count(DISTINCT problem_id)as ac from solution where 
+                user_id=? and result=4`, [user_id])
+			, query(`select count(solution_id) as submit from solution where 
+                user_id=? and problem_id>0`, [user_id])
+		]);
+		if (_result.length === 0) {
 			res.json({
 				status: "error",
 				statement: "no such user"
 			});
+			return;
 		}
-		else {
-			let user_info = {
-				school: result[0].school,
-				email: result[0].email,
-				nick: result[0].nick,
-				user_id: user_id,
-				AC_language: []
-			};
-			const language = {
-				"0": "GCC",
-				"21": "GCC",
-				"1": "G++",
-				"20": "G++",
-				"19": "G++",
-				"3": "Java",
-				"6": "Python",
-				"13": "Clang",
-				"14": "Clang++",
-				"2": "Pascal"
-			};
-			result = await query("select count(DISTINCT problem_id)as ac from solution where " +
-                "user_id=? and result=4", [user_id]);
-			user_info["AC"] = parseInt(result[0].ac);
-			result = await query("select count(solution_id) as submit from solution where " +
-                "user_id=? and problem_id>0", [user_id]);
-			user_info["submit"] = parseInt(result[0].submit);
-			query("update users set solved=?,submit=? where user_id=?", [user_info.AC, user_info.submit, user_id]);
-			result = await query("select language as lang,count(1) as cnt from solution where user_id=? and" +
-                " result=4 group by lang order by lang", [user_id]);
-			for (let i in result) {
-				if (user_info.AC_language[language[result[i].lang]] === undefined)
-					user_info.AC_language[language[result[i].lang]] = result[i].cnt;
-				else
-					user_info.AC_language[language[result[i].lang]] += result[i].cnt;
-			}
+		let user_info = {
+			school: result[0].school,
+			email: result[0].email,
+			nick: result[0].nick,
+			user_id: user_id,
+			AC_language: {}
+		};
+		const language = {
+			"0": "GCC",
+			"21": "GCC",
+			"1": "G++",
+			"20": "G++",
+			"19": "G++",
+			"3": "Java",
+			"6": "Python",
+			"13": "Clang",
+			"14": "Clang++",
+			"2": "Pascal"
+		};
+		user_info["AC"] = parseInt(result1[0].ac);
+		user_info["submit"] = parseInt(result2[0].submit);
+		query("update users set solved=?,submit=? where user_id=?", [user_info.AC, user_info.submit, user_id]);
+		for (let i in result) {
+			if (user_info.AC_language[language[result[i].lang.toString()]] === undefined)
+				user_info.AC_language[language[result[i].lang.toString()]] = result[i].cnt;
+			else
+				user_info.AC_language[language[result[i].lang.toString()]] += result[i].cnt;
 		}
+		res.json(user_info);
 	}
 });
 

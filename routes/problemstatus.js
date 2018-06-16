@@ -3,13 +3,16 @@ const router = express.Router();
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 const cache_query = require("../module/mysql_cache");
-const getProblemStatus = async (res, req, opt = {source: true, id: 0, page: 0, from: "", page_cnt: 20}) => {
+const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, from: "", page_cnt: 20}) => {
 	if (opt.id === 0) {
 		res.json(error.invalidParams);
 	}
 	else {
-		const hasOJName = () => {
-			if (from) {
+		let _opt = {source: true, id: 0, page: 0, from: "", page_cnt: 20};
+		Object.assign(_opt, opt);
+		Object.assign(opt, _opt);
+		const hasOJName = (from) => {
+			if (!from) {
 				return "and oj_name = ?";
 			}
 			else {
@@ -21,22 +24,22 @@ const getProblemStatus = async (res, req, opt = {source: true, id: 0, page: 0, f
 			from = "solution";
 		}
 		const [_result, solution] = await Promise.all([cache_query(`select count(1) total,result from ${from}
-		 where problem_id = ? ${hasOJName()}
+		 where problem_id = ? ${hasOJName(opt.source)}
         group by result`, [opt.id, opt.from]),
 		cache_query(`select user_id,solution_id,language,code_length,in_date,time,memory from ${from}
-		where problem_id = ? ${hasOJName()}
+		where problem_id = ? ${hasOJName(opt.source)}
 order by time,memory,code_length,in_date,solution_id limit ?,?`, (() => {
-			if (from) {
-				return [opt.id, opt.from, opt.page, opt.page_cnt];
+			if (!opt.source) {
+				return [opt.id, opt.from, opt.page * opt.page_cnt, opt.page_cnt];
 			}
 			else {
-				return [opt.id, opt.page, opt.page_cnt];
+				return [opt.id, opt.page * opt.page_cnt, opt.page_cnt];
 			}
 		})())]);
 		res.json({
 			status: "OK",
 			data: {
-				problem_status: _result[0],
+				problem_status: _result,
 				solution_status: solution
 			}
 		});
