@@ -68,7 +68,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								order by sol.in_date desc, sol.solution_id desc limit ?,20`, sql_arr);
 	}
 	else {
-		sql_arr.push(...sql_arr);
+		// sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
 		/* _res = await cache_query(`select * from
                                 (select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name
@@ -84,9 +84,11 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
                                 order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
                                 */
 		_res = await cache_query(`select * from
-								(select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,
+								memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
-								where problem_id > 0 and contest_id is null) sol
+								where problem_id > 0 and contest_id is null 
+								${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
 	}
