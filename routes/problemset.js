@@ -66,7 +66,8 @@ async function get_problem(req, res) {
 	let recent_one_month;
 	let one_month_add_problem = undefined;
 	const one_month_ago = dayjs().subtract(1, "month").format("YYYY-MM-DD");
-	if (req.session.isadmin) {
+	const browse_privilege = req.session.isadmin || req.session.source_browser || req.session.editor;
+	if (browse_privilege) {
 		if (search) {
 			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
 			if (label) {
