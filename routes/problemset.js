@@ -1,6 +1,7 @@
 const express = require("express");
 const query = require("../module/mysql_query");
 const router = express.Router();
+const dayjs = require("dayjs");
 const page_cnt = 50;
 let cache_pool = {};
 const auth = require("../middleware/auth");
@@ -62,6 +63,9 @@ async function get_problem(req, res) {
 	let result;
 	let total_num;
 	let _total;
+	let recent_one_month;
+	let one_month_add_problem = undefined;
+	const one_month_ago = dayjs().subtract(1, "month").format("YYYY-MM-DD");
 	if (req.session.isadmin) {
 		if (search) {
 			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
@@ -73,7 +77,7 @@ async function get_problem(req, res) {
 			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
 			 `, sqlArr),
-			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
 			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} ) ${label ? "and label like ?" : ""}
 			order by ${order} limit ?,?`, sqlArr)]);
@@ -98,9 +102,14 @@ async function get_problem(req, res) {
 				}
 				return where + " " + statmentArr.join(" and ");
 			};
-			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table} ${sqlState()}`,
-				sqlArr), cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table} 
-			${sqlState()} order by ${order} limit ?,?`, sqlArr)]);
+			let promiseArray = [cache_query(`select count(1) as cnt from ${search_table} ${sqlState()}`,
+				sqlArr), cache_query(`select problem_id,title,source,submit,accepted,in_date,label from ${search_table} 
+			${sqlState()} order by ${order} limit ?,?`, sqlArr)];
+			if (!has_from && !label) {
+				promiseArray.push(cache_query(`select count(1) as cnt from ${search_table} where 
+			    in_date > ?`, [one_month_ago]));
+			}
+			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}
 	}
 	else {
@@ -116,7 +125,7 @@ async function get_problem(req, res) {
 			 and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			`, sqlArr),
-			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
@@ -132,18 +141,27 @@ async function get_problem(req, res) {
 				sqlArr.push(`%${label}%`);
 			}
 			sqlArr.push(start * page_cnt, page_cnt);
-			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
+			let promiseArray = [cache_query(`select count(1) as cnt from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			`, sqlArr),
-			cache_query(`select problem_id,title,source,submit,accepted,label from ${search_table}
+			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
 			order by ${order}
-		 	limit ?,?`, sqlArr)]);
+		 	limit ?,?`, sqlArr)];
+			if (!has_from && !label) {
+				promiseArray.push(`select count(1) as cnt from problem where defunct='N' and in_date > ?
+			    and problem_id not in (select problem_id from contest_problem
+			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1)))`, [one_month_ago]);
+			}
+			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}
 	}
 	total_num = parseInt(_total[0].cnt);
+	if (recent_one_month && recent_one_month.length > 0) {
+		one_month_add_problem = recent_one_month[0].cnt;
+	}
 	let send_problem_list = [];
 	for (let i of result) {
 		let acnum;
@@ -167,7 +185,8 @@ async function get_problem(req, res) {
 			source: i.source,
 			submit: i.submit,
 			accepted: i.accepted,
-			label: i.label
+			label: i.label,
+			new: dayjs(i.in_date).isAfter(one_month_ago)
 		});
 	}
 	result = await cache_query("select value from global_setting where label='label_color'");
@@ -175,6 +194,7 @@ async function get_problem(req, res) {
 		problem: send_problem_list,
 		color: JSON.parse(result[0].value),
 		total: total_num,
+		recent_one_month: one_month_add_problem,
 		step: page_cnt
 	};
 	if (search_table === "vjudge_problem") {
