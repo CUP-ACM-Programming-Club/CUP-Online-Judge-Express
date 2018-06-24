@@ -1,10 +1,19 @@
 const express = require("express");
 const cache_query = require("../module/mysql_cache");
+const query = require("../module/mysql_query");
 const router = express.Router();
 const [error] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
 
+const md = require("markdown-it")({
+	html: true,
+	breaks: true
+});
+const mh = require("markdown-it-highlightjs");
+const mk = require("markdown-it-katex");
+md.use(mk);
+md.use(mh);
 const checkValidation = (number) => {
 	number = parseInt(number);
 	if (isNaN(number) || number <= 0) {
@@ -22,32 +31,29 @@ router.get("/:id", async (req, res) => {
 		res.json(error.invalidParams);
 		return;
 	}
-	let count = 0;
 	let discuss_content;
-	let tot = 0;
-	const resolve = () => {
-		++count;
-		if (count >= 2) {
-			res.json({
-				discuss: discuss_content,
-				total: tot
-			});
-		}
-	};
-
-	cache_query(`select * from article_content where article_id = ? 
-	${req.session.isadmin ? "" : "and defunct = 'N'"} order by content_id asc 
-	limit ?,?`, [id, page, page_cnt])
-		.then(rows => {
-			discuss_content = rows;
-			resolve();
-		});
-	cache_query(`select count(1) as cnt from article_content where article_id = ? 
-	${req.session.isadmin ? "" : "and defunct = 'N'"}`)
-		.then(rows => {
-			tot = parseInt(rows[0].cnt);
-			resolve();
-		});
+	let _tot, _article;
+	[discuss_content, _tot, _article] = await Promise.all([
+		cache_query(`select * from 
+		(select t.*,users.avatar from (select * from article_content where article_id = ? 
+	${req.session.isadmin ? "" : "and defunct = 'N'"})t left join users
+	on users.user_id = t.user_id)joint
+	 order by content_id asc 
+	limit ?,?`, [id, page, page_cnt]),
+		cache_query(`select count(1) as cnt from article_content where article_id = ? 
+	${req.session.isadmin ? "" : "and defunct = 'N'"}`, [id]),
+		cache_query(`select tmp.*,users.avatar,users.nick,users.biography,users.solved from (
+		select * from article where article_id = ? ${req.session.isadmin ? "" : "and defunct = 'N'"})
+		tmp
+		left join users on users.user_id = tmp.user_id
+		`, [id])
+	]);
+	_article[0].content = md.render(_article[0].content);
+	res.json({
+		discuss: discuss_content,
+		total: _tot[0].cnt,
+		discuss_header_content: _article[0]
+	});
 });
 router.get("/", async (req, res) => {
 	let page = checkValidation(req.query.page);
@@ -78,4 +84,18 @@ router.get("/", async (req, res) => {
 		});
 });
 
-module.exports = ["/discuss",auth,router];
+router.post("/:id", (req, res) => {
+	const captcha = req.body.captcha;
+	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
+	if (id < 1)
+		if (req.session.captcha.from !== "discuss" || req.session.captcha.captcha !== captcha) {
+			res.json(error.invalidCaptcha);
+		}
+		else {
+			const content = req.body.comment;
+			query(`insert into article_content(user_id,content,article_id)
+		values(?,?,?)`, [req.session.user_id, content, id]);
+		}
+});
+
+module.exports = ["/discuss", auth, router];

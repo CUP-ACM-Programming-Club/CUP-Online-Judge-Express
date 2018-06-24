@@ -103,7 +103,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 		if (~opt.solution_id) {
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ?)"}`, [opt.solution_id, req.session.user_id])
+			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or share = true)"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
