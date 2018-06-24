@@ -30,24 +30,24 @@ const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, f
 		const memory_limit = problem_limit[0].memory_limit * 1024;
 		const time_step = parseFloat(time_limit) * 2 / 25;
 		const memory_step = parseFloat(memory_limit) * 2 / 25;
-		let sql1 = `select count(1)total,diff from
+		let sql1 = `select count(1)total,language,diff from
   (select case`;
 		for (let i = 0; i <= time_limit; i += time_step) {
 			sql1 += ` when time between ${parseInt(i)} and ${parseInt(i + time_step)} then '${parseInt(i)}-${parseInt(i + time_step)}' `;
 		}
 
-		sql1 += `else '>${time_limit}' end as diff `;
+		sql1 += `else '>${time_limit}' end as diff ,language `;
 		sql1 += ` from solution where problem_id = ? and result = 4)t
-group by diff`;
-		let sql2 = `select count(1)total,diff from
+group by diff,language`;
+		let sql2 = `select count(1)total,language,diff from
   (select case`;
 		for (let i = 0; i <= memory_limit; i += memory_step) {
 			sql2 += ` when memory between ${parseInt(i)} and ${parseInt(i + memory_step)} then '${parseInt(i)}-${parseInt(i + memory_step)}' `;
 		}
 
-		sql2 += `else '>${time_limit}' end as diff `;
+		sql2 += `else '>${time_limit}' end as diff,language `;
 		sql2 += ` from solution where problem_id = ? and result = 4)t
-group by diff`;
+group by diff,language`;
 		const [_result, solution, _total, _solved, _passed, _end_contest, _time_range, _memory_range] = await Promise.all([cache_query(`select count(1) total,result from ${from}
 		 where problem_id = ? ${hasOJName(opt.source)}
         group by result`, [opt.id, opt.from]),

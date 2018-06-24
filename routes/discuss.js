@@ -1,9 +1,11 @@
 const express = require("express");
 const cache_query = require("../module/mysql_cache");
+const query = require("../module/mysql_query");
 const router = express.Router();
 const [error] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
+
 const md = require("markdown-it")({
 	html: true,
 	breaks: true
@@ -80,6 +82,20 @@ router.get("/", async (req, res) => {
 			tot = parseInt(rows[0].cnt);
 			resolve();
 		});
+});
+
+router.post("/:id", (req, res) => {
+	const captcha = req.body.captcha;
+	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
+	if (id < 1)
+		if (req.session.captcha.from !== "discuss" || req.session.captcha.captcha !== captcha) {
+			res.json(error.invalidCaptcha);
+		}
+		else {
+			const content = req.body.comment;
+			query(`insert into article_content(user_id,content,article_id)
+		values(?,?,?)`, [req.session.user_id, content, id]);
+		}
 });
 
 module.exports = ["/discuss", auth, router];

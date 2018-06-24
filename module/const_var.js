@@ -41,6 +41,11 @@ error.nologin = {
 	statement: "not login"
 };
 
+error.invalidCaptcha = {
+	status: "error",
+	statement: "captcha doesn't match"
+};
+
 error.contestNotStart = {
 	status:"error",
 	statement: "contest not start!",
