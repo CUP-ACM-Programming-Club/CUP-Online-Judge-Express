@@ -41,7 +41,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		else {
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,pass_rate,share,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}) sol
@@ -68,20 +68,29 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								order by sol.in_date desc, sol.solution_id desc limit ?,20`, sql_arr);
 	}
 	else {
-		sql_arr.push(...sql_arr);
+		// sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
+		/* _res = await cache_query(`select * from
+                                (select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name
+                                from solution
+                                where problem_id > 0 and contest_id is null
+                                ${where_sql}
+                                union all select solution_id,0.00 as pass_rate,share,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name
+                                from vjudge_solution
+                                where problem_id > 0 and contest_id is null
+                                ${where_sql}
+                                order by in_date) sol
+                                left join sim on sim.s_id = sol.solution_id
+                                order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
+                                */
 		_res = await cache_query(`select * from
-								(select solution_id,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,
+								memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
-								where problem_id > 0 and contest_id is null
-								${where_sql}
-								union all select solution_id,0.00 as pass_rate,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
-								from vjudge_solution
-								where problem_id > 0 and contest_id is null
-								${where_sql}
-								order by in_date) sol
+								where problem_id > 0 and contest_id is null 
+								${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
 	}
 	let result = [];
 	for (const val of _res) {
@@ -95,6 +104,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 				nick: nick,
 				avatar: avatar,
 				sim: val.sim,
+				share: val.share,
 				sim_id: val.sim_s_id,
 				problem_id: val.problem_id,
 				contest_id: val.contest_id,
@@ -372,8 +382,8 @@ router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
-		const _result = await query("SELECT user_id,language from solution WHERE solution_id = ?", [sid]);
-		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege)) {
+		const _result = await query("SELECT user_id,language,share from solution WHERE solution_id = ?", [sid]);
+		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
 				status: "OK",
 				data: {

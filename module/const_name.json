@@ -324,10 +324,10 @@
         "rank": "名次",
         "user": "用户名",
         "nick": "昵称",
-        "accept": "通过",
+        "accept": "通过数量",
         "submit": "提交",
         "ratio": "通过率",
-        "vjudge_accept": "VJ通过"
+        "vjudge_accept": "VJ通过数量"
       }
     },
     "jp": {
