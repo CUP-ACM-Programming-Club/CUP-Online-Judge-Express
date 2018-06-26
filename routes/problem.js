@@ -103,7 +103,12 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 		if (~opt.solution_id) {
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or share = true)"}`, [opt.solution_id, req.session.user_id])
+			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
+                "           and not exists\n" +
+                "           (select * from contest where contest_id in\n" +
+                "           (select contest_id from contest_problem\n" +
+                "           where solution.problem_id = contest_problem.problem_id)\n" +
+                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,

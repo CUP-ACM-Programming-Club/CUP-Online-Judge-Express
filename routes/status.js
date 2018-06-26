@@ -84,7 +84,14 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
                                 order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
                                 */
 		_res = await cache_query(`select * from
-								(select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,
+								(select solution_id,
+								if((share = 1
+           and not exists
+           (select * from contest where contest_id in
+           (select contest_id from contest_problem
+           where solution.problem_id = contest_problem.problem_id)
+          and end_time > NOW()) ),1,0) as share
+								,pass_rate,problem_id,contest_id,num,user_id,time,
 								memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where problem_id > 0 and contest_id is null 
@@ -382,7 +389,12 @@ router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
-		const _result = await query("SELECT user_id,language,share from solution WHERE solution_id = ?", [sid]);
+		const _result = await query(`SELECT user_id,language,if((share = 1
+           and not exists
+           (select * from contest where contest_id in
+           (select contest_id from contest_problem
+           where solution.problem_id = contest_problem.problem_id)
+          and end_time > NOW()) ),1,0) as share from solution WHERE solution_id = ?`, [sid]);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
 				status: "OK",
