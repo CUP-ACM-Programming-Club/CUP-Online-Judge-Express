@@ -10,6 +10,9 @@ const [error, ok] = require("../module/const_var");
 const salt = "thisissalt";
 const login_action = require("../module/login_action");
 
+const check_json = (text) => {
+	return /^[\],:{}\s]*$/.test(text.replace(/\\["\\\/bfnrtu]/g, "@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:\s*\[)+/g, ""));
+};
 
 const reverse = (val) => {
 	if (typeof val !== "string" && val.toString)
@@ -65,6 +68,10 @@ router.post("/", function (req, res, next) {
 
 router.post("/", async function (req, res) {
 	let receive = req.body.msg;
+	if (typeof receive === "undefined") {
+		res.json(error.invalidParams);
+		return;
+	}
 	try {
 		receive = Buffer.from(receive, "base64").toString();
 		receive = Buffer.from(receive, "base64").toString();
@@ -74,6 +81,10 @@ router.post("/", async function (req, res) {
 		return;
 	}
 	log.info(receive);
+	if (!check_json(receive)) {
+		res.json(error.invalidJSON);
+		return;
+	}
 	try {
 		receive = JSON.parse(receive);
 	}

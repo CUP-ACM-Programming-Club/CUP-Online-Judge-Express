@@ -27,8 +27,8 @@ error.invalidUser = {
 };
 
 error.invalidParams = {
-	status:"error",
-	statememt:"invalid params"
+	status: "error",
+	statememt: "invalid params"
 };
 
 error.memcahceError = {
@@ -46,15 +46,20 @@ error.invalidCaptcha = {
 	statement: "captcha doesn't match"
 };
 
+error.invalidJSON = {
+	status: "error",
+	statement: "invalid JSON format"
+};
+
 error.contestNotStart = {
-	status:"error",
+	status: "error",
 	statement: "contest not start!",
 	error_code: 101
 };
 
 error.noprivilege = {
-	status:"error",
-	statement:"Permission denied"
+	status: "error",
+	statement: "Permission denied"
 };
 
 ok.logined = {

@@ -203,7 +203,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 });
 
 const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
-	if (ENVIRONMENT) {
+	if (ENVIRONMENT === "test") {
 		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
 	}
 	else {

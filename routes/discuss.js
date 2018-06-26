@@ -38,7 +38,7 @@ router.get("/:id", async (req, res) => {
 		(select t.*,users.avatar from (select * from article_content where article_id = ? 
 	${req.session.isadmin ? "" : "and defunct = 'N'"})t left join users
 	on users.user_id = t.user_id)joint
-	 order by content_id asc 
+	 order by comment_id asc 
 	limit ?,?`, [id, page, page_cnt]),
 		cache_query(`select count(1) as cnt from article_content where article_id = ? 
 	${req.session.isadmin ? "" : "and defunct = 'N'"}`, [id]),
