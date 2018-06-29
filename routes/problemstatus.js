@@ -45,7 +45,7 @@ group by diff,language`;
 			sql2 += ` when memory between ${parseInt(i)} and ${parseInt(i + memory_step)} then '${parseInt(i)}-${parseInt(i + memory_step)}' `;
 		}
 
-		sql2 += `else '>${time_limit}' end as diff,language `;
+		sql2 += `else '>${memory_limit}' end as diff,language `;
 		sql2 += ` from solution where problem_id = ? and result = 4)t
 group by diff,language`;
 		const [_result, solution, _total, _solved, _passed, _end_contest, _time_range, _memory_range] = await Promise.all([cache_query(`select count(1) total,result from ${from}
