@@ -134,7 +134,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 	else {
 		const obj = {
 			status: "error",
-			statement: "problem not found"
+			statement: "problem not found or not a public problem"
 		};
 		send_json(res, obj);
 	}
@@ -257,11 +257,10 @@ const make_cache = async (res, req, opt = {source: "", raw: false, after_contest
 	else {
 		if (opt.source.length === 0) {
 			sql = `SELECT * FROM problem WHERE problem_id = ?
-			        AND defunct = 'N' AND problem_id`;
+			        AND defunct = 'N'`;
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
-
 					problem_callback(rows, req, res, opt);
 				});
 		}
@@ -358,10 +357,25 @@ router.get("/:source/", async function (req, res) {
 		}
 		else {
 			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
-		 where problem_id = ?`, [id]);
-			const end_time = dayjs(_end_time[0]);
-			if (dayjs().isBefore(end_time)) {
-				res.json(error.problemInContest);
+		 where problem_id = ?)`, [id]);
+			if (_end_time.length > 0) {
+				const end_time = dayjs(_end_time[0]);
+				if (dayjs().isBefore(end_time)) {
+					res.json(error.problemInContest);
+				}
+				else {
+					make_cache(res, req, {
+						problem_id: id,
+						source: source,
+						solution_id: sid,
+						raw: raw,
+						after_contest: true
+					});
+
+				}
+			}
+			else {
+				make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
 			}
 		}
 
