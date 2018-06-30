@@ -23,6 +23,7 @@ const auth = require("../middleware/auth");
 const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
+const [error] = require("../module/const_var");
 
 const send_json = (res, val) => {
 	if (res !== null) {
@@ -54,8 +55,8 @@ const judgeValidNumber = (num) => {
 
 };
 
-const check = (req, cid) => {
-	return req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+const checkContestPrivilege = (req, cid) => {
+	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
 const markdownPack = (html) => {
@@ -303,11 +304,8 @@ router.get("/:source/", async function (req, res) {
 	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
 	if (~cid && ~pid) {
 		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
-		if (contest[0].private === 1 && !check(req, cid)) {
-			res.json({
-				status: "error",
-				statement: "invalid parameter id"
-			});
+		if (contest[0].private === 1 && !checkContestPrivilege(req, cid)) {
+			res.json(error.problemInContest);
 			return;
 		}
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
@@ -354,7 +352,19 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+		const browse_privilege = req.session.isadmin || req.session.source_browser;
+		if (browse_privilege) {
+			make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+		}
+		else {
+			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
+		 where problem_id = ?`, [id]);
+			const end_time = dayjs(_end_time[0]);
+			if (dayjs().isBefore(end_time)) {
+				res.json(error.problemInContest);
+			}
+		}
+
 	}
 	else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";

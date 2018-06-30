@@ -74,6 +74,9 @@ let submissionOrigin = {};
 /**
  * 本地判题WebSocket服务器建立连接
  */
+
+let problemFromContest = {};
+
 wss.on("connection", function (ws) {
 	/**
      * 绑定judger发送的事件
@@ -82,10 +85,18 @@ wss.on("connection", function (ws) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = parseInt(solution_pack.solution_id);
+		if (problemFromContest[solution_id]) {
+			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
+			solution_pack.num = problemFromContest[solution_id].num;
+			if (finished) {
+				delete problemFromContest[solution_id];
+			}
+		}
 		if (submissions[solution_id]) {
 			submissions[solution_id].emit("result", solution_pack);
 			if (submissionOrigin[solution_id]) {
 				sendMessage(pagePush.contest_status[submissionOrigin[solution_id]], "result", solution_pack, 1);
+				sendMessage(pagePush.status, "result", solution_pack, 1);
 			}
 			else if (~submissionType.normal.indexOf(solution_id)) {
 				sendMessage(pagePush.status, "result", solution_pack, 1);
@@ -107,7 +118,7 @@ wss.on("connection", function (ws) {
 		}
 	});
 
-	ws.on("vjudgeJudgerStatus", (data) => {
+	ws.on("vjudgeJudgerStatus", () => {
 
 	});
 
@@ -439,12 +450,17 @@ io.on("connection", async function (socket) {
                 "contest_problem WHERE contest_id=? and num=?", [Math.abs(data["val"]["cid"]), data["val"]["pid"]]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
+				problemFromContest[submission_id] = {
+					contest_id: data["val"]["cid"],
+					num: data["val"]["pid"]
+				};
 			}
 		}
 		if ((data["val"] && data["val"]["cid"])) {
 			const contest_id = Math.abs(parseInt(data["val"]["cid"])) || 0;
 			if (contest_id >= 1000) {
 				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
+				sendMessage(pagePush.status, "submit", data, 1);
 				if (!submissionType.contest[contest_id]) {
 					submissionType.contest[contest_id] = [];
 				}

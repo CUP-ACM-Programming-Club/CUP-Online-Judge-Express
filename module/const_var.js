@@ -51,6 +51,11 @@ error.invalidJSON = {
 	statement: "invalid JSON format"
 };
 
+error.problemInContest = {
+	status:"error",
+	statement:"Current problem is in contest."
+};
+
 error.contestNotStart = {
 	status: "error",
 	statement: "contest not start!",
