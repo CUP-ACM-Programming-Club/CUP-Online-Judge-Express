@@ -6,7 +6,7 @@ router.get("/", (req, res) => {
 	const captcha = svgCaptcha.create({
 		noise: 3
 	});
-	const from = req.params.from || "global";
+	const from = req.query.from || "global";
 	req.session.captcha = {
 		from,
 		captcha: captcha.text

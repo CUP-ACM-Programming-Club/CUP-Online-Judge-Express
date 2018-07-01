@@ -74,4 +74,9 @@ ok.logined = {
 ok.ok = {
 	status: "OK"
 };
+
+ok.serverReceived = {
+	status:"OK",
+	statement:"server has receive your post"
+};
 module.exports = [error, ok];
