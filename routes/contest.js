@@ -6,7 +6,7 @@ const md = require("markdown-it")({
 });
 
 const mh = require("markdown-it-highlightjs");
-const mk = require("markdown-it-katex");
+const mk = require("@ryanlee2014/markdown-it-katex");
 md.use(mk);
 md.use(mh);
 const cache_query = require("../module/mysql_cache");
