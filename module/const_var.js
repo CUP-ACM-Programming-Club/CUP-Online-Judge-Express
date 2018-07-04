@@ -27,8 +27,8 @@ error.invalidUser = {
 };
 
 error.invalidParams = {
-	status:"error",
-	statememt:"invalid params"
+	status: "error",
+	statememt: "invalid params"
 };
 
 error.memcahceError = {
@@ -46,15 +46,25 @@ error.invalidCaptcha = {
 	statement: "captcha doesn't match"
 };
 
-error.contestNotStart = {
+error.invalidJSON = {
+	status: "error",
+	statement: "invalid JSON format"
+};
+
+error.problemInContest = {
 	status:"error",
+	statement:"Current problem is in contest."
+};
+
+error.contestNotStart = {
+	status: "error",
 	statement: "contest not start!",
 	error_code: 101
 };
 
 error.noprivilege = {
-	status:"error",
-	statement:"Permission denied"
+	status: "error",
+	statement: "Permission denied"
 };
 
 ok.logined = {
@@ -63,5 +73,10 @@ ok.logined = {
 };
 ok.ok = {
 	status: "OK"
+};
+
+ok.serverReceived = {
+	status:"OK",
+	statement:"server has receive your post"
 };
 module.exports = [error, ok];

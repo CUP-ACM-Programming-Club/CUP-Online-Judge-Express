@@ -2,7 +2,7 @@ const query = require("./mysql_query");
 const dayjs = require("dayjs");
 let cache_pool = [];
 module.exports = async function cache_query(sql, sqlArr = []) {
-	let identified = sql.toString() + sqlArr.toString();
+	let identified = sql.toString() + JSON.stringify(sqlArr.toString());
 	let now = dayjs();
 	if (cache_pool[identified]) {
 		let before = cache_pool[identified].time;

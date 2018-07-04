@@ -108,7 +108,7 @@ async function get_problem(req, res) {
 			${sqlState()} order by ${order} limit ?,?`, sqlArr)];
 			if (!has_from && !label) {
 				promiseArray.push(cache_query(`select count(1) as cnt from ${search_table} where 
-			    in_date > ?`, [one_month_ago]));
+			    in_date > ${one_month_ago}`));
 			}
 			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}
@@ -152,9 +152,9 @@ async function get_problem(req, res) {
 			order by ${order}
 		 	limit ?,?`, sqlArr)];
 			if (!has_from && !label) {
-				promiseArray.push(`select count(1) as cnt from problem where defunct='N' and in_date > ?
+				promiseArray.push(cache_query(`select count(1) as cnt from problem where defunct='N' and in_date > ${one_month_ago}
 			    and problem_id not in (select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1)))`, [one_month_ago]);
+			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1)))`));
 			}
 			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}

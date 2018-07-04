@@ -182,7 +182,7 @@ class localJudger extends eventEmitter {
      */
 
 	async collectSubmissionFromDatabase() {
-		let result = await query("SELECT solution_id FROM solution WHERE result<2");
+		let result = await query("SELECT solution_id FROM solution WHERE result<2 and language not in (15,16,22)");
 		for (let i in result) {
 			const solution_id = parseInt(result[i].solution_id);
 			if (!isNaN(solution_id) &&

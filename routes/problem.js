@@ -9,7 +9,7 @@ const md = require("markdown-it")({
 	breaks: true
 });
 const mh = require("markdown-it-highlightjs");
-const mk = require("markdown-it-katex");
+const mk = require("@ryanlee2014/markdown-it-katex");
 md.use(mk);
 md.use(mh);
 const cache = require("../module/cachePool");
@@ -23,6 +23,7 @@ const auth = require("../middleware/auth");
 const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
+const [error] = require("../module/const_var");
 
 const send_json = (res, val) => {
 	if (res !== null) {
@@ -54,8 +55,8 @@ const judgeValidNumber = (num) => {
 
 };
 
-const check = (req, cid) => {
-	return req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+const checkContestPrivilege = (req, cid) => {
+	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
 const markdownPack = (html) => {
@@ -103,7 +104,12 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 		if (~opt.solution_id) {
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or share = true)"}`, [opt.solution_id, req.session.user_id])
+			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
+                "           and not exists\n" +
+                "           (select * from contest where contest_id in\n" +
+                "           (select contest_id from contest_problem\n" +
+                "           where solution.problem_id = contest_problem.problem_id)\n" +
+                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					send_json(res, {
 						problem: packed_problem,
@@ -128,7 +134,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 	else {
 		const obj = {
 			status: "error",
-			statement: "problem not found"
+			statement: "problem not found or not a public problem"
 		};
 		send_json(res, obj);
 	}
@@ -203,7 +209,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 });
 
 const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
-	if (ENVIRONMENT) {
+	if (ENVIRONMENT === "test") {
 		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
 	}
 	else {
@@ -251,11 +257,10 @@ const make_cache = async (res, req, opt = {source: "", raw: false, after_contest
 	else {
 		if (opt.source.length === 0) {
 			sql = `SELECT * FROM problem WHERE problem_id = ?
-			        AND defunct = 'N' AND problem_id`;
+			        AND defunct = 'N'`;
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
-
 					problem_callback(rows, req, res, opt);
 				});
 		}
@@ -298,11 +303,8 @@ router.get("/:source/", async function (req, res) {
 	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
 	if (~cid && ~pid) {
 		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
-		if (contest[0].private === 1 && !check(req, cid)) {
-			res.json({
-				status: "error",
-				statement: "invalid parameter id"
-			});
+		if (contest[0].private === 1 && !checkContestPrivilege(req, cid)) {
+			res.json(error.problemInContest);
 			return;
 		}
 		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
@@ -349,7 +351,34 @@ router.get("/:source/", async function (req, res) {
 		}
 	}
 	else if (~id) {
-		make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+		const browse_privilege = req.session.isadmin || req.session.source_browser;
+		if (browse_privilege) {
+			make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+		}
+		else {
+			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
+		 where problem_id = ?)`, [id]);
+			if (_end_time.length > 0) {
+				const end_time = dayjs(_end_time[0]);
+				if (dayjs().isBefore(end_time)) {
+					res.json(error.problemInContest);
+				}
+				else {
+					make_cache(res, req, {
+						problem_id: id,
+						source: source,
+						solution_id: sid,
+						raw: raw,
+						after_contest: true
+					});
+
+				}
+			}
+			else {
+				make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+			}
+		}
+
 	}
 	else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
