@@ -102,63 +102,65 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let result = [];
 	for (const val of _res) {
 		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
-		const nick = _user_info[0].nick.trim();
-		const avatar = Boolean(_user_info[0].avatar);
-		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
-			result.push({
-				solution_id: val.solution_id,
-				user_id: val.user_id,
-				nick: nick,
-				ip: val.ip,
-				avatar: avatar,
-				sim: val.sim,
-				share: val.share,
-				sim_id: val.sim_s_id,
-				problem_id: val.problem_id,
-				contest_id: val.contest_id,
-				pass_rate: val.pass_rate,
-				num: val.num,
-				result: val.result,
-				oj_name: val.oj_name,
-				memory: val.memory,
-				time: val.time,
-				language: val.language,
-				length: val.code_length,
-				in_date: val.in_date,
-				judger: val.judger
-			});
-		}
-		else {
-			const owner = req.session.user_id === val.user_id;
-			const check_owner = (data) => {
-				if (owner) {
-					return data;
-				}
-				else {
-					return "----";
-				}
-			};
-			result.push({
-				solution_id: val.solution_id,
-				user_id: val.user_id,
-				nick: nick,
-				avatar: avatar,
-				ip: val.ip,
-				problem_id: val.problem_id,
-				result: val.result,
-				pass_rate: val.pass_rate,
-				sim_id: val.sim_s_id,
-				sim: val.sim,
-				num: val.num,
-				contest_id: val.contest_id,
-				oj_name: val.oj_name,
-				memory: check_owner(val.memory),
-				time: check_owner(val.time),
-				language: val.language,
-				length: check_owner(val.code_length),
-				in_date: val.in_date,
-				judger: val.judger,
-			});
+		if (_user_info.length > 0) {
+			const nick = _user_info[0].nick.trim();
+			const avatar = Boolean(_user_info[0].avatar);
+			if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
+				result.push({
+					solution_id: val.solution_id,
+					user_id: val.user_id,
+					nick: nick,
+					ip: val.ip,
+					avatar: avatar,
+					sim: val.sim,
+					share: val.share,
+					sim_id: val.sim_s_id,
+					problem_id: val.problem_id,
+					contest_id: val.contest_id,
+					pass_rate: val.pass_rate,
+					num: val.num,
+					result: val.result,
+					oj_name: val.oj_name,
+					memory: val.memory,
+					time: val.time,
+					language: val.language,
+					length: val.code_length,
+					in_date: val.in_date,
+					judger: val.judger
+				});
+			}
+			else {
+				const owner = req.session.user_id === val.user_id;
+				const check_owner = (data) => {
+					if (owner) {
+						return data;
+					}
+					else {
+						return "----";
+					}
+				};
+				result.push({
+					solution_id: val.solution_id,
+					user_id: val.user_id,
+					nick: nick,
+					avatar: avatar,
+					ip: val.ip,
+					problem_id: val.problem_id,
+					result: val.result,
+					pass_rate: val.pass_rate,
+					sim_id: val.sim_s_id,
+					sim: val.sim,
+					num: val.num,
+					contest_id: val.contest_id,
+					oj_name: val.oj_name,
+					memory: check_owner(val.memory),
+					time: check_owner(val.time),
+					language: val.language,
+					length: check_owner(val.code_length),
+					in_date: val.in_date,
+					judger: val.judger,
+				});
+			}
 		}
 	}
 	res.json({

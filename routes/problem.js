@@ -58,13 +58,13 @@ const judgeValidNumber = (num) => {
 const checkContestPrivilege = (req, cid) => {
 	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
-
+/*
 const markdownPack = (html) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
-
+*/
 const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}) => {
-	let packed_problem;
+	let packed_problem = {};
 	if (rows.length !== 0) {
 		if (!opt.raw && (packed_problem = cachePack[opt.id])) {
 			new Promise((resolve) => {
@@ -73,12 +73,14 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				_packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 				_packed_problem.prepend = opt.prepend;
 				_packed_problem.append = opt.append;
-				if (opt.source) {
-					_packed_problem.input = markdownPack(md.render(_packed_problem.input));
-					_packed_problem.output = markdownPack(md.render(_packed_problem.output));
-					_packed_problem.description = markdownPack(md.render(_packed_problem.description));
-					_packed_problem.hint = markdownPack(md.render(_packed_problem.hint));
-				}
+				/*
+                if (opt.source) {
+                    _packed_problem.input = markdownPack(md.render(_packed_problem.input));
+                    _packed_problem.output = markdownPack(md.render(_packed_problem.output));
+                    _packed_problem.description = markdownPack(md.render(_packed_problem.description));
+                    _packed_problem.hint = markdownPack(md.render(_packed_problem.hint));
+                }
+                */
 				_packed_problem.langmask = opt.langmask || const_variable.langmask;
 				cachePack[opt.id] = _packed_problem;
 				resolve();
@@ -90,12 +92,14 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 			packed_problem.prepend = opt.prepend;
 			packed_problem.append = opt.append;
-			if (!opt.raw && !opt.source) {
-				packed_problem.input = markdownPack(md.render(packed_problem.input));
-				packed_problem.output = markdownPack(md.render(packed_problem.output));
-				packed_problem.description = markdownPack(md.render(packed_problem.description));
-				packed_problem.hint = markdownPack(md.render(packed_problem.hint));
-			}
+			/*
+            if (!opt.raw && !opt.source) {
+                packed_problem.input = markdownPack(md.render(packed_problem.input));
+                packed_problem.output = markdownPack(md.render(packed_problem.output));
+                packed_problem.description = markdownPack(md.render(packed_problem.description));
+                packed_problem.hint = markdownPack(md.render(packed_problem.hint));
+            }
+            */
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
 		if (!opt.after_contest) {

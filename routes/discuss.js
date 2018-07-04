@@ -6,17 +6,6 @@ const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
 
-const md = require("markdown-it")({
-	html: true,
-	breaks: true
-});
-const mh = require("markdown-it-highlightjs");
-const mk = require("@ryanlee2014/markdown-it-katex");
-md.use(mk);
-md.use(mh);
-const markdownPack = (html) => {
-	return `<div class="markdown-body">${html}</div>`;
-};
 
 const checkCaptcha = (req, from) => {
 	return req.session.captcha.from === from && req.session.captcha.captcha.toLowerCase() === req.body.captcha.toLowerCase();
@@ -54,10 +43,6 @@ router.get("/:id", async (req, res) => {
 		left join users on users.user_id = tmp.user_id
 		`, [id])
 	]);
-	_article[0].content = markdownPack(md.render(_article[0].content));
-	for (let i of discuss_content) {
-		i.content = markdownPack(md.render(i.content));
-	}
 	res.json({
 		discuss: discuss_content,
 		total: _tot[0].cnt,
