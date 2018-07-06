@@ -156,6 +156,7 @@ class localJudger extends eventEmitter {
 			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
 			if (EXITCODE) {
+				query("update solution set result = 16 where solution_id = ?", [solution_id]);
 				logger.fatal(`Fatal Error:\n
 				solution_id:${solution_id}\n
 				runner_id:${runner_id}\n

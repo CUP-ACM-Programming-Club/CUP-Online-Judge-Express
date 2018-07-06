@@ -26,6 +26,32 @@
       "Kotlin",
       "Other Language"
     ],
+    "common": [
+      "C",
+      "C++",
+      "Pascal",
+      "Java",
+      "Ruby",
+      "Bash",
+      "Python",
+      "PHP",
+      "Perl",
+      "C#",
+      "Obj-C",
+      "FreeBasic",
+      "Scheme",
+      "Clang",
+      "Clang++",
+      "Lua",
+      "JavaScript",
+      "Go",
+      "Python",
+      "C++",
+      "C++",
+      "C",
+      "Other Language",
+      "Other Language"
+    ],
     "hdu": [
       "G++",
       "",
@@ -300,6 +326,7 @@
       "运行完成",
       "已加入队列",
       "提交被服务器拒绝",
+      "系统错误",
       ""
     ]
   },
