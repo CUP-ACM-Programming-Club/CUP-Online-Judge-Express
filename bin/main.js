@@ -20,6 +20,10 @@ const localJudge = new _localJudge(config.judger.oj_home, config.judger.oj_judge
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
+
+String.prototype.find = function (str) {
+	return this.indexOf(str) !== -1;
+};
 /**
  *
  * @type {{Object}} 记录在线用户的信息
@@ -195,7 +199,7 @@ function onlineUserBroadcast() {
 	sendMessage(normal_user, "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
-	userArr["user"] = online;
+	userArr.user = online;
 	sendMessage(admin_user, "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
@@ -334,12 +338,12 @@ io.use((socket, next) => {
 		};
 		if (socket.handshake.headers["x-forwarded-for"]) {
 			const iplist = socket.handshake.headers["x-forwarded-for"].split(",");
-			user["ip"] = iplist[0];
-			user["intranet_ip"] = iplist[1];
+			user.ip = iplist[0];
+			user.intranet_ip = iplist[1];
 		}
 		else {
-			user["intranet_ip"] = socket.handshake.address;
-			user["ip"] = "";
+			user.intranet_ip = socket.handshake.address;
+			user.ip = "";
 		}
 		if (_url.length && _url.length > 0) {
 			user.url.push(_url);
@@ -364,7 +368,7 @@ io.use((socket, next) => {
 	if (socket.url && ~socket.url.indexOf("status")) {
 		if (~socket.url.indexOf("cid")) {
 			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("?") + 1, socket.url.length));
-			const contest_id = parseInt(parseObj["cid"]) || 0;
+			const contest_id = parseInt(parseObj.cid) || 0;
 			if (contest_id >= 1000) {
 				if (!pagePush.contest_status[contest_id]) {
 					pagePush.contest_status[contest_id] = [];
@@ -429,48 +433,48 @@ io.on("connection", async function (socket) {
 		/**
          * { submission_id: 61459,
          * val:
-         * { id: '1000',
+         * { id: '',
          * input_text: '1 2',
          * language: '1',
-         * source: '#include <iostream>\nusing namespace std;\nint main()\n{\n    int a,b;\n    while(cin>>a>>b)cout<<a+b<<endl;\n}',
+         * source: '',
          * type: 'problem',
-         * csrf: '3FEY3VDt7hTnsgvDtKEac3kbs5Ek5L3N' },
-         * user_id: '2016011253',
-         * nick: 'Ryan Lee(李昊元)' }
+         * csrf: '' },
+         * user_id: '',
+         * nick: '' }
          *
          */
 		let data = Object.assign({}, _data);
-		data["user_id"] = socket.user_id || "";
-		data["nick"] = socket.user_nick;
-		const submission_id = parseInt(data["submission_id"]);
+		data.user_id = socket.user_id || "";
+		data.nick = socket.user_nick;
+		const submission_id = parseInt(data.submission_id);
 		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
-		if (data["val"] && typeof data["val"]["cid"] !== "undefined" && !isNaN(parseInt(data["val"]["cid"]))) {
-			const id_val = await cache_query("SELECT problem_id FROM " +
-                "contest_problem WHERE contest_id=? and num=?", [Math.abs(data["val"]["cid"]), data["val"]["pid"]]);
+		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
+			const id_val = await cache_query(`SELECT problem_id FROM 
+                contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
 				problemFromContest[submission_id] = {
-					contest_id: data["val"]["cid"],
-					num: data["val"]["pid"]
+					contest_id: data.val.cid,
+					num: data.val.pid
 				};
 			}
 		}
-		if ((data["val"] && data["val"]["cid"])) {
-			const contest_id = Math.abs(parseInt(data["val"]["cid"])) || 0;
+		if ((data.val && data.val.cid)) {
+			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
 				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
 				sendMessage(pagePush.status, "submit", data, 1);
 				if (!submissionType.contest[contest_id]) {
 					submissionType.contest[contest_id] = [];
 				}
-				submissionType.contest[contest_id].push(parseInt(data["submission_id"]));
+				submissionType.contest[contest_id].push(parseInt(data.submission_id));
 				submissionOrigin[submission_id] = contest_id;
 			}
 		}
 		else {
 			sendMessage(pagePush.status, "submit", data, 1);
-			submissionType.normal.push(parseInt(data["submission_id"]));
+			submissionType.normal.push(parseInt(data.submission_id));
 		}
 		const language = parseInt(data.val.language);
 		switch (language) {
@@ -497,22 +501,22 @@ io.on("connection", async function (socket) {
      */
 
 	socket.on("chat", function (data) {
-		const toPersonUser_id = data["to"];
+		const toPersonUser_id = data.to;
 		if (user_socket[toPersonUser_id] && user_socket[toPersonUser_id].emit) {
 			sendMessage(user_socket[toPersonUser_id], "chat", {
-				from: data["from"],
-				content: data["content"],
+				from: data.from,
+				content: data.content,
 				time: Date.now().toString()
 			});
 		}
 	});
 
 	socket.on("whiteboard", function (data) {
-		if (data["request"] === "register" && !whiteboard.has(socket)) {
+		if (data.request === "register" && !whiteboard.has(socket)) {
 			whiteboard.add(socket);
 		}
-		else if (data["request"] === "text") {
-			whiteBoardBroadCast(socket, data["content"]);
+		else if (data.request === "text") {
+			whiteBoardBroadCast(socket, data.content);
 		}
 	});
 	/**

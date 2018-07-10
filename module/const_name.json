@@ -24,6 +24,8 @@
       "C++98",
       "C99",
       "Kotlin",
+      "Java 8",
+      "Java 7",
       "Other Language"
     ],
     "common": [
@@ -49,6 +51,9 @@
       "C++",
       "C++",
       "C",
+      "Kotlin",
+      "Java",
+      "Java",
       "Other Language",
       "Other Language"
     ],
@@ -144,7 +149,9 @@
       "cpp",
       "cpp",
       "c",
-      "kt"
+      "kt",
+      "java",
+      "java"
     ]
   },
   "markdown_language": {
@@ -172,6 +179,8 @@
       "c++",
       "c++",
       "kotlin",
+      "java",
+      "java",
       ""
     ],
     "hdu": [
@@ -267,11 +276,11 @@
       "c_cpp",
       "c_cpp",
       "java",
-      "python",
-      "python"
+      "java",
+      "java"
     ]
   },
-  "langmask": 29531568,
+  "langmask": 4365744,
   "judge_color": [
     "waiting",
     "running",
