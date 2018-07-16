@@ -447,7 +447,6 @@ io.on("connection", async function (socket) {
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
-		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
