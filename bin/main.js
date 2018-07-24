@@ -8,6 +8,7 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 const port = process.env.PORT || config.ws.client_port;
 const query = require("../module/mysql_query");
+const cache_query = require("../module/mysql_cache");
 const cachePool = require("../module/cachePool");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
@@ -217,20 +218,6 @@ function whiteBoardBroadCast(socket, content) {
 	}
 }
 
-let cache_queue = [];
-
-async function cache_query(sql, sqlArr) {
-	let cache_str;
-	if (cache_queue[(cache_str = sql + sqlArr.toString())]) {
-		return cache_queue[cache_str];
-	}
-	else {
-		const result = await query(sql, sqlArr);
-		cache_queue[cache_str] = result;
-		return result;
-	}
-}
-
 /**
  * 从ExpressJS提取Session信息，将Session与当前的Socket绑定
  */
@@ -269,8 +256,7 @@ io.use((socket, next) => {
         next();
     }
     */
-})
-;
+});
 
 /**
  * 查询用户权限
@@ -447,7 +433,6 @@ io.on("connection", async function (socket) {
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
-		localJudge.addTask(submission_id);
 		submissions[submission_id] = socket;
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
@@ -485,7 +470,6 @@ io.on("connection", async function (socket) {
 			break;
 		default:
 			localJudge.addTask(data);
-
 		}
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
