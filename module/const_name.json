@@ -26,6 +26,8 @@
       "Kotlin",
       "Java 8",
       "Java 7",
+      "PyPy",
+      "PyPy3",
       "Other Language"
     ],
     "common": [
@@ -54,6 +56,8 @@
       "Kotlin",
       "Java",
       "Java",
+      "Python",
+      "Python",
       "Other Language",
       "Other Language"
     ],
@@ -151,7 +155,9 @@
       "c",
       "kt",
       "java",
-      "java"
+      "java",
+      "py",
+      "py"
     ]
   },
   "markdown_language": {
@@ -181,6 +187,8 @@
       "kotlin",
       "java",
       "java",
+      "python",
+      "python",
       ""
     ],
     "hdu": [
@@ -277,10 +285,12 @@
       "c_cpp",
       "java",
       "java",
-      "java"
+      "java",
+      "python",
+      "python"
     ]
   },
-  "langmask": 4365744,
+  "langmask": 171440,
   "judge_color": [
     "waiting",
     "running",

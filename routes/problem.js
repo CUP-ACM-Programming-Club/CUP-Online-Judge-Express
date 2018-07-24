@@ -287,9 +287,15 @@ router.get("/:source/:id", function (req, res) {
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
+		if(process.env.NODE_ENV === "test") {
+			console.log("match cache");
+		}
 		make_cache(res, req, {problem_id: id, source: source});
 	}
 	else {
+		if(process.env.NODE_ENV === "test") {
+			console.log("not match");
+		}
 		send_json(res, _res);
 		make_cache(null, req, {problem_id: id, source: source});
 	}
