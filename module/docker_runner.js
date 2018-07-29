@@ -1,24 +1,16 @@
 /* eslint-disable no-console */
 const dockerJudger = require("./docker_judger");
 const query = require("./mysql_query");
+const cache_query = require("./mysql_cache");
 const os = require("os");
-
-let cache = [];
-
-async function cache_query(sql, sqlArr) {
-	if (cache[sql + sqlArr.toString()]) {
-		return cache[sql + sqlArr.toString()];
-	}
-	else {
-		return (cache[sql + sqlArr.toString()] = await query(sql, sqlArr));
-	}
-}
 
 class dockerRunner {
 	constructor(home_dir, judger_num) {
 		this.oj_home = home_dir;
 		this.waiting_queue = [];
 		this.judging_queue = [];
+		this.querying_queue = [];
+		this.isProcessingQueue = false;
 		this.latestSolutionID = 0;
 		this.platform = os.platform();
 		if (this.platform !== "linux") {
@@ -35,6 +27,29 @@ class dockerRunner {
 
 	static startupInit() {
 		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+	}
+
+	async processQueryQueue(sql, sqlArr = []) {
+		if (sql && sql.length > 0) {
+			this.querying_queue.push({
+				sql,
+				sqlArr
+			});
+		}
+		if (this.isProcessingQueue) {
+			return;
+		}
+		this.isProcessingQueue = true;
+		while (this.querying_queue.length > 0) {
+			const sqlTask = this.querying_queue.shift();
+			await query(sqlTask.sql, sqlTask.sqlArr);
+		}
+		if (this.querying_queue.length > 0) {
+			this.processQueryQueue();
+		}
+		else {
+			this.isProcessingQueue = false;
+		}
 	}
 
 	startLoopJudge(time = 1000) {
@@ -100,39 +115,11 @@ class dockerRunner {
 				});
 			}
 			if (status > 3) {
-				query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?",
-					[time, memory, pass_point, status, solution_id])
-					.then((row) => {
-						let affected_row = parseInt(row.affectedRows);
-						if (affected_row === 0) {
-							query("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?",
-								[time, memory, pass_point, status, solution_id])
-								.then(() => {
-								}).catch((err) => {
-									console.log(err);
-								});
-						}
-					}).catch((err) => {
-						console.log(err);
-					});
+				that.processQueryQueue("UPDATE solution set time=?,memory=?,pass_point=?,result=? WHERE solution_id=?",
+					[time, memory, pass_point, status, solution_id]);
 			}
 			if (compile_message && compile_message.length > 0) {
-				query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message])
-					.then((row) => {
-						let affected_row = parseInt(row.affectedRows);
-						if (affected_row === 0) {
-							query("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message])
-								.then((row) => {
-									let affected_row = parseInt(row.affectedRows);
-									if (affected_row === 0) {
-										console.log(row);
-									}
-								}).catch((err) => {
-									console.log(err);
-								});
-						}
-					}).catch(() => {
-					});
+				that.processQueryQueue("INSERT INTO compileinfo (solution_id,error) VALUES (?,?)", [solution_id, compile_message]);
 			}
 		});
 
@@ -143,11 +130,11 @@ class dockerRunner {
 				that.judging_queue.splice(solutionPos, 1);
 			}
 			if (judger.user_id) {
-				await query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
-				await query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
+				that.processQueryQueue("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
+				that.processQueryQueue("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
 			}
-			await query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
-			await query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+			that.processQueryQueue("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+			that.processQueryQueue("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
 			if (that.waiting_queue.length > 0) {
 				let solution_id;
 				await that.runJudger(that.waiting_package[(solution_id = this.waiting_queue.shift())]);

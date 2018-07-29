@@ -1,3 +1,4 @@
+/* eslint-disable no-cond-assign */
 const express = require("express");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});

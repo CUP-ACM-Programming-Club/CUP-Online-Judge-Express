@@ -24,6 +24,41 @@
       "C++98",
       "C99",
       "Kotlin",
+      "Java 8",
+      "Java 7",
+      "PyPy",
+      "PyPy3",
+      "Other Language"
+    ],
+    "common": [
+      "C",
+      "C++",
+      "Pascal",
+      "Java",
+      "Ruby",
+      "Bash",
+      "Python",
+      "PHP",
+      "Perl",
+      "C#",
+      "Obj-C",
+      "FreeBasic",
+      "Scheme",
+      "Clang",
+      "Clang++",
+      "Lua",
+      "JavaScript",
+      "Go",
+      "Python",
+      "C++",
+      "C++",
+      "C",
+      "Kotlin",
+      "Java",
+      "Java",
+      "Python",
+      "Python",
+      "Other Language",
       "Other Language"
     ],
     "hdu": [
@@ -118,7 +153,11 @@
       "cpp",
       "cpp",
       "c",
-      "kt"
+      "kt",
+      "java",
+      "java",
+      "py",
+      "py"
     ]
   },
   "markdown_language": {
@@ -146,6 +185,10 @@
       "c++",
       "c++",
       "kotlin",
+      "java",
+      "java",
+      "python",
+      "python",
       ""
     ],
     "hdu": [
@@ -241,11 +284,13 @@
       "c_cpp",
       "c_cpp",
       "java",
+      "java",
+      "java",
       "python",
       "python"
     ]
   },
-  "langmask": 29531568,
+  "langmask": 171440,
   "judge_color": [
     "waiting",
     "running",
@@ -300,6 +345,7 @@
       "运行完成",
       "已加入队列",
       "提交被服务器拒绝",
+      "系统错误",
       ""
     ]
   },
