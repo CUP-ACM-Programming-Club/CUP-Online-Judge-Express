@@ -1,6 +1,13 @@
 const [error] = require("../module/const_var");
 const client = require("../module/redis");
 module.exports = async (req, res, next) => {
+	if (process.env.NODE_ENV === "local") {
+		if (!req.session.auth) {
+			req.session.auth = true;
+			req.session.isadmin = true;
+		}
+		next();
+	}
 	if (!req.session.auth) {
 		const original_cookie = req.cookies;
 		//req.cookies is an object
@@ -13,7 +20,7 @@ module.exports = async (req, res, next) => {
 			if (original_token.indexOf(token) !== -1) {
 				// if (token === original_token) {//check token
 				const login_action = require("../module/login_action");
-				await login_action(req,user_id);
+				await login_action(req, user_id);
 				return next();
 			}
 			else {

@@ -99,6 +99,24 @@ router.post("/reply/:id", (req, res) => {
 	}
 });
 
+router.get("/search/:search_val", async (req, res) => {
+	const search_val = `%${req.params.search_val}%`;
+	let sql = "select * from article where title like ?";
+	let page = checkValidation(req.query.page);
+	let sqlArr = [search_val];
+	if (search_val.length === 2 || typeof req.params.search_val === "undefined") {
+		sql = `select * from article 
+	    order by last_post desc,edit_time desc,create_time desc,article_id desc limit ?,?`;
+		sqlArr = [];
+	}
+	sqlArr.push(page, page_cnt);
+	const result = await query(sql, sqlArr);
+	res.json({
+		status: "OK",
+		data: result
+	});
+});
+
 router.post("/newpost", (req, res) => {
 	if (!checkCaptcha(req, "newpost")) {
 		res.json(error.invalidCaptcha);
