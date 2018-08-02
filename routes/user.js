@@ -21,6 +21,7 @@ select oj_name,problem_id,result,language from vjudge_record where user_id = ? a
 	sqlQueue.push(query("select * from acm_member where user_id = ?", [user_id]));
 	sqlQueue.push(query("select * from special_subject_problem"));
 	sqlQueue.push(query("select count(1) + 1 as rnk from users where solved > (select solved from users where user_id = ?)", [user_id]));
+	sqlQueue.push(query("select time from loginlog where user_id = ? order by time desc limit 1", [user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -32,7 +33,8 @@ select oj_name,problem_id,result,language from vjudge_record where user_id = ? a
 			acm_user: result[4][0],
 			special_subject: result[5],
 			rank: result[6][0].rnk,
-			const_variable: const_variable
+			const_variable: const_variable,
+			login_time: result[7]
 		}
 	});
 });
