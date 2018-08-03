@@ -5,11 +5,8 @@ const router = express.Router();
 const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
+const {checkCaptcha} = require("../module/captcha_checker");
 
-
-const checkCaptcha = (req, from) => {
-	return req.session.captcha.from === from && req.session.captcha.captcha.toLowerCase() === req.body.captcha.toLowerCase();
-};
 
 const checkValidation = (number) => {
 	number = parseInt(number);
