@@ -18,6 +18,28 @@ const checkValidation = (number) => {
 	}
 };
 
+router.get("/my", async (req, res) => {
+	let page = checkValidation(req.query.page);
+	const user_id = req.session.user_id;
+	try {
+		const [_discuss_list, _tot] = await Promise.all([
+			cache_query(`select title,create_time,edit_time,article_id from article where user_id = ? or article_id in
+		 (select article_id from article_content where user_id = ?)
+	order by last_post desc,edit_time desc,create_time desc,article_id desc
+	limit ?,?`, [user_id, user_id, page, page_cnt]),
+			cache_query(`select count(1) as cnt from article
+         ${req.session.isadmin ? "" : "where defunct = 'N'"}`)
+		]);
+		res.json({
+			discuss: _discuss_list,
+			total: _tot[0].cnt
+		});
+	}
+	catch (e) {
+		res.json(error.invalidParams);
+	}
+});
+
 router.get("/:id", async (req, res) => {
 	let page = checkValidation(req.query.page);
 	const id = checkValidation(req.params.id);
