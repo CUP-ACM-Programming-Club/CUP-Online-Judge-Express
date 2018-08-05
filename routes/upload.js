@@ -10,6 +10,8 @@ const query = require("../module/mysql_query");
 const upload = multer({dest: "/home/uploads/"});
 const path = require("path");
 const auth = require("../middleware/auth");
+const {checkCaptcha} = require("../module/captcha_checker");
+const [error] = require("../module/const_var");
 
 const base64ToString = (base64) => {
 	return new Buffer(base64, "base64").toString();
@@ -30,7 +32,7 @@ const convertLanguage = (language_name) => {
 	}
 	return 19;
 };
-const make_problem = (problem_id, problems = {}) => {
+const make_problem = (problem_id, problems = {}, req) => {
 	const save_problem = Object.assign({
 		title: "",
 		description: "",
@@ -62,6 +64,7 @@ const make_problem = (problem_id, problems = {}) => {
 			save_problem.memory, save_problem.defunct, 0, 0, 0])
 
 			.then(rows => {
+				query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
 				resolve(rows);
 			})
 			.catch(err => {
@@ -195,6 +198,10 @@ const make_files = async (req, pid, problems = {}) => {
 };
 
 const make_file = async (req, res, file_path, pid) => {
+	const fpath = file_path || req.file.path;
+	if (!fpath.match(/\.rpk$/)) {
+		throw new Error("file is invalid");
+	}
 	const data = await fsPromise.readFileAsync(file_path || req.file.path);
 	const unzip_data = await new Promise((resolve) => {
 		zlib.gunzip(data, (err, data) => {
@@ -213,7 +220,7 @@ const make_file = async (req, res, file_path, pid) => {
 	}
 	let problem_list = [];
 	for (let i = 0; i < problems.length; ++i) {
-		await make_problem(max_pid + i + 1, problems[i]);
+		await make_problem(max_pid + i + 1, problems[i], req);
 		await make_files(req, max_pid + i + 1, problems[i]);
 		problem_list.push({
 			problem_id: max_pid + i + 1,
@@ -223,7 +230,7 @@ const make_file = async (req, res, file_path, pid) => {
 	return problem_list;
 };
 
-router.post("/", upload.single("fps"), (req, res) => {
+const createProblemModule = (req, res) => {
 	make_file(req, res)
 		.then(problem_list => {
 			res.json({
@@ -237,6 +244,19 @@ router.post("/", upload.single("fps"), (req, res) => {
 				statement: "upload file error"
 			});
 		});
+};
+
+router.post("/", upload.single("fps"), (req, res) => {
+	createProblemModule(req, res);
+});
+
+router.post("/user", upload.single("fps"), (req, res) => {
+	if (!checkCaptcha(req, "upload")) {
+		res.json(error.invalidCaptcha);
+	}
+	else {
+		createProblemModule(req, res);
+	}
 });
 
 router.get("/", async (req, res) => {
