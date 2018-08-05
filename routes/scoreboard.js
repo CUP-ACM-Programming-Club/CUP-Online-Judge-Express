@@ -34,7 +34,7 @@ router.get("/:cid", async (req, res) => {
         left join users
         on users.user_id=solution.user_id 
         union all 
-        select users.user_id,users.avatar,users.nick,vsol.result,vsol.num,vsol.in_date
+        select users.user_id,users.nick,users.avatar,vsol.result,vsol.num,vsol.in_date
         from
         (select * from 
         vjudge_solution where vjudge_solution.contest_id=? 
