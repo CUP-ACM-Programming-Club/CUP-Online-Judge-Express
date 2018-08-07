@@ -287,13 +287,13 @@ router.get("/:source/:id", function (req, res) {
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
-		if(process.env.NODE_ENV === "test") {
+		if (process.env.NODE_ENV === "test") {
 			console.log("match cache");
 		}
 		make_cache(res, req, {problem_id: id, source: source});
 	}
 	else {
-		if(process.env.NODE_ENV === "test") {
+		if (process.env.NODE_ENV === "test") {
 			console.log("not match");
 		}
 		send_json(res, _res);
@@ -438,15 +438,28 @@ WHERE NOT EXISTS (
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
+	const from = req.params.source || "";
+	let local = false;
+	if (from.length <= 2) {
+		local = true;
+	}
 	if (req.session.isadmin || req.session.editor) {
 		let json;
 		try {
 			json = req.body.json;
-			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
-			sample_input = ?,sample_output = ?,hint = ?,label = ? where problem_id = ?`,
-			[json.title, json.time, json.memory, json.description, json.input,
-				json.output, json.sampleinput, json.sampleoutput, json.hint, json.label,
-				problem_id])
+			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
+			memory_limit = ?,description = ?,input = ?,output = ?,
+			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ? and source = ?`;
+			let sqlArr = [json.title, json.time, json.memory, json.description, json.input,
+				json.output, json.sampleinput, json.sampleoutput, json.label];
+			if (local) {
+				sqlArr.push(json.hint,
+					problem_id, from);
+			}
+			else {
+				sqlArr.push(problem_id, from);
+			}
+			query(sql, sqlArr)
 				.then(() => {
 				})
 				.catch(err => {
