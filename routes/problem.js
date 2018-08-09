@@ -440,21 +440,24 @@ router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
 	const from = req.params.source || "";
 	let local = false;
-	if (from.length <= 2) {
+	if (from.length <= 2 || from === "local") {
 		local = true;
 	}
+	console.log("local");
+	console.log(local);
 	if (req.session.isadmin || req.session.editor) {
 		let json;
 		try {
 			json = req.body.json;
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
-			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ? and source = ?`;
+			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
+			 ${local ? "" : " and source = ?"}`;
 			let sqlArr = [json.title, json.time, json.memory, json.description, json.input,
 				json.output, json.sampleinput, json.sampleoutput, json.label];
 			if (local) {
 				sqlArr.push(json.hint,
-					problem_id, from);
+					problem_id);
 			}
 			else {
 				sqlArr.push(problem_id, from);
