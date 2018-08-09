@@ -32,6 +32,14 @@ const send_json = (res, val) => {
 	}
 };
 
+const checkEmpty = (str) => {
+	if(str === "" || str === null)
+	{
+		return null;
+	}
+	return str;
+};
+
 const _judgeValidNumber = (num) => {
 	if (isNaN(num)) {
 		return -1;
@@ -448,12 +456,22 @@ router.post("/:source/:id", function (req, res) {
 	if (req.session.isadmin || req.session.editor) {
 		let json;
 		try {
-			json = req.body.json;
+			json = Object.assign({
+				title:"",
+				time:0,
+				memory:0,
+				description:"",
+				input:"",
+				output:"",
+				sampleinput:"",
+				sampleoutput:"",
+				label:""
+			},req.body.json);
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
 			 ${local ? "" : " and source = ?"}`;
-			let sqlArr = [json.title, json.time, json.memory, json.description, json.input,
+			let sqlArr = [json.title, checkEmpty(json.time), checkEmpty(json.memory), json.description, json.input,
 				json.output, json.sampleinput, json.sampleoutput, json.label];
 			if (local) {
 				sqlArr.push(json.hint,
