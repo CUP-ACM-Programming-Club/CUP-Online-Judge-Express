@@ -28,6 +28,7 @@
       "Java 7",
       "PyPy",
       "PyPy3",
+      "Java 6",
       "Other Language"
     ],
     "common": [
@@ -58,6 +59,7 @@
       "Java",
       "Python",
       "Python",
+      "Java",
       "Other Language",
       "Other Language"
     ],
@@ -157,7 +159,8 @@
       "java",
       "java",
       "py",
-      "py"
+      "py",
+      "java"
     ]
   },
   "markdown_language": {
@@ -189,6 +192,7 @@
       "java",
       "python",
       "python",
+      "java",
       ""
     ],
     "hdu": [
@@ -287,7 +291,8 @@
       "java",
       "java",
       "python",
-      "python"
+      "python",
+      "java"
     ]
   },
   "langmask": 171440,
