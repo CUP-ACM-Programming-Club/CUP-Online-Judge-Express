@@ -67,6 +67,11 @@ error.noprivilege = {
 	statement: "Permission denied"
 };
 
+error.solutionIdNotValid = {
+	status:"error",
+	statement:"Solution ID is not valid or result of it is not accept"
+};
+
 ok.logined = {
 	status: "OK",
 	statment: "logined"

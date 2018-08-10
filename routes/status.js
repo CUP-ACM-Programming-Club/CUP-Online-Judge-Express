@@ -34,11 +34,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}
-								union all select solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all 
+								select '' as fingerprint,solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where 1=1
 								${where_sql}
@@ -49,7 +50,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		else {
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}) sol
@@ -63,11 +64,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
 		_end = _end[0].cnt;
 		_res = await cache_query(`select * from
-								(select solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where problem_id > 0 
 								${where_sql}
-								union all select solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all 
+								select '' as fingerprint,solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where problem_id > 0 
 								${where_sql}
@@ -92,7 +94,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
                                 order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
                                 */
 		_res = await cache_query(`select * from
-								(select solution_id,
+								(select fingerprint,solution_id,
 								if((share = 1
            and not exists
            (select * from contest where contest_id in
@@ -134,7 +136,8 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 					language: val.language,
 					length: val.code_length,
 					in_date: val.in_date,
-					judger: val.judger
+					judger: val.judger,
+					fingerprint: val.fingerprint
 				});
 			}
 			else {
