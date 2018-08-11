@@ -81,6 +81,7 @@ let submissionOrigin = {};
  */
 
 let problemFromContest = {};
+let problemFromSpecialSubject = {};
 
 wss.on("connection", function (ws) {
 	/**
@@ -95,6 +96,13 @@ wss.on("connection", function (ws) {
 			solution_pack.num = problemFromContest[solution_id].num;
 			if (finished) {
 				delete problemFromContest[solution_id];
+			}
+		}
+		else if(problemFromSpecialSubject[solution_id]) {
+			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
+			solution_pack.num = problemFromSpecialSubject[solution_id].num;
+			if(finished) {
+				delete problemFromSpecialSubject[solution_id];
 			}
 		}
 		if (submissions[solution_id]) {
@@ -445,6 +453,18 @@ io.on("connection", async function (socket) {
 				};
 			}
 		}
+		else if(data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
+			const id_val = await cache_query(`SELECT problem_id FROM 
+			special_subject_problem WHERE topic_id = ? and num = ?`,[Math.abs(data.val.tid),data.val.pid]);
+			if(id_val.length && id_val[0].problem_id) {
+				data.val.id = id_val[0].problem_id;
+				problemFromSpecialSubject[submission_id] = {
+					topic: data.val.topic_id,
+					num: data.val.pid
+				};
+			}
+		}
+
 		if ((data.val && data.val.cid)) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {

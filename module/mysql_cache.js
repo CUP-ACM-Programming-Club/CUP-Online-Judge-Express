@@ -17,6 +17,10 @@ module.exports = async function cache_query(sql, sqlArr = []) {
 		return cache_pool[identified].data;
 	}
 	else {
+		const lowerCaseSql = sql.toLowerCase();
+		if(lowerCaseSql.indexOf("update") !== -1 || lowerCaseSql.indexOf("insert") !== -1) {
+			return await query(sql,sqlArr);
+		}
 		cache_pool[identified] = {
 			data: await query(sql, sqlArr),
 			time: dayjs()
