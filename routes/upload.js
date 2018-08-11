@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -199,10 +200,7 @@ const make_files = async (req, pid, problems = {}) => {
 
 const make_file = async (req, res, file_path, pid) => {
 	const fpath = file_path || req.file.path;
-	if (!fpath.match(/\.rpk$/)) {
-		throw new Error("file is invalid");
-	}
-	const data = await fsPromise.readFileAsync(file_path || req.file.path);
+	const data = await fsPromise.readFileAsync(fpath);
 	const unzip_data = await new Promise((resolve) => {
 		zlib.gunzip(data, (err, data) => {
 			resolve(data.toString());
