@@ -413,18 +413,21 @@ router.get("/solution", async function (req, res) {
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
 		const _result = await query(`SELECT user_id,language,if((share = 1
+    or solution_id in (select solution_id from tutorial where solution.solution_id = ?))
            and not exists
            (select * from contest where contest_id in
            (select contest_id from contest_problem
            where solution.problem_id = contest_problem.problem_id)
-          and end_time > NOW()) ),1,0) as share from solution WHERE solution_id = ?`, [sid]);
+          and end_time > NOW()) ),1,0) as share,time,memory,code_length from solution WHERE solution_id = ?`, [sid, sid]);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
 				status: "OK",
 				data: {
 					solution_id: sid,
 					user_id: _result[0].user_id,
-					language: _result[0].language
+					language: _result[0].language,
+					time: _result[0].time,
+					memory: _result[0].memory
 				}
 			});
 		}
