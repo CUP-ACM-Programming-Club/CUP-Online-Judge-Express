@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const cache_query = require("../module/mysql_cache");
 const {checkCaptcha} = require("../module/captcha_checker");
 const [error, ok] = require("../module/const_var");
+const const_variable = require("../module/const_name");
 const checkSourceId = (req) => {
 	const source = req.params.source;
 	let id = req.params.id;
@@ -36,8 +37,9 @@ const checkSolutionId = async (solution_id, problem_id, local = true, source = "
 };
 
 const checkOwner = async (solution_id, req) => {
-	const _data = await cache_query("select user_id from solution where solution_id = ?", [req.session.user_id]);
+	const _data = await cache_query("select user_id from solution where solution_id = ?", [solution_id]);
 	if (!_data || _data.length <= 0) {
+		console.log("false 1");
 		return false;
 	}
 	const user_id = _data[0].user_id;
@@ -62,10 +64,13 @@ router.get("/:source/:id", async (req, res) => {
 	const source = _sourceId.source;
 	const id = _sourceId.id;
 	let sqlQuery = [];
-	sqlQuery.push(cache_query(`select tutorial.*,users.user_id,users.nick,users.avatar,users.solved,users.biography 
+	sqlQuery.push(cache_query(`select tutorial.*,users.user_id,users.nick,users.avatar,users.solved,users.biography,
+	 solution.time,solution.memory,solution.language,solution.result,solution.code_length,solution.in_date,source_code_user.source as code
 	from tutorial
 left join users on users.user_id = tutorial.user_id
-where source = ? and problem_id = ?`, [source, id]));
+left join solution on solution.solution_id = tutorial.solution_id
+left join source_code_user on source_code_user.solution_id = tutorial.solution_id 
+where tutorial.source = ? and tutorial.problem_id = ?`, [source, id]));
 	let data = await Promise.all(sqlQuery);
 	data = data[0];
 	if (data && data.length > 0) {
@@ -74,15 +79,19 @@ where source = ? and problem_id = ?`, [source, id]));
 				i.owner = true;
 			}
 		}
-		res.json({
-			status: "OK",
-			data: data,
-			self: req.session.user_id
-		});
 	}
-	else {
-		res.json(error.invalidParams);
-	}
+	res.json({
+		status: "OK",
+		data: data,
+		self: req.session.user_id,
+		const_variable: {
+			judge_color: const_variable.judge_color,
+			language_name: const_variable.language_name.local,
+			icon_list: const_variable.icon_list,
+			result: const_variable.result.cn,
+			language_common_name: const_variable.language_name.common
+		}
+	});
 });
 
 router.get("/:tutorial_id", async (req, res) => {
@@ -160,6 +169,7 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 		const {source, problem_id} = sourceProblemId;
 		let sqlQuery = [checkSolutionId(solution_id, problem_id, source.toUpperCase() === "LOCAL", source), checkOwner(solution_id, req)];
 		const _data = await Promise.all(sqlQuery);
+		console.log(sqlQuery);
 		if (_data[0] && _data[1]) {
 			cache_query(`update tutorial set content = ?,
         solution_id = ? where tutorial_id = ?`, [content, solution_id, tid])
