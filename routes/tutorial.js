@@ -79,22 +79,19 @@ where tutorial.source = ? and tutorial.problem_id = ?`, [source, id]));
 				i.owner = true;
 			}
 		}
-		res.json({
-			status: "OK",
-			data: data,
-			self: req.session.user_id,
-			const_variable:{
-				judge_color:const_variable.judge_color,
-				language_name:const_variable.language_name.local,
-				icon_list:const_variable.icon_list,
-				result:const_variable.result.cn,
-				language_common_name:const_variable.language_name.common
-			}
-		});
 	}
-	else {
-		res.json(error.invalidParams);
-	}
+	res.json({
+		status: "OK",
+		data: data,
+		self: req.session.user_id,
+		const_variable: {
+			judge_color: const_variable.judge_color,
+			language_name: const_variable.language_name.local,
+			icon_list: const_variable.icon_list,
+			result: const_variable.result.cn,
+			language_common_name: const_variable.language_name.common
+		}
+	});
 });
 
 router.get("/:tutorial_id", async (req, res) => {
