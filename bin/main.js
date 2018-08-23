@@ -98,10 +98,10 @@ wss.on("connection", function (ws) {
 				delete problemFromContest[solution_id];
 			}
 		}
-		else if(problemFromSpecialSubject[solution_id]) {
+		else if (problemFromSpecialSubject[solution_id]) {
 			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
 			solution_pack.num = problemFromSpecialSubject[solution_id].num;
-			if(finished) {
+			if (finished) {
 				delete problemFromSpecialSubject[solution_id];
 			}
 		}
@@ -203,7 +203,12 @@ localJudge.on("change", (freeJudger) => {
 function onlineUserBroadcast() {
 	let online = Object.values(onlineUser);
 	let userArr = {
-		user_cnt: online.length
+		user_cnt: online.length,
+		user: online.map(e => {
+			return {
+				user_id: e.user_id
+			};
+		})
 	};
 	sendMessage(normal_user, "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
@@ -453,10 +458,10 @@ io.on("connection", async function (socket) {
 				};
 			}
 		}
-		else if(data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
+		else if (data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
-			special_subject_problem WHERE topic_id = ? and num = ?`,[Math.abs(data.val.tid),data.val.pid]);
-			if(id_val.length && id_val[0].problem_id) {
+			special_subject_problem WHERE topic_id = ? and num = ?`, [Math.abs(data.val.tid), data.val.pid]);
+			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
 				problemFromSpecialSubject[submission_id] = {
 					topic: data.val.topic_id,
@@ -484,12 +489,11 @@ io.on("connection", async function (socket) {
 		const language = parseInt(data.val.language);
 		switch (language) {
 		case 15:
-		case 16:
 		case 22:
 			dockerRunner.addTask(data);
 			break;
 		default:
-			localJudge.addTask(data);
+			localJudge.addTask(data.submission_id);
 		}
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
