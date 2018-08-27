@@ -219,7 +219,7 @@ class dockerRunner {
 		solution.language,solution.problem_id,source_code.source,solution.result,solution.contest_id,
 		custominput.input_text FROM solution left join source_code on
 		 source_code.solution_id = solution.solution_id left join custominput on
-		  custominput.solution_id = solution.solution_id)sol WHERE sol.result<2 and sol.language in (15,16,22) limit 20`);
+		  custominput.solution_id = solution.solution_id)sol WHERE sol.result<2 and sol.language in (15,22) limit 20`);
 		for (let i in result) {
 			const solution_id = parseInt(result[i].solution_id);
 			let problem_id = parseInt(result[i].problem_id);
