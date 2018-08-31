@@ -398,5 +398,53 @@
         "judger": "審判するコンピューター"
       }
     }
-  }
+  },
+  "language_icon": [
+    "devicon-c-plain",
+    "devicon-cplusplus-plain",
+    "devicon-devicon-plain",
+    "devicon-java-plain",
+    "devicon-ruby-plain",
+    "devicon-devicon-plain",
+    "devicon-python-plain",
+    "devicon-php-plain",
+    "devicon-devicon-plain",
+    "devicon-csharp-plain",
+    "devicon-devicon-plain",
+    "devicon-devicon-plain",
+    "devicon-devicon-plain",
+    "devicon-c-plain",
+    "devicon-cplusplus-plain",
+    "devicon-devicon-plain",
+    "devicon-javascript-plain",
+    "devicon-go-plain",
+    "devicon-python-plain",
+    "devicon-cplusplus-plain",
+    "devicon-cplusplus-plain",
+    "devicon-c-plain",
+    "devicon-devicon-plain",
+    "devicon-java-plain",
+    "devicon-java-plain",
+    "devicon-python-plain",
+    "devicon-python-plain",
+    "devicon-java-plain"
+  ],
+  "judge_icon": [
+    "hourglass half",
+    "spinner",
+    "spinner",
+    "spinner",
+    "checkmark",
+    "minus",
+    "remove",
+    "clock",
+    "microchip",
+    "print",
+    "bomb",
+    "code",
+    "spinner",
+    "spinner",
+    "spinner",
+    "remove"
+  ]
 }

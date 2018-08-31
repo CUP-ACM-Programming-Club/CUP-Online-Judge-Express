@@ -108,7 +108,7 @@ async function get_problem(req, res) {
 			${sqlState()} order by ${order} limit ?,?`, sqlArr)];
 			if (!has_from && !label) {
 				promiseArray.push(cache_query(`select count(1) as cnt from ${search_table} where 
-			    in_date > ${one_month_ago}`));
+			    in_date > '${one_month_ago}'`));
 			}
 			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}

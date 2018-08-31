@@ -384,7 +384,18 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 });
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
-	const problem_id = req.params.problem_id === "null" ? undefined : req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+	let problem_id;
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			problem_id = undefined;
+		}
+		else {
+			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	}
+	else {
+		problem_id = parseInt(req.params.problem_id);
+	}
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
