@@ -33,8 +33,7 @@ const send_json = (res, val) => {
 };
 
 const checkEmpty = (str) => {
-	if(str === "" || str === null)
-	{
+	if (str === "" || str === null) {
 		return null;
 	}
 	return str;
@@ -230,9 +229,11 @@ const make_cache = async (res, req, opt = {source: "", raw: false, after_contest
 	}
 	if (req.session.isadmin) {
 		if (opt.source.length === 0) {
-			sql = "SELECT * FROM problem WHERE problem_id = ?";
+			sql = `select a.*,privilege.user_id as creator
+from (SELECT * FROM problem WHERE problem_id = ?)a
+       left join privilege on privilege.rightstr = CONCAT('p', '?')`;
 			opt.sql = sql;
-			cache_query(sql, [opt.problem_id])
+			cache_query(sql, [opt.problem_id, opt.problem_id])
 				.then((rows) => {
 					problem_callback(rows, req, res, opt);
 				});
@@ -437,16 +438,16 @@ router.post("/:source/:id", function (req, res) {
 		let json;
 		try {
 			json = Object.assign({
-				title:"",
-				time:0,
-				memory:0,
-				description:"",
-				input:"",
-				output:"",
-				sampleinput:"",
-				sampleoutput:"",
-				label:""
-			},req.body.json);
+				title: "",
+				time: 0,
+				memory: 0,
+				description: "",
+				input: "",
+				output: "",
+				sampleinput: "",
+				sampleoutput: "",
+				label: ""
+			}, req.body.json);
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
