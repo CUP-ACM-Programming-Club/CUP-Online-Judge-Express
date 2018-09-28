@@ -6,23 +6,18 @@ const logger = require("morgan");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const app = express();
-const fs = require("fs");
 const performance = require("./middleware/performance");
 const helmet = require("helmet");
 const log4js = require("./module/logger");
 const log = log4js.logger("cheese", "info");
 const sessionMiddleware = require("./module/session").sessionMiddleware;
 global.Application = app;
-const oneDay = 86400000;
 app.use(performance);
 app.use(log4js.connectLogger(log, {level: "info"}));
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 app.set("view cache", true);
-app.use("/static", express.static(__dirname + "/static", {
-	maxAge: oneDay * 30
-}));
 /*
 const epf = require("express-php-fpm");
 
@@ -51,22 +46,13 @@ app.use(session({
 		httpOnly: true,
 		expires: expiryDate
 	}
-})
-);
+}));
 app.use(logger("dev"));
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extend: false}));
 app.use(cookieParser());
-const routerDir = path.join(__dirname, "routes");
-const routerFiles = fs.readdirSync(routerDir);
-routerFiles.forEach(fileName => {
-	let routerArray = require(path.join(routerDir, fileName));
-	if (typeof routerArray !== "undefined" && routerArray.length > 1 && typeof routerArray[0] === "string" && routerArray[0].match(/^\/[\s\S]*/).length > 0) {
-		// routerArray[0] = path.join("/api",routerArray[0]);
-		app.use(...routerArray);
-	}
-});
+require("./module/router_loader")(app);
 // app.use("/",epf(options));
 app.use((req, res, next) => {
 	let err = new Error("Not Found");

@@ -2,7 +2,7 @@
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
-const config = require("../config.json");
+const config = global.config = require("../config.json");
 const logger = log4js.logger("normal", "info");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
@@ -50,7 +50,7 @@ let normal_user = {};
  * @type {{Socket}} 记录solution_id对应的Socket连接
  */
 let submissions = {};
-global.submissions = submissions;
+
 /**
  * 记录打开状态页面的Socket连接
  * @type {{status: Array, contest_status: {}}}
@@ -82,6 +82,9 @@ let submissionOrigin = {};
 
 let problemFromContest = {};
 let problemFromSpecialSubject = {};
+
+global.submissions = submissions;
+global.contest_mode = false;
 
 wss.on("connection", function (ws) {
 	/**
