@@ -84,7 +84,8 @@ router.get("/", async (req, res) => {
 			});
 		}
 	};
-	cache_query(`select * from article 
+
+	cache_query(`select * from article ${req.session.isadmin ? "" : "where defunct = 'N'"}
 	order by last_post desc,edit_time desc,create_time desc,article_id desc
 	limit ?,?`, [page, page_cnt])
 		.then(rows => {

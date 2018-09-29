@@ -34,7 +34,7 @@ class localJudger extends eventEmitter {
 		this.CPUModel = CPUDetails[0].model;
 		this.CPUSpeed = CPUDetails[0].speed;
 		this.platform = os.platform();
-		if (this.platform !== "linux") {
+		if (this.platform !== "linux" && this.platform !== "darwin") {
 			return new Error("Your platform doesn't support right now");
 		}
 		localJudger.startupInit();// Reset result whose solution didn't finish

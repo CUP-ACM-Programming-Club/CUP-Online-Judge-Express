@@ -6,7 +6,7 @@ module.exports = async (req, res, next) => {
 			req.session.auth = true;
 			req.session.isadmin = true;
 		}
-		next();
+		return next();
 	}
 	if (!req.session.auth) {
 		const original_cookie = req.cookies;
