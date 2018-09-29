@@ -520,4 +520,6 @@ router.get("/:sid/:tr", async function (req, res) {
 	});
 });
 
+router.use("/result", require("./status/submit_result"));
+
 module.exports = ["/status", auth, router];
