@@ -82,6 +82,7 @@ let submissionOrigin = {};
 
 let problemFromContest = {};
 let problemFromSpecialSubject = {};
+let submitUserInfo = {};
 
 global.submissions = submissions;
 global.contest_mode = false;
@@ -94,6 +95,11 @@ wss.on("connection", function (ws) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = parseInt(solution_pack.solution_id);
+		if (submitUserInfo[solution_id]) {
+			solution_pack.nick = submitUserInfo[solution_id].nick;
+			solution_pack.user_id = submitUserInfo[solution_id].user_id;
+			solution_pack.in_date = submitUserInfo[solution_id].in_date;
+		}
 		if (problemFromContest[solution_id]) {
 			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
 			solution_pack.num = problemFromContest[solution_id].num;
@@ -118,6 +124,7 @@ wss.on("connection", function (ws) {
 				sendMessage(pagePush.status, "result", solution_pack, 1);
 			}
 		}
+
 		if (finished) {
 			let pos;
 			if (submissionOrigin[solution_id]) {
@@ -130,6 +137,7 @@ wss.on("connection", function (ws) {
 			else if (~(pos = submissionType.normal.indexOf(solution_id))) {
 				submissionType.normal.splice(pos, 1);
 			}
+			delete submitUserInfo[solution_id];
 			delete submissions[solution_id];
 		}
 	});
@@ -367,7 +375,7 @@ io.use((socket, next) => {
  */
 
 io.use((socket, next) => {
-	if (socket.url && ~socket.url.indexOf("status")) {
+	if (socket.url && (~socket.url.indexOf("status") || ~socket.url.indexOf("rank"))) {
 		if (~socket.url.indexOf("cid")) {
 			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("?") + 1, socket.url.length));
 			const contest_id = parseInt(parseObj.cid) || 0;
@@ -450,6 +458,11 @@ io.on("connection", async function (socket) {
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
 		submissions[submission_id] = socket;
+		submitUserInfo[submission_id] = {
+			nick: data.nick,
+			user_id: data.user_id,
+			in_date: new Date().toISOString()
+		};
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
                 contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);
