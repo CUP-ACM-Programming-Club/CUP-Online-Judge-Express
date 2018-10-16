@@ -1,3 +1,4 @@
+/* eslint-disable no-cond-assign */
 const express = require("express");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
@@ -46,7 +47,8 @@ router.get("/:source/:id", async (req, res) => {
 	const browse_code = req.session.isadmin || req.session.source_browser;
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
-where solution_id = ? ${browse_code ? "" : "and (user_id = ? or share = true)"}`;
+where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or solution_id in 
+(select solution_id from tutorial))`}`;
 	// noinspection JSAnnotator
 	const sqlArr = browse_code ? [id] : [id, req.session.user_id];
 	let promiseArray = [];

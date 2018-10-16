@@ -26,8 +26,8 @@ const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, f
 			from = "solution";
 		}
 		const problem_limit = await cache_query("select time_limit,memory_limit from problem where problem_id = ?", [opt.id]);
-		const time_limit = problem_limit[0].time_limit * 1000;
-		const memory_limit = problem_limit[0].memory_limit * 1024;
+		const time_limit = Math.max(1, problem_limit[0].time_limit * 1000);
+		const memory_limit = Math.max(32, problem_limit[0].memory_limit * 1024);
 		const time_step = parseFloat(time_limit) * 2 / 25;
 		const memory_step = parseFloat(memory_limit) * 2 / 25;
 		let sql1 = `select count(1)total,language,diff from
@@ -35,7 +35,6 @@ const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, f
 		for (let i = 0; i <= time_limit; i += time_step) {
 			sql1 += ` when time between ${parseInt(i)} and ${parseInt(i + time_step)} then '${parseInt(i)}-${parseInt(i + time_step)}' `;
 		}
-
 		sql1 += `else '>${time_limit}' end as diff ,language `;
 		sql1 += ` from solution where problem_id = ? and result = 4)t
 group by diff,language`;

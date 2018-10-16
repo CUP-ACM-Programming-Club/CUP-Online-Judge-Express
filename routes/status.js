@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 const express = require("express");
 const router = express.Router();
 const query = require("../module/mysql_query");
@@ -8,6 +9,13 @@ const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
 const auth = require("../middleware/auth");
+const SECONDS = 1000;
+const MINUTES = 60 * SECONDS;
+const HOURS = 60 * MINUTES;
+const DAYS = 24 * HOURS;
+const WEEKS = 7 * DAYS;
+const MONTH = 30 * DAYS;
+const YEARS = 365 * DAYS;
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
@@ -26,11 +34,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}
-								union all select solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all 
+								select '' as fingerprint,solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where 1=1
 								${where_sql}
@@ -41,7 +50,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		else {
 			sql_arr.push(limit);
 			_res = await cache_query(`select * from
-								(select solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}) sol
@@ -55,11 +64,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
 		_end = _end[0].cnt;
 		_res = await cache_query(`select * from
-								(select solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
+								(select fingerprint,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where problem_id > 0 
 								${where_sql}
-								union all select solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
+								union all 
+								select '' as fingerprint,solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
 								from vjudge_solution
 								where problem_id > 0 
 								${where_sql}
@@ -84,7 +94,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
                                 order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
                                 */
 		_res = await cache_query(`select * from
-								(select solution_id,
+								(select fingerprint,solution_id,
 								if((share = 1
            and not exists
            (select * from contest where contest_id in
@@ -102,63 +112,66 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let result = [];
 	for (const val of _res) {
 		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
-		const nick = _user_info[0].nick.trim();
-		const avatar = Boolean(_user_info[0].avatar);
-		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
-			result.push({
-				solution_id: val.solution_id,
-				user_id: val.user_id,
-				nick: nick,
-				ip: val.ip,
-				avatar: avatar,
-				sim: val.sim,
-				share: val.share,
-				sim_id: val.sim_s_id,
-				problem_id: val.problem_id,
-				contest_id: val.contest_id,
-				pass_rate: val.pass_rate,
-				num: val.num,
-				result: val.result,
-				oj_name: val.oj_name,
-				memory: val.memory,
-				time: val.time,
-				language: val.language,
-				length: val.code_length,
-				in_date: val.in_date,
-				judger: val.judger
-			});
-		}
-		else {
-			const owner = req.session.user_id === val.user_id;
-			const check_owner = (data) => {
-				if (owner) {
-					return data;
-				}
-				else {
-					return "----";
-				}
-			};
-			result.push({
-				solution_id: val.solution_id,
-				user_id: val.user_id,
-				nick: nick,
-				avatar: avatar,
-				ip: val.ip,
-				problem_id: val.problem_id,
-				result: val.result,
-				pass_rate: val.pass_rate,
-				sim_id: val.sim_s_id,
-				sim: val.sim,
-				num: val.num,
-				contest_id: val.contest_id,
-				oj_name: val.oj_name,
-				memory: check_owner(val.memory),
-				time: check_owner(val.time),
-				language: val.language,
-				length: check_owner(val.code_length),
-				in_date: val.in_date,
-				judger: val.judger,
-			});
+		if (_user_info.length > 0) {
+			const nick = _user_info[0].nick.trim();
+			const avatar = Boolean(_user_info[0].avatar);
+			if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
+				result.push({
+					solution_id: val.solution_id,
+					user_id: val.user_id,
+					nick: nick,
+					ip: val.ip,
+					avatar: avatar,
+					sim: val.sim,
+					share: val.share,
+					sim_id: val.sim_s_id,
+					problem_id: val.problem_id,
+					contest_id: val.contest_id,
+					pass_rate: val.pass_rate,
+					num: val.num,
+					result: val.result,
+					oj_name: val.oj_name,
+					memory: val.memory,
+					time: val.time,
+					language: val.language,
+					length: val.code_length,
+					in_date: val.in_date,
+					judger: val.judger,
+					fingerprint: val.fingerprint
+				});
+			}
+			else {
+				const owner = req.session.user_id === val.user_id;
+				const check_owner = (data) => {
+					if (owner) {
+						return data;
+					}
+					else {
+						return "----";
+					}
+				};
+				result.push({
+					solution_id: val.solution_id,
+					user_id: val.user_id,
+					nick: nick,
+					avatar: avatar,
+					ip: val.ip,
+					problem_id: val.problem_id,
+					result: val.result,
+					pass_rate: val.pass_rate,
+					sim_id: val.sim_s_id,
+					sim: val.sim,
+					num: val.num,
+					contest_id: val.contest_id,
+					oj_name: val.oj_name,
+					memory: check_owner(val.memory),
+					time: check_owner(val.time),
+					language: val.language,
+					length: check_owner(val.code_length),
+					in_date: val.in_date,
+					judger: val.judger,
+				});
+			}
 		}
 	}
 	res.json({
@@ -179,7 +192,15 @@ async function getGraphData(req, res, request_query = {}) {
 				const start_time = new Date(result[0].start_time);
 				const end_time = new Date(result[0].end_time);
 				let diff_time = timediff(start_time, new Date(Math.min(new Date(), end_time)));
-				if (diff_time.years * 12 + diff_time.months > 10) {
+
+				const diffMilliseconds = diff_time.years * YEARS
+                    + diff_time.months * MONTH
+                    + diff_time.weeks * WEEKS
+                    + diff_time.days * DAYS
+                    + diff_time.minutes * MINUTES
+                    + diff_time.seconds * SECONDS
+                    + diff_time.milliseconds;
+				if (diffMilliseconds > 10 * MONTH) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
 												FROM solution
@@ -207,7 +228,7 @@ async function getGraphData(req, res, request_query = {}) {
 						label: ["year", "month"]
 					});
 				}
-				else if (diff_time.months * 30 + diff_time.days > 12) {
+				else if (diffMilliseconds > 12 * DAYS) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
 												FROM solution
@@ -236,7 +257,7 @@ async function getGraphData(req, res, request_query = {}) {
 						label: ["month", "day"]
 					});
 				}
-				else if (diff_time.days * 24 + diff_time.hours > 12) {
+				else if (diffMilliseconds > 12 * HOURS) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
 												FROM solution
@@ -264,7 +285,7 @@ async function getGraphData(req, res, request_query = {}) {
 						label: ["day", "hour"]
 					});
 				}
-				else if (diff_time.hours * 60 + diff_time.minutes > 12) {
+				else if (diffMilliseconds > 12 * MINUTES) {
 					const result = await cache_query(`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
 												FROM solution
@@ -363,7 +384,18 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 });
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
-	const problem_id = req.params.problem_id === "null" ? undefined : req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+	let problem_id;
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			problem_id = undefined;
+		}
+		else {
+			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	}
+	else {
+		problem_id = parseInt(req.params.problem_id);
+	}
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
@@ -392,18 +424,21 @@ router.get("/solution", async function (req, res) {
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
 		const _result = await query(`SELECT user_id,language,if((share = 1
+    or solution_id in (select solution_id from tutorial where solution.solution_id = ?))
            and not exists
            (select * from contest where contest_id in
            (select contest_id from contest_problem
            where solution.problem_id = contest_problem.problem_id)
-          and end_time > NOW()) ),1,0) as share from solution WHERE solution_id = ?`, [sid]);
+          and end_time > NOW()),1,0) as share,time,memory,code_length from solution WHERE solution_id = ?`, [sid, sid]);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
 				status: "OK",
 				data: {
 					solution_id: sid,
 					user_id: _result[0].user_id,
-					language: _result[0].language
+					language: _result[0].language,
+					time: _result[0].time,
+					memory: _result[0].memory
 				}
 			});
 		}
@@ -484,5 +519,7 @@ router.get("/:sid/:tr", async function (req, res) {
 		});
 	});
 });
+
+router.use("/result", require("./status/submit_result"));
 
 module.exports = ["/status", auth, router];

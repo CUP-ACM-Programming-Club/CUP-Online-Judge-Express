@@ -119,6 +119,16 @@ order by pnum;`, [cid, cid, cid, cid, cid, cid]);
 	}
 });
 
+router.get("/list", async (req, res) => {
+	let privilege = Boolean(req.session.isadmin);
+	let sql = `select title,start_time,end_time,contest_id from contest ${privilege ? "" : " where defunct = 'N'"}`;
+	const _data = await cache_query(sql);
+	res.json({
+		status: "OK",
+		data: _data
+	});
+});
+
 router.get("/statistics/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && cid >= 1000) {

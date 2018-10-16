@@ -1,230 +1,43 @@
 const express = require("express");
-const NodeCache = require("node-cache");
 const router = express.Router();
-const query = require("../module/mysql_query");
+const query = require("../module/mysql_cache");
 const auth = require("../middleware/auth");
+const const_variable = require("../module/const_name");
 
-const cache = new NodeCache({stdTTL: 10, checkperiod: 15});
-Date.prototype.Format = function (fmt) { //author: meizz
-	const o = {
-		"M+": this.getMonth() + 1, //月份
-		"d+": this.getDate(), //日
-		"h+": this.getHours(), //小时
-		"m+": this.getMinutes(), //分
-		"s+": this.getSeconds(), //秒
-		"q+": Math.floor((this.getMonth() + 3) / 3), //季度
-		"S": this.getMilliseconds() //毫秒
-	};
-	if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
-	for (let k in o)
-		if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length === 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
-	return fmt;
-};
-
-const rank_search = async (req, res, next, start, end) => {
-	if (start > end) {
-		start ^= end;
-		end ^= start;
-		start ^= end;
-	}
-	const step = end - start;
-	const _detail = cache.get(`rank from ${start} to ${end}`);
-	// console.log("here");
-	if (_detail === undefined) {
-		//console.log("not cache");
-		let result = await query(`SELECT * FROM users 
-            ORDER BY solved DESC,submit,reg_time LIMIT ${start},${step + 1}`);
-		let send_msg = {
-			cache_time: (new Date()).Format("yyyy-MM-dd hh:mm:ss"),
-			start: start,
-			end: end,
-			user: []
-		};
-		for (let i in result) {
-			let admin = await query("select count(1) as count from privilege where user_id=? " +
-                "and rightstr='administrator'", [result[i].user_id]);
-			admin = admin[0].count > 0 ? "管理员" : "普通用户";
-			const user_detail = {
-				user_id: result[i].user_id,
-				nick: result[i].nick,
-				solved: result[i].solved,
-				submit: result[i].submit,
-				reg_time: (new Date(result[i].reg_time).Format("yyyy-MM-dd")),
-				privilege: admin
-			};
-			//console.log(user_detail);
-			send_msg.user.push(user_detail);
-		}
-		res.json(send_msg);
-		cache.set(`rank from ${start} to ${end}`, send_msg, 10 * 60);
-	}
-	else {
-		res.json(_detail);
-	}
-};
-
-
-router.get("/rank/:start/:end", async function (req, res, next) {
-	let start = parseInt(req.params.start);
-	let end = parseInt(req.params.end);
-	if (isNaN(start) || isNaN(end)) {
-		next();
-	}
-	else {
-		await rank_search(req, res, next, start, end);
-	}
-}, function (req, res) {
+router.get("/:user_id", async (req, res) => {
+	const user_id = req.params.user_id;
+	let sqlQueue = [];
+	sqlQueue.push(query(`
+select * from (select "LOCAL" as oj_name,problem_id,result,language,in_date as time from solution where user_id = ? and problem_id > 0
+union all
+select oj_name,problem_id,result,language,in_date as time from vjudge_solution where user_id = ?
+union all
+select oj_name,problem_id,result,language,time from vjudge_record where user_id = ? and oj_name != "CUP"
+)t
+`, [user_id, user_id, user_id]));
+	sqlQueue.push(query("select * from privilege where user_id = ? and rightstr in ('administrator','editor','source_browser')", [user_id]));
+	sqlQueue.push(query("select * from award where user_id = ?", [user_id]));
+	sqlQueue.push(query("select avatar,school,email,blog,github,nick,biography from users where user_id = ?", [user_id]));
+	sqlQueue.push(query("select * from acm_member where user_id = ?", [user_id]));
+	sqlQueue.push(query("select * from special_subject_problem"));
+	sqlQueue.push(query("select count(1) + 1 as rnk from users where solved > (select solved from users where user_id = ?)", [user_id]));
+	sqlQueue.push(query("select time from loginlog where user_id = ? order by time desc limit 1", [user_id]));
+	sqlQueue.push(query("select title,article_id from article where user_id = ? order by create_time desc", [user_id]));
+	const result = await Promise.all(sqlQueue);
 	res.json({
-		status: "error",
-		statement: "invalid rank start or end num"
+		status: "OK",
+		data: {
+			submission: result[0],
+			privilege: result[1],
+			award: result[2],
+			information: result[3][0],
+			acm_user: result[4][0],
+			special_subject: result[5],
+			rank: result[6][0].rnk,
+			const_variable: const_variable,
+			login_time: result[7],
+			article_publish: result[8]
+		}
 	});
 });
-
-router.get("/rank", function (req, res, next) {
-	rank_search(req, res, next, 0, 50);
-});
-
-router.get("/:user_id", function (req, res) {
-	const user_id = req.params.user_id;
-	const _detail = cache.get("user_id" + user_id);
-	if (_detail === undefined) {
-		query("SELECT submit,solved,email,nick,school from users where user_id=?", [user_id], (rows) => {
-			if (rows.length !== 0) {
-				const usr = rows[0];
-				const user_detail = {
-					user_id: user_id,
-					submit: usr["submit"],
-					solved: usr["solved"],
-					email: usr["email"],
-					nick: usr["nick"],
-					school: usr["school"]
-				};
-				cache.set("user" + user_id, user_detail, 10);
-				res.header("Content-Type", "application/json");
-				res.json(user_detail);
-			}
-			else {
-
-				const obj = {
-					status: "ERROR",
-					statement: "user not found"
-				};
-				res.header("Content-Type", "application/json");
-				res.json(obj);
-			}
-		});
-	}
-	else {
-		res.header("Content-Type", "application/json");
-		res.json(_detail);
-	}
-});
-
-router.get("/nick/:nick", function (req, res) {
-	const nick = req.params.nick;
-	const _user = cache.get("nick" + nick);
-	if (_user === undefined) {
-		query("SELECT user_id FROM users WHERE nick=?", [nick], (rows) => {
-			if (rows.length !== 0) {
-				const user = {
-					status: "OK",
-					user_id: rows[0]["user_id"]
-				};
-				cache.set("nick" + nick, user, 10);
-				res.header("Content-Type", "application/json");
-				res.json(user);
-			}
-			else {
-				const obj = {
-					status: "ERROR",
-					user_id: "null"
-				};
-				res.header("Content-Type", "application/json");
-				res.json(obj);
-			}
-		});
-	}
-	else {
-		res.header("Content-Type", "application/json");
-		res.json(_user);
-	}
-});
-
-router.get("/:user_id/submit", function (req, res) {
-	const user_id = req.params.user_id;
-	const _format = cache.get("user_id/submit" + user_id);
-	if (_format === undefined) {
-		query("SELECT * FROM solution WHERE user_id=?", [user_id], (rows) => {
-			let formatArr = [];
-			const len = rows.length;
-			for (let i = 0; i < len; ++i) {
-				let obj = {
-					result: rows[i]["result"],
-					problem_id: rows[i]["problem_id"]
-				};
-				formatArr.push(obj);
-			}
-			res.header("Content-Type", "application/json");
-			res.json(formatArr);
-		});
-	}
-	else {
-		res.header("Content-Type", "application/json");
-		res.json(_format);
-	}
-});
-
-router.get("/info/:user_id", async function (req, res) {
-	const user_id = req.params.user_id;
-	const _user_msg = cache.get("user_id/user_info" + user_id);
-	if (_user_msg === undefined) {
-		let _result, result, result1, result2;
-		[_result, result, result1, result2] = await Promise.all([
-			query("select school,email,nick from users where user_id=?", [user_id]),
-			query(`select language as lang,count(1) as cnt from solution where user_id=? and
-                    result=4 group by lang order by lang`, [user_id])
-			, query(`select count(DISTINCT problem_id)as ac from solution where 
-                user_id=? and result=4`, [user_id])
-			, query(`select count(solution_id) as submit from solution where 
-                user_id=? and problem_id>0`, [user_id])
-		]);
-		if (_result.length === 0) {
-			res.json({
-				status: "error",
-				statement: "no such user"
-			});
-			return;
-		}
-		let user_info = {
-			school: result[0].school,
-			email: result[0].email,
-			nick: result[0].nick,
-			user_id: user_id,
-			AC_language: {}
-		};
-		const language = {
-			"0": "GCC",
-			"21": "GCC",
-			"1": "G++",
-			"20": "G++",
-			"19": "G++",
-			"3": "Java",
-			"6": "Python",
-			"13": "Clang",
-			"14": "Clang++",
-			"2": "Pascal"
-		};
-		user_info["AC"] = parseInt(result1[0].ac);
-		user_info["submit"] = parseInt(result2[0].submit);
-		query("update users set solved=?,submit=? where user_id=?", [user_info.AC, user_info.submit, user_id]);
-		for (let i in result) {
-			if (user_info.AC_language[language[result[i].lang.toString()]] === undefined)
-				user_info.AC_language[language[result[i].lang.toString()]] = result[i].cnt;
-			else
-				user_info.AC_language[language[result[i].lang.toString()]] += result[i].cnt;
-		}
-		res.json(user_info);
-	}
-});
-
 module.exports = ["/user", auth, router];

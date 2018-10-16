@@ -24,6 +24,43 @@
       "C++98",
       "C99",
       "Kotlin",
+      "Java 8",
+      "Java 7",
+      "PyPy",
+      "PyPy3",
+      "Java 6",
+      "Other Language"
+    ],
+    "common": [
+      "C",
+      "C++",
+      "Pascal",
+      "Java",
+      "Ruby",
+      "Bash",
+      "Python",
+      "PHP",
+      "Perl",
+      "C#",
+      "Obj-C",
+      "FreeBasic",
+      "Scheme",
+      "Clang",
+      "Clang++",
+      "Lua",
+      "JavaScript",
+      "Go",
+      "Python",
+      "C++",
+      "C++",
+      "C",
+      "Kotlin",
+      "Java",
+      "Java",
+      "Python",
+      "Python",
+      "Java",
+      "Other Language",
       "Other Language"
     ],
     "hdu": [
@@ -118,7 +155,12 @@
       "cpp",
       "cpp",
       "c",
-      "kt"
+      "kt",
+      "java",
+      "java",
+      "py",
+      "py",
+      "java"
     ]
   },
   "markdown_language": {
@@ -146,6 +188,11 @@
       "c++",
       "c++",
       "kotlin",
+      "java",
+      "java",
+      "python",
+      "python",
+      "java",
       ""
     ],
     "hdu": [
@@ -241,11 +288,14 @@
       "c_cpp",
       "c_cpp",
       "java",
+      "java",
+      "java",
       "python",
-      "python"
+      "python",
+      "java"
     ]
   },
-  "langmask": 29531568,
+  "langmask": 171440,
   "judge_color": [
     "waiting",
     "running",
@@ -300,6 +350,7 @@
       "运行完成",
       "已加入队列",
       "提交被服务器拒绝",
+      "系统错误",
       ""
     ]
   },
@@ -347,5 +398,53 @@
         "judger": "審判するコンピューター"
       }
     }
-  }
+  },
+  "language_icon": [
+    "devicon-c-plain",
+    "devicon-cplusplus-plain",
+    "devicon-devicon-plain",
+    "devicon-java-plain",
+    "devicon-ruby-plain",
+    "devicon-devicon-plain",
+    "devicon-python-plain",
+    "devicon-php-plain",
+    "devicon-devicon-plain",
+    "devicon-csharp-plain",
+    "devicon-devicon-plain",
+    "devicon-devicon-plain",
+    "devicon-devicon-plain",
+    "devicon-c-plain",
+    "devicon-cplusplus-plain",
+    "devicon-devicon-plain",
+    "devicon-javascript-plain",
+    "devicon-go-plain",
+    "devicon-python-plain",
+    "devicon-cplusplus-plain",
+    "devicon-cplusplus-plain",
+    "devicon-c-plain",
+    "devicon-devicon-plain",
+    "devicon-java-plain",
+    "devicon-java-plain",
+    "devicon-python-plain",
+    "devicon-python-plain",
+    "devicon-java-plain"
+  ],
+  "judge_icon": [
+    "hourglass half",
+    "spinner",
+    "spinner",
+    "spinner",
+    "checkmark",
+    "minus",
+    "remove",
+    "clock",
+    "microchip",
+    "print",
+    "bomb",
+    "code",
+    "spinner",
+    "spinner",
+    "spinner",
+    "remove"
+  ]
 }

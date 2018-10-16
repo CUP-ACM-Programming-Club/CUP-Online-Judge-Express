@@ -67,6 +67,16 @@ error.noprivilege = {
 	statement: "Permission denied"
 };
 
+error.solutionIdNotValid = {
+	status:"error",
+	statement:"Solution ID is not valid or result of it is not accept"
+};
+
+error.contestMode = {
+	status:"error",
+	contest_mode:true
+};
+
 ok.logined = {
 	status: "OK",
 	statment: "logined"

@@ -5,22 +5,8 @@ const router = express.Router();
 const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
+const {checkCaptcha} = require("../module/captcha_checker");
 
-const md = require("markdown-it")({
-	html: true,
-	breaks: true
-});
-const mh = require("markdown-it-highlightjs");
-const mk = require("@ryanlee2014/markdown-it-katex");
-md.use(mk);
-md.use(mh);
-const markdownPack = (html) => {
-	return `<div class="markdown-body">${html}</div>`;
-};
-
-const checkCaptcha = (req, from) => {
-	return req.session.captcha.from === from && req.session.captcha.captcha.toLowerCase() === req.body.captcha.toLowerCase();
-};
 
 const checkValidation = (number) => {
 	number = parseInt(number);
@@ -31,6 +17,28 @@ const checkValidation = (number) => {
 		return number;
 	}
 };
+
+router.get("/my", async (req, res) => {
+	let page = checkValidation(req.query.page);
+	const user_id = req.session.user_id;
+	try {
+		const [_discuss_list, _tot] = await Promise.all([
+			cache_query(`select title,create_time,edit_time,article_id from article where user_id = ? or article_id in
+		 (select article_id from article_content where user_id = ?)
+	order by last_post desc,edit_time desc,create_time desc,article_id desc
+	limit ?,?`, [user_id, user_id, page, page_cnt]),
+			cache_query(`select count(1) as cnt from article
+         ${req.session.isadmin ? "" : "where defunct = 'N'"}`)
+		]);
+		res.json({
+			discuss: _discuss_list,
+			total: _tot[0].cnt
+		});
+	}
+	catch (e) {
+		res.json(error.invalidParams);
+	}
+});
 
 router.get("/:id", async (req, res) => {
 	let page = checkValidation(req.query.page);
@@ -54,10 +62,6 @@ router.get("/:id", async (req, res) => {
 		left join users on users.user_id = tmp.user_id
 		`, [id])
 	]);
-	_article[0].content = markdownPack(md.render(_article[0].content));
-	for (let i of discuss_content) {
-		i.content = markdownPack(md.render(i.content));
-	}
 	res.json({
 		discuss: discuss_content,
 		total: _tot[0].cnt,
@@ -80,7 +84,8 @@ router.get("/", async (req, res) => {
 			});
 		}
 	};
-	cache_query(`select * from article 
+
+	cache_query(`select * from article ${req.session.isadmin ? "" : "where defunct = 'N'"}
 	order by last_post desc,edit_time desc,create_time desc,article_id desc
 	limit ?,?`, [page, page_cnt])
 		.then(rows => {
@@ -112,6 +117,24 @@ router.post("/reply/:id", (req, res) => {
 			res.json(ok.serverReceived);
 		}
 	}
+});
+
+router.get("/search/:search_val", async (req, res) => {
+	const search_val = `%${req.params.search_val}%`;
+	let sql = "select * from article where title like ?";
+	let page = checkValidation(req.query.page);
+	let sqlArr = [search_val];
+	if (search_val.length === 2 || typeof req.params.search_val === "undefined") {
+		sql = `select * from article 
+	    order by last_post desc,edit_time desc,create_time desc,article_id desc limit ?,?`;
+		sqlArr = [];
+	}
+	sqlArr.push(page, page_cnt);
+	const result = await query(sql, sqlArr);
+	res.json({
+		status: "OK",
+		data: result
+	});
 });
 
 router.post("/newpost", (req, res) => {

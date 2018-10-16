@@ -32,6 +32,13 @@ const send_json = (res, val) => {
 	}
 };
 
+const checkEmpty = (str) => {
+	if (str === "" || str === null) {
+		return null;
+	}
+	return str;
+};
+
 const _judgeValidNumber = (num) => {
 	if (isNaN(num)) {
 		return -1;
@@ -59,12 +66,8 @@ const checkContestPrivilege = (req, cid) => {
 	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
-const markdownPack = (html) => {
-	return `<div class="markdown-body">${html}</div>`;
-};
-
 const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}) => {
-	let packed_problem;
+	let packed_problem = {};
 	if (rows.length !== 0) {
 		if (!opt.raw && (packed_problem = cachePack[opt.id])) {
 			new Promise((resolve) => {
@@ -73,12 +76,6 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				_packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 				_packed_problem.prepend = opt.prepend;
 				_packed_problem.append = opt.append;
-				if (opt.source) {
-					_packed_problem.input = markdownPack(md.render(_packed_problem.input));
-					_packed_problem.output = markdownPack(md.render(_packed_problem.output));
-					_packed_problem.description = markdownPack(md.render(_packed_problem.description));
-					_packed_problem.hint = markdownPack(md.render(_packed_problem.hint));
-				}
 				_packed_problem.langmask = opt.langmask || const_variable.langmask;
 				cachePack[opt.id] = _packed_problem;
 				resolve();
@@ -90,12 +87,6 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 			packed_problem.prepend = opt.prepend;
 			packed_problem.append = opt.append;
-			if (!opt.raw && !opt.source) {
-				packed_problem.input = markdownPack(md.render(packed_problem.input));
-				packed_problem.output = markdownPack(md.render(packed_problem.output));
-				packed_problem.description = markdownPack(md.render(packed_problem.description));
-				packed_problem.hint = markdownPack(md.render(packed_problem.hint));
-			}
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
 		if (!opt.after_contest) {
@@ -238,9 +229,11 @@ const make_cache = async (res, req, opt = {source: "", raw: false, after_contest
 	}
 	if (req.session.isadmin) {
 		if (opt.source.length === 0) {
-			sql = "SELECT * FROM problem WHERE problem_id = ?";
+			sql = `select a.*,privilege.user_id as creator
+from (SELECT * FROM problem WHERE problem_id = ?)a
+       left join privilege on privilege.rightstr = CONCAT('p', '?')`;
 			opt.sql = sql;
-			cache_query(sql, [opt.problem_id])
+			cache_query(sql, [opt.problem_id, opt.problem_id])
 				.then((rows) => {
 					problem_callback(rows, req, res, opt);
 				});
@@ -283,9 +276,15 @@ router.get("/:source/:id", function (req, res) {
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
+		if (process.env.NODE_ENV === "test") {
+			console.log("match cache");
+		}
 		make_cache(res, req, {problem_id: id, source: source});
 	}
 	else {
+		if (process.env.NODE_ENV === "test") {
+			console.log("not match");
+		}
 		send_json(res, _res);
 		make_cache(null, req, {problem_id: id, source: source});
 	}
@@ -428,15 +427,41 @@ WHERE NOT EXISTS (
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
+	const from = req.params.source || "";
+	let local = false;
+	if (from.length <= 2 || from === "local") {
+		local = true;
+	}
+	console.log("local");
+	console.log(local);
 	if (req.session.isadmin || req.session.editor) {
 		let json;
 		try {
-			json = req.body.json;
-			query(`update problem set title = ?,time_limit = ?,memory_limit = ?,description = ?,input = ?,output = ?,
-			sample_input = ?,sample_output = ?,hint = ?,label = ? where problem_id = ?`,
-			[json.title, json.time, json.memory, json.description, json.input,
-				json.output, json.sampleinput, json.sampleoutput, json.hint, json.label,
-				problem_id])
+			json = Object.assign({
+				title: "",
+				time: 0,
+				memory: 0,
+				description: "",
+				input: "",
+				output: "",
+				sampleinput: "",
+				sampleoutput: "",
+				label: ""
+			}, req.body.json);
+			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
+			memory_limit = ?,description = ?,input = ?,output = ?,
+			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
+			 ${local ? "" : " and source = ?"}`;
+			let sqlArr = [json.title, checkEmpty(json.time), checkEmpty(json.memory), json.description, json.input,
+				json.output, json.sampleinput, json.sampleoutput, json.label];
+			if (local) {
+				sqlArr.push(json.hint,
+					problem_id);
+			}
+			else {
+				sqlArr.push(problem_id, from);
+			}
+			query(sql, sqlArr)
 				.then(() => {
 				})
 				.catch(err => {

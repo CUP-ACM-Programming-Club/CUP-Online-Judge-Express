@@ -34,7 +34,7 @@ class localJudger extends eventEmitter {
 		this.CPUModel = CPUDetails[0].model;
 		this.CPUSpeed = CPUDetails[0].speed;
 		this.platform = os.platform();
-		if (this.platform !== "linux") {
+		if (this.platform !== "linux" && this.platform !== "darwin") {
 			return new Error("Your platform doesn't support right now");
 		}
 		localJudger.startupInit();// Reset result whose solution didn't finish
@@ -76,6 +76,20 @@ class localJudger extends eventEmitter {
      */
 
 	addTask(solution_id) {
+		if (typeof solution_id === "object") {
+			if (!isNaN(solution_id.submission_id)) {
+				solution_id = solution_id.submission_id;
+			}
+			else if (!isNaN(solution_id.solution_id)) {
+				solution_id = solution_id.solution_id;
+			}
+			else {
+				console.log("Error:Not valid solution_id");
+			}
+		}
+		else {
+			solution_id = parseInt(solution_id);
+		}
 		if (solution_id > this.latestSolutionID &&
             !~this.judging_queue.indexOf(solution_id) &&
             !~this.waiting_queue.indexOf(solution_id)) {
@@ -156,6 +170,7 @@ class localJudger extends eventEmitter {
 			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
 			if (EXITCODE) {
+				query("update solution set result = 16 where solution_id = ?", [solution_id]);
 				logger.fatal(`Fatal Error:\n
 				solution_id:${solution_id}\n
 				runner_id:${runner_id}\n
@@ -182,7 +197,7 @@ class localJudger extends eventEmitter {
      */
 
 	async collectSubmissionFromDatabase() {
-		let result = await query("SELECT solution_id FROM solution WHERE result<2 and language not in (15,16,22)");
+		let result = await query("SELECT solution_id FROM solution WHERE result<2 and language not in (15,22)");
 		for (let i in result) {
 			const solution_id = parseInt(result[i].solution_id);
 			if (!isNaN(solution_id) &&

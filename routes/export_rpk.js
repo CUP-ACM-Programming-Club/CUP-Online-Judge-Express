@@ -73,7 +73,7 @@ const readFile = async (file_list) => {
 	return target;
 };
 
-const pack_problem = async (_problem_detail, problem_dir) => {
+const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
 	const problem_details = {
 		title: _problem_detail.title,
 		time: _problem_detail.time_limit,
@@ -99,6 +99,34 @@ const pack_problem = async (_problem_detail, problem_dir) => {
 	problem_details.prepend = await readFile(dirFileList.prepend);
 	problem_details.append = await readFile(dirFileList.append);
 	problem_details.spj = await readFile([dirFileList.spj])[0];
+	const prepend_file_database = await new Promise((resolve => {
+		query("select * from prefile where problem_id = ?", [problem_id])
+			.then(rows => {
+				let prepend = [];
+				for (let i of rows) {
+					prepend.push({
+						name: `prepend.${suffix[i.type]}`,
+						content: Buffer.from(i.code).toString("base64")
+					});
+				}
+				resolve(prepend);
+			});
+	}));
+	problem_details.prepend.push(...prepend_file_database);
+	const append_file_database = await new Promise((resolve => {
+		query("select * from prefile where problem_id = ?", [problem_id])
+			.then(rows => {
+				let append = [];
+				for (let i of rows) {
+					append.push({
+						name: `apend.${suffix[i.type]}`,
+						content: Buffer.from(i.code).toString("base64")
+					});
+				}
+				resolve(append);
+			});
+	}));
+	problem_details.append.push(...append_file_database);
 	return problem_details;
 };
 
@@ -120,7 +148,6 @@ const send_file = (req, res, data, filename) => {
 const pack_file = async (req, res, opt = {}) => {
 	if ((typeof opt.problem_id === "undefined" && typeof opt.contest_id === "undefined") || (isNaN(opt.problem_id) && isNaN(opt.contest_id))) {
 		res.json(error_cb);
-		return;
 	}
 	else {
 		if (typeof opt.problem_id !== "undefined" && !isNaN(opt.problem_id)) {
@@ -134,7 +161,7 @@ const pack_file = async (req, res, opt = {}) => {
 			let _solution = await query(`select * from (
 select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
 sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
-			const problem_details = await pack_problem(_problem_detail[0], problem_dir);
+			const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
 			if (_solution.length > 0) {
 				_solution = _solution[0];
 				problem_details.solution.push({
@@ -167,7 +194,7 @@ sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
 sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 
-					const problem_details = await pack_problem(_problem_detail[0], problem_dir);
+					const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
 					if (_solution.length > 0) {
 						_solution = _solution[0];
 						problem_details.solution.push({
