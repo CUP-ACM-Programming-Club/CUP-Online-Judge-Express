@@ -521,5 +521,6 @@ router.get("/:sid/:tr", async function (req, res) {
 });
 
 router.use("/result", require("./status/submit_result"));
+router.use("/device", require("./status/device"));
 
 module.exports = ["/status", auth, router];

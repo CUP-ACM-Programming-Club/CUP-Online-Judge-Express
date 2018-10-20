@@ -59,7 +59,16 @@ const judgeValidNumber = (num) => {
 	else {
 		return _judgeValidNumber(num);
 	}
+};
 
+const checkUploader = async (problem_id) => {
+	const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
+	if (_uploader && _uploader.length > 0) {
+		return _uploader[0].user_id;
+	}
+	else {
+		return "Administrator";
+	}
 };
 
 const checkContestPrivilege = (req, cid) => {
@@ -76,6 +85,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				_packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 				_packed_problem.prepend = opt.prepend;
 				_packed_problem.append = opt.append;
+				_packed_problem.uploader = opt.uploader;
 				_packed_problem.langmask = opt.langmask || const_variable.langmask;
 				cachePack[opt.id] = _packed_problem;
 				resolve();
@@ -87,6 +97,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
 			packed_problem.prepend = opt.prepend;
 			packed_problem.append = opt.append;
+			packed_problem.uploader = opt.uploader;
 			packed_problem.langmask = opt.langmask || const_variable.langmask;
 		}
 		if (!opt.after_contest) {
@@ -199,7 +210,12 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	send_json(res, errmsg);
 });
 
-const make_cache = async (res, req, opt = {source: "", raw: false, after_contest: false}) => {
+const make_cache = async (res, req, opt = {
+	source: "",
+	raw: false,
+	after_contest: false,
+	uploader: "Administrator"
+}) => {
 	if (ENVIRONMENT === "test") {
 		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
 	}
@@ -301,13 +317,12 @@ router.get("/:source/", async function (req, res) {
 	let raw = req.query.raw !== undefined;
 	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
 	if (~cid && ~pid) {
-		const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+		const [contest, result] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
+            "num = ?", [cid, pid])]);
 		if (contest[0].private === 1 && !checkContestPrivilege(req, cid)) {
 			res.json(error.problemInContest);
 			return;
 		}
-		const result = await cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-            "num = ?", [cid, pid]);
 		if (result.length > 0) {
 			const _langmask = await cache_query("SELECT langmask,end_time FROM contest WHERE contest_id = ?", [cid]);
 			let problem_id = result[0].problem_id;
@@ -352,7 +367,14 @@ router.get("/:source/", async function (req, res) {
 	else if (~id) {
 		const browse_privilege = req.session.isadmin || req.session.source_browser;
 		if (browse_privilege) {
-			make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+			make_cache(res, req, {
+				problem_id: id,
+				source: source,
+				solution_id: sid,
+				raw: raw,
+				after_contest: true,
+				uploader: await checkUploader(id)
+			});
 		}
 		else {
 			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
@@ -368,13 +390,21 @@ router.get("/:source/", async function (req, res) {
 						source: source,
 						solution_id: sid,
 						raw: raw,
-						after_contest: true
+						after_contest: true,
+						uploader: await checkUploader(id)
 					});
 
 				}
 			}
 			else {
-				make_cache(res, req, {problem_id: id, source: source, solution_id: sid, raw: raw, after_contest: true});
+				make_cache(res, req, {
+					problem_id: id,
+					source: source,
+					solution_id: sid,
+					raw: raw,
+					after_contest: true,
+					uploader: await checkUploader(id)
+				});
 			}
 		}
 
