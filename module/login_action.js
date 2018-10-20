@@ -25,7 +25,10 @@ module.exports = async (req, user_id) => {
 		else if (i.rightstr.indexOf("editor") === 0) {
 			req.session.editor = true;
 		}
-		else if(i.rightstr.indexOf("source_browser") === 0) {
+		else if (i.rightstr.indexOf("contest_manager") === 0) {
+			req.session.contest_manager = true;
+		}
+		else if (i.rightstr.indexOf("source_browser") === 0) {
 			req.session.source_browser = true;
 		}
 	}

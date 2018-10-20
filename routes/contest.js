@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const express = require("express");
 const dayjs = require("dayjs");
 const md = require("markdown-it")({
@@ -30,7 +31,7 @@ const check = async (req, res, cid) => {
 		return false;
 	}
 	else {
-		return true;
+		return contest;
 	}
 };
 
@@ -56,8 +57,35 @@ router.get("/general/:cid", async (req, res) => {
 
 router.get("/problem/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
-	if (~cid && check(req, res, cid)) {
-		const contest_general_detail = await cache_query(`select *
+	let contest_detail = null;
+	try {
+		if (~cid && (contest_detail = await check(req, res, cid))) {
+			if (contest_detail.length > 0) contest_detail = contest_detail[0];
+			let contest_general_detail = null;
+			const contest_is_end = dayjs(contest_detail.end_time).isBefore(dayjs());
+			if (contest_detail.vjudge) {
+				contest_general_detail = await cache_query(`select * from (SELECT \`problem\`.\`title\` as \`title\`,\`problem\`.\`problem_id\` as \`pid\`,source as source,"LOCAL" as oj_name,contest_problem.num as pnum
+
+		FROM \`contest_problem\`,\`problem\`
+
+		WHERE \`contest_problem\`.\`problem_id\`=\`problem\`.\`problem_id\` 
+
+		AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\` IS NULL ORDER BY \`contest_problem\`.\`num\` 
+                ) problem
+                left join (select problem_id pid1,num,count(1) accepted from solution where result=4 and contest_id= ? group by pid1) p1 on problem.pid=p1.pid1
+                left join (select problem_id pid2,num,count(1) submit from solution where contest_id= ?  group by pid2) p2 on problem.pid=p2.pid2
+union all
+select * from (SELECT \`vjudge_problem\`.\`title\` as \`title\`,\`vjudge_problem\`.\`problem_id\` as \`pid\`,"" as source,source as oj_name,contest_problem.num as pnum FROM
+ \`contest_problem\`,\`vjudge_problem\`
+WHERE \`contest_problem\`.\`problem_id\`=\`vjudge_problem\`.\`problem_id\`
+AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\`=\`vjudge_problem\`.\`source\` ORDER BY \`contest_problem\`.\`num\`) vproblem
+left join(select problem_id pid1,num,count(1) accepted from vjudge_solution where result=4 and contest_id= ? group by num) vp1 on vproblem.pid=vp1.pid1 and vproblem.pnum=vp1.num
+left join(select problem_id pid2,num,count(1) submit from vjudge_solution where contest_id= ? group by num) vp2 on vproblem.pid=vp2.pid2 and vproblem.pnum=vp2.num
+order by pnum;`, [cid, cid, cid, cid, cid, cid]);
+
+			}
+			else {
+				contest_general_detail = await cache_query(`select *
 from (SELECT
         \`problem\`.\`title\`      as \`title\`,
         \`problem\`.\`problem_id\` as \`pid\`,
@@ -112,10 +140,25 @@ from (SELECT
              where contest_id = ?
              group by num) vp2 on vproblem.pid = vp2.pid2 and vproblem.pnum = vp2.num
 order by pnum;`, [cid, cid, cid, cid, cid, cid]);
-		res.json({
-			status: "OK",
-			data: contest_general_detail
-		});
+			}
+			let browse_privilege = req.session.isadmin || req.session.contest_manager;
+			if (!browse_privilege && !contest_is_end) {
+				for (let i of contest_general_detail) {
+					i.pid = i.pid1 = i.pid2 = "";
+				}
+			}
+			delete contest_detail.password;
+			res.json({
+				status: "OK",
+				data: contest_general_detail,
+				info: contest_detail,
+				admin: browse_privilege
+			});
+		}
+	}
+	catch (e) {
+		console.log(e);
+		res.json(error.database);
 	}
 });
 
