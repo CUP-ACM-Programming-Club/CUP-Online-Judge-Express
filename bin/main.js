@@ -116,12 +116,9 @@ wss.on("connection", function (ws) {
 		}
 		if (submissions[solution_id]) {
 			submissions[solution_id].emit("result", solution_pack);
+			sendMessage(pagePush.status, "result", solution_pack, 1);
 			if (submissionOrigin[solution_id]) {
 				sendMessage(pagePush.contest_status[submissionOrigin[solution_id]], "result", solution_pack, 1);
-				sendMessage(pagePush.status, "result", solution_pack, 1);
-			}
-			else if (~submissionType.normal.indexOf(solution_id)) {
-				sendMessage(pagePush.status, "result", solution_pack, 1);
 			}
 		}
 

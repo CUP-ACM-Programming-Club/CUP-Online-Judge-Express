@@ -12,11 +12,13 @@ const get_ranklist = async (req, res, opt = {}) => {
 	let result;
 	if (!opt.search && !opt.time_stamp) {
 		if (opt.vjudge) {
-			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar FROM users ORDER BY vjudge_accept
+			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar FROM users
+			 ${opt.acm_member ? " where user_id in (select user_id from acm_member) " : ""}ORDER BY vjudge_accept
 			 DESC,vjudge_submit DESC,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
 		else {
-			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar FROM users ORDER BY solved 
+			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar FROM users 
+			${opt.acm_member ? " where user_id in (select user_id from acm_member) " : ""} ORDER BY solved 
 				DESC,submit,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
 	}
@@ -123,6 +125,20 @@ router.get("/", async function (req, res) {
 		search: search,
 		time_stamp: time_stamp,
 		vjudge: vjudge
+	});
+});
+
+router.get("/acmmember", async function (req, res) {
+	let page = req.query.page || 0;
+	let search = req.query.search || "";
+	let time_stamp = req.query.time_stamp;
+	let vjudge = req.query.vjudge || false;
+	await get_ranklist(req, res, {
+		page: page,
+		search: search,
+		time_stamp: time_stamp,
+		vjudge: vjudge,
+		acm_member: true
 	});
 });
 
