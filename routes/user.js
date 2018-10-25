@@ -16,13 +16,16 @@ select oj_name,problem_id,result,language,time from vjudge_record where user_id 
 )t
 `, [user_id, user_id, user_id]));
 	sqlQueue.push(query("select * from privilege where user_id = ? and rightstr in ('administrator','editor','source_browser')", [user_id]));
-	sqlQueue.push(query("select * from award where user_id = ?", [user_id]));
+	sqlQueue.push(query("select * from award where user_id = ? order by year", [user_id]));
 	sqlQueue.push(query("select avatar,school,email,blog,github,nick,biography from users where user_id = ?", [user_id]));
 	sqlQueue.push(query("select * from acm_member where user_id = ?", [user_id]));
 	sqlQueue.push(query("select * from special_subject_problem"));
 	sqlQueue.push(query("select count(1) + 1 as rnk from users where solved > (select solved from users where user_id = ?)", [user_id]));
 	sqlQueue.push(query("select time from loginlog where user_id = ? order by time desc limit 1", [user_id]));
 	sqlQueue.push(query("select title,article_id from article where user_id = ? order by create_time desc", [user_id]));
+	sqlQueue.push(query(`select count(1) as cnt,year(in_date) as year,month(in_date) as month,day(in_date) as day from solution
+where user_id = ? and in_date >= DATE_SUB(NOW(),INTERVAL 1 YEAR)
+group by year(in_date),month(in_date),day(in_date)`, [user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -36,7 +39,8 @@ select oj_name,problem_id,result,language,time from vjudge_record where user_id 
 			rank: result[6][0].rnk,
 			const_variable: const_variable,
 			login_time: result[7],
-			article_publish: result[8]
+			article_publish: result[8],
+			submission_count: result[9]
 		}
 	});
 });

@@ -375,12 +375,24 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
-	await get_status(req, res, next, {
-		problem_id: problem_id,
-		user_id: user_id,
-		language: language,
-		result: result
-	}, limit);
+	if (isNaN(problem_id) && problem_id !== undefined) {
+		res.json({
+			result: result,
+			const_list: const_name,
+			self: req.session.user_id,
+			isadmin: req.session.isadmin,
+			browse_code: req.session.source_browser,
+			end: false
+		});
+	}
+	else {
+		await get_status(req, res, next, {
+			problem_id: problem_id,
+			user_id: user_id,
+			language: language,
+			result: result
+		}, limit);
+	}
 });
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
