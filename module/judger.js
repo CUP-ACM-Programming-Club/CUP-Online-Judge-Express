@@ -6,6 +6,7 @@ const {spawn} = require("child_process");
 const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
+const PriorityQueue = require("tinyqueue");
 const os = require("os");
 const eventEmitter = require("events").EventEmitter;
 
@@ -27,7 +28,15 @@ class localJudger extends eventEmitter {
 		super();
 		this.oj_home = home_dir;
 		this.judge_queue = [...Array(judger_num).keys()].map(x => x + 1);
-		this.waiting_queue = [];
+		this.waiting_queue = new PriorityQueue([], function (a, b) {
+			if (a.priority !== b.priority) {
+				return b.priority - a.priority;
+			}
+			else {
+				return b.solution_id - a.solution_id;
+			}
+		});
+		this.in_waiting_queue = {};
 		this.judging_queue = [];
 		this.latestSolutionID = 0;
 		const CPUDetails = this.CPUDetails = os.cpus();
@@ -92,14 +101,18 @@ class localJudger extends eventEmitter {
 		}
 		if (solution_id > this.latestSolutionID &&
             !~this.judging_queue.indexOf(solution_id) &&
-            !~this.waiting_queue.indexOf(solution_id)) {
+            !this.in_waiting_queue[solution_id]) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
 				this.runJudger(solution_id, this.judge_queue.shift());
 				this.judging_queue.push(solution_id);
 			}
 			else {
-				this.waiting_queue.push(solution_id);
+				this.waiting_queue.push({
+					solution_id: solution_id,
+					priority: 1
+				});
+				this.in_waiting_queue[solution_id] = true;
 			}
 		}
 	}
@@ -110,7 +123,10 @@ class localJudger extends eventEmitter {
 
 	getRestTask() {
 		if (this.judge_queue.length && this.waiting_queue.length) {
-			this.runJudger(this.waiting_queue.shift(), this.judge_queue.shift());
+			const task = this.waiting_queue.pop();
+			const solution_id = task.solution_id;
+			delete this.in_waiting_queue[solution_id];
+			this.runJudger(solution_id, this.judge_queue.shift());
 		}
 	}
 
@@ -199,16 +215,22 @@ class localJudger extends eventEmitter {
 	async collectSubmissionFromDatabase() {
 		let result = await query("SELECT solution_id FROM solution WHERE result<2 and language not in (15,22)");
 		for (let i in result) {
+
 			const solution_id = parseInt(result[i].solution_id);
+			const priority = parseInt(result[i].result);
 			if (!isNaN(solution_id) &&
-                !~this.waiting_queue.indexOf(solution_id) &&
+                !this.in_waiting_queue[solution_id] &&
                 !~this.judging_queue.indexOf(solution_id)) {
 				if (this.judge_queue.length) {
 					this.runJudger(solution_id, this.judge_queue.shift());
 					this.judging_queue.push(solution_id);
 				}
 				else {
-					this.waiting_queue.push(solution_id);
+					this.waiting_queue.push({
+						solution_id: solution_id,
+						priority: !priority
+					});
+					this.in_waiting_queue[solution_id] = true;
 				}
 			}
 		}
