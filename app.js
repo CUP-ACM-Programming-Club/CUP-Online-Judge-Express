@@ -1,5 +1,4 @@
 const express = require("express");
-const session = require("express-session");
 const compression = require("compression");
 const path = require("path");
 const logger = require("morgan");
@@ -37,7 +36,7 @@ const options = {
 app.use(sessionMiddleware);
 
 app.use(compression());
-
+/*
 const expiryDate = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
 app.use(session({
 	name: "session",
@@ -47,6 +46,7 @@ app.use(session({
 		expires: expiryDate
 	}
 }));
+*/
 app.use(logger("dev"));
 app.use(helmet());
 app.use(bodyParser.json());
