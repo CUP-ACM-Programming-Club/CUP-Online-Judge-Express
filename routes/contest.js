@@ -63,8 +63,9 @@ router.get("/problem/:cid", async (req, res) => {
 			if (contest_detail.length > 0) contest_detail = contest_detail[0];
 			let contest_general_detail = null;
 			const contest_is_end = dayjs(contest_detail.end_time).isBefore(dayjs());
+			let sqlQueue = [];
 			if (contest_detail.vjudge) {
-				contest_general_detail = await cache_query(`select * from (SELECT \`problem\`.\`title\` as \`title\`,\`problem\`.\`problem_id\` as \`pid\`,source as source,"LOCAL" as oj_name,contest_problem.num as pnum
+				sqlQueue.push(cache_query(`select * from (SELECT \`problem\`.\`title\` as \`title\`,\`problem\`.\`problem_id\` as \`pid\`,source as source,"LOCAL" as oj_name,contest_problem.num as pnum
 
 		FROM \`contest_problem\`,\`problem\`
 
@@ -81,11 +82,11 @@ WHERE \`contest_problem\`.\`problem_id\`=\`vjudge_problem\`.\`problem_id\`
 AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\`=\`vjudge_problem\`.\`source\` ORDER BY \`contest_problem\`.\`num\`) vproblem
 left join(select problem_id pid1,num,count(1) accepted from vjudge_solution where result=4 and contest_id= ? group by num) vp1 on vproblem.pid=vp1.pid1 and vproblem.pnum=vp1.num
 left join(select problem_id pid2,num,count(1) submit from vjudge_solution where contest_id= ? group by num) vp2 on vproblem.pid=vp2.pid2 and vproblem.pnum=vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]);
+order by pnum;`, [cid, cid, cid, cid, cid, cid]));
 
 			}
 			else {
-				contest_general_detail = await cache_query(`select *
+				sqlQueue.push(cache_query(`select *
 from (SELECT
         \`problem\`.\`title\`      as \`title\`,
         \`problem\`.\`problem_id\` as \`pid\`,
@@ -139,11 +140,35 @@ from (SELECT
              from vjudge_solution
              where contest_id = ?
              group by num) vp2 on vproblem.pid = vp2.pid2 and vproblem.pnum = vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]);
+order by pnum;`, [cid, cid, cid, cid, cid, cid]));
 			}
+			sqlQueue.push(cache_query(`select count(1) as cnt,problem_id,result from solution where 
+			user_id = ? and contest_id = ?
+and result <> 13
+group by problem_id,result`, [req.session.user_id, cid]));
+			let submission_data;
+			[contest_general_detail, submission_data] = await Promise.all(sqlQueue);
 			let browse_privilege = req.session.isadmin || req.session.contest_manager;
-			if (!browse_privilege && !contest_is_end) {
-				for (let i of contest_general_detail) {
+			let submission_map = {};
+			for (let i of submission_data) {
+				if (typeof submission_map[i.problem_id] === "undefined") {
+					submission_map[i.problem_id] = {};
+				}
+				submission_map[i.problem_id].ac = submission_map[i.problem_id].ac || i.result === 4;
+			}
+			for (let i of contest_general_detail) {
+				if (typeof submission_map[i.pid] !== "undefined") {
+					if (submission_map[i.pid].ac) {
+						i.ac = 1;
+					}
+					else {
+						i.ac = -1;
+					}
+				}
+				else {
+					i.ac = 0;
+				}
+				if (!browse_privilege && !contest_is_end) {
 					i.pid = i.pid1 = i.pid2 = "";
 				}
 			}
