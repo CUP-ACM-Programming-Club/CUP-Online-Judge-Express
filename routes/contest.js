@@ -157,8 +157,8 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				submission_map[i.problem_id].ac = submission_map[i.problem_id].ac || i.result === 4;
 			}
 			for (let i of contest_general_detail) {
-				if (typeof submission_map[i.pid] !== "undefined") {
-					if (submission_map[i.pid].ac) {
+				if (typeof submission_map[i.pid + ""] !== "undefined") {
+					if (submission_map[i.pid + ""].ac) {
 						i.ac = 1;
 					}
 					else {
@@ -168,7 +168,10 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				else {
 					i.ac = 0;
 				}
-				if (!browse_privilege && !contest_is_end) {
+			}
+			if (!browse_privilege && !contest_is_end) {
+				contest_general_detail = JSON.parse(JSON.stringify(contest_general_detail));
+				for (let i of contest_general_detail) {
 					i.pid = i.pid1 = i.pid2 = "";
 				}
 			}
