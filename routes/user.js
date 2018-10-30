@@ -26,6 +26,12 @@ select oj_name,problem_id,result,language,time from vjudge_record where user_id 
 	sqlQueue.push(query(`select count(1) as cnt,year(in_date) as year,month(in_date) as month,day(in_date) as day from solution
 where user_id = ? and in_date >= DATE_SUB(NOW(),INTERVAL 1 YEAR)
 group by year(in_date),month(in_date),day(in_date)`, [user_id]));
+	sqlQueue.push(query(`select count(1) as cnt,os_name,os_version from loginlog 
+where user_id = ? and os_name is not null
+group by os_name,os_version`,[user_id]));
+	sqlQueue.push(query(`select count(1) as cnt,browser_name,browser_version from loginlog
+where user_id = ? and browser_name is not null
+group by browser_name,browser_version`,[user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -40,8 +46,11 @@ group by year(in_date),month(in_date),day(in_date)`, [user_id]));
 			const_variable: const_variable,
 			login_time: result[7],
 			article_publish: result[8],
-			submission_count: result[9]
-		}
+			submission_count: result[9],
+			browser:result[11],
+			os:result[10]
+		},
+		isadmin:req.session.isadmin
 	});
 });
 module.exports = ["/user", auth, router];
