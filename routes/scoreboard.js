@@ -43,10 +43,13 @@ router.get("/:cid", async (req, res) => {
         ORDER BY user_id,in_date`;
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
 	const sql3 = "select start_time,title from contest where contest_id = ?";
+	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
+left join users on users.user_id = t.user_id`;
 	const _data = query(sql, [cid, cid]);
 	const _total = query(sql2, [cid]);
 	const _start_time = query(sql3, [cid]);
-	Promise.all([_data, _total, _start_time]).then((result) => {
+	const _user = query(sql4, ["c" + cid]);
+	Promise.all([_data, _total, _start_time, _user]).then((result) => {
 		if (result[1][0].total_problem === 0) {
 			res.json({
 				status: "error",
@@ -59,7 +62,8 @@ router.get("/:cid", async (req, res) => {
 				data: result[0],
 				total: result[1][0].total_problem,
 				start_time: result[2][0].start_time,
-				title: result[2][0].title
+				title: result[2][0].title,
+				users: result[3]
 			});
 		}
 	});
