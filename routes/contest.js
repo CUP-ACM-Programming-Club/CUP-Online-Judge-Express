@@ -22,11 +22,12 @@ const check = async (req, res, cid) => {
 	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
 	const start_time = dayjs(contest[0].start_time);
 	const now = dayjs();
-	if (contest[0].private === 1 && !(req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`])) {
+	const privilege = req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+	if (contest[0].private === 1 && !privilege) {
 		res.json(error.noprivilege);
 		return false;
 	}
-	else if (start_time.isAfter(now)) {
+	else if (!privilege && start_time.isAfter(now)) {
 		res.json(error.contestNotStart);
 		return false;
 	}
@@ -61,7 +62,7 @@ router.get("/problem/:cid", async (req, res) => {
 	try {
 		if (~cid && (contest_detail = await check(req, res, cid))) {
 			if (contest_detail.length > 0) contest_detail = contest_detail[0];
-			let contest_general_detail = null;
+			let contest_general_detail;
 			const contest_is_end = dayjs(contest_detail.end_time).isBefore(dayjs());
 			let sqlQueue = [];
 			if (contest_detail.vjudge) {

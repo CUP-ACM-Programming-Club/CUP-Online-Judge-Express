@@ -20,6 +20,13 @@ const reverse = (val) => {
 	else
 		return val.split("").reverse().join("");
 };
+
+router.get("/", function (req, res) {
+	res.json({
+		status: "OK"
+	});
+});
+
 router.post("/token", function (req, res, next) {
 	if (typeof req.body.token !== "string") {
 		res.json(error.invalidToken);
