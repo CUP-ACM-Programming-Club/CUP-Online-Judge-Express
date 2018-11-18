@@ -535,5 +535,6 @@ router.get("/:sid/:tr", async function (req, res) {
 router.use("/result", require("./status/submit_result"));
 router.use("/device", require("./status/device"));
 router.use("/sim", require("./status/sim"));
+router.use("/runtimeerror", require("./status/runtime_error"));
 
 module.exports = ["/status", auth, router];

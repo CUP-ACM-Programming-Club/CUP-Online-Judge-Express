@@ -50,7 +50,7 @@ app.use(session({
 app.use(logger("dev"));
 app.use(helmet());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extend: false}));
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 require("./module/router_loader")(app);
 // app.use("/",epf(options));
