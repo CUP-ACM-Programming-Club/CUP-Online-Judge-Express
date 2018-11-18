@@ -68,7 +68,10 @@ const make_problem = (problem_id, problems = {}, req) => {
 			save_problem.memory, save_problem.defunct, 0, 0, 0])
 
 			.then(rows => {
-				query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
+				query("DELETE FROM privilege where rightstr = ?", [`p${problem_id}`])
+					.then(() => {
+						query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
+					});
 				resolve(rows);
 			})
 			.catch(err => {
