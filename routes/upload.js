@@ -21,18 +21,20 @@ const base64ToString = (base64) => {
 
 const convertLanguage = (language_name) => {
 	const language_file_name = {
-		".c": 21,
-		".cpp": 19,
-		".cc": 19,
-		".java": 3,
-		".py": 18,
+		".c": [0, 13, 21],
+		".cpp": [1, 14, 19, 20],
+		".cc": [1, 14, 19, 20],
+		".java": [3, 23, 24, 27],
+		".py": [17, 18],
+		".js": [16],
+		".lua": [15]
 	};
 	for (let i in language_file_name) {
 		if (/*language_name.indexOf(i) !== -1*/path.extname(language_name) === i) {
 			return language_file_name[i];
 		}
 	}
-	return 19;
+	return [19];
 };
 const make_problem = (problem_id, problems = {}, req) => {
 	const save_problem = Object.assign({
@@ -101,9 +103,9 @@ const writeFiles = async (_path, files) => {
 const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 	for (let i of files) {
 		const content = new Buffer(i.content, "base64").toString();
-		const language = convertLanguage(i.name);
-		let prepend_code = prepend.find((el) => convertLanguage(el.name) === language) || "";
-		let append_code = append.find((el) => convertLanguage(el.name) === language) || "";
+		const language = JSON.stringify(convertLanguage(i.name));
+		let prepend_code = prepend.find((el) => JSON.stringify(convertLanguage(el.name)) === language) || "";
+		let append_code = append.find((el) => JSON.stringify(convertLanguage(el.name)) === language) || "";
 		if (prepend_code !== "") {
 			prepend_code = base64ToString(prepend_code.content);
 		}
@@ -112,7 +114,7 @@ const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 		}
 		await new Promise((resolve, reject) => {
 			query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
-		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name), req.session.user_id, content.length])
+		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name)[0], req.session.user_id, content.length])
 				.then(rows => {
 					let flag = 0;
 					let feedback = [];
@@ -120,7 +122,7 @@ const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 						if (row) {
 							feedback.push(row);
 						}
-						if (++flag >= 1) resolve();
+						if (++flag > 1) resolve();
 					};
 					const solution_id = rows.insertId;
 					query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${prepend_code + content + append_code}')`
@@ -178,11 +180,17 @@ const make_files = async (req, pid, problems = {}) => {
 	// await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
 	// await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
 	for (let i of prependFiles) {
-		query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 1, base64ToString(i.content), convertLanguage(i.name)]);
+		const languageSet = convertLanguage(i.name);
+		for (let lang of languageSet) {
+			query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 1, base64ToString(i.content), lang]);
+		}
 	}
 
 	for (let i of appendFiles) {
-		query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 0, base64ToString(i.content), convertLanguage(i.name)]);
+		const languageSet = convertLanguage(i.name);
+		for (let lang of languageSet) {
+			query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 0, base64ToString(i.content), lang]);
+		}
 	}
 	// await writeFiles(save_path, prependFiles);
 	// await writeFiles(save_path, appendFiles);
