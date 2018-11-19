@@ -536,5 +536,6 @@ router.use("/result", require("./status/submit_result"));
 router.use("/device", require("./status/device"));
 router.use("/sim", require("./status/sim"));
 router.use("/runtimeerror", require("./status/runtime_error"));
+router.use("/submit_hour", require("./status/submit_hour"));
 
 module.exports = ["/status", auth, router];
