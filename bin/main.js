@@ -22,7 +22,7 @@ const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_j
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 
-String.prototype.find = function (str) {
+String.prototype.exist = function (str) {
 	return this.indexOf(str) !== -1;
 };
 /**
