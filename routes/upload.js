@@ -156,6 +156,7 @@ const make_files = async (req, pid, problems = {}) => {
 	const outputFiles = problems.output_files;
 	const prependFiles = problems.prepend_files;
 	const appendFiles = problems.append_files;
+	const special_judge = [problems.special_judge];
 	// const sample_input = problems.sample_input;
 	// const sample_output = problems.sample_output;
 	const solutionFiles = problems.solution;
@@ -179,6 +180,15 @@ const make_files = async (req, pid, problems = {}) => {
 	});
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
+	await writeFiles(save_path, special_judge);
+	const special_judge_file = special_judge[0];
+
+	if (special_judge_file && special_judge_file.name) {
+		let suffix = special_judge_file.name.substring(special_judge_file.name.indexOf(".") + 1);
+		if (suffix === "cc" || suffix === "c" || suffix === "cpp") {
+			// check administrator privilege
+		}
+	}
 	// sample maybe have wrong data
 	// await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
 	// await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
