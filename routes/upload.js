@@ -14,9 +14,16 @@ const path = require("path");
 const auth = require("../middleware/auth");
 const {checkCaptcha} = require("../module/captcha_checker");
 const [error] = require("../module/const_var");
+const jschardet = require("jschardet");
+const iconv = require("iconv-lite");
+
 
 const base64ToString = (base64) => {
-	return new Buffer(base64, "base64").toString();
+	let data = Buffer.from(base64, "base64");
+	if (jschardet.detect(data).encoding === "GB2312") {
+		data = iconv.decode(data,"gb2312");
+	}
+	return data.toString();
 };
 
 const convertLanguage = (language_name) => {
@@ -89,8 +96,7 @@ const writeFiles = async (_path, files) => {
 			fs.writeFile(path.join(_path, name), data, function (err) {
 				if (err) {
 					reject(err);
-				}
-				else {
+				} else {
 					fs.chown(path.join(_path, name), 48, 48, function (err) {
 						if (err) {
 							throw err;
@@ -172,8 +178,7 @@ const make_files = async (req, pid, problems = {}) => {
 		fs.mkdir(save_path, 0o755, function (err) {
 			if (err) {
 				reject(err);
-			}
-			else {
+			} else {
 				resolve();
 			}
 		});
@@ -211,8 +216,7 @@ const make_files = async (req, pid, problems = {}) => {
 		fs.chown(save_path, 48, 48, function (err) {
 			if (err) {
 				reject(err);
-			}
-			else {
+			} else {
 				resolve();
 			}
 		});
@@ -233,8 +237,7 @@ const make_file = async (req, res, file_path, pid) => {
 
 	if (pid) {
 		max_pid = pid;
-	}
-	else {
+	} else {
 		const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
 		max_pid = parseInt(_max_pid[0].max_id);
 	}
@@ -273,8 +276,7 @@ router.post("/", upload.single("fps"), (req, res) => {
 router.post("/user", upload.single("fps"), (req, res) => {
 	if (!checkCaptcha(req, "upload")) {
 		res.json(error.invalidCaptcha);
-	}
-	else {
+	} else {
 		createProblemModule(req, res);
 	}
 });
