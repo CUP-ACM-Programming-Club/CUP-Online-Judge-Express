@@ -587,4 +587,6 @@ io.on("connection", async function (socket) {
 			onlineUserBroadcast();
 		}
 	});
+
+	//console.log(socket.request.session);
 });

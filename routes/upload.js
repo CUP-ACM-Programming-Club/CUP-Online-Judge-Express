@@ -21,7 +21,7 @@ const iconv = require("iconv-lite");
 const base64ToString = (base64) => {
 	let data = Buffer.from(base64, "base64");
 	if (jschardet.detect(data).encoding === "GB2312") {
-		data = iconv.decode(data,"gb2312");
+		data = iconv.decode(data, "gb2312");
 	}
 	return data.toString();
 };
@@ -90,6 +90,9 @@ const make_problem = (problem_id, problems = {}, req) => {
 
 const writeFiles = async (_path, files) => {
 	for (let i of files) {
+		if (!i || !i.name || !i.content) {
+			continue;
+		}
 		const name = i.name;
 		const data = base64ToString(i.content);
 		await new Promise((resolve, reject) => {
@@ -261,7 +264,8 @@ const createProblemModule = (req, res) => {
 				data: problem_list
 			});
 		})
-		.catch(() => {
+		.catch((err) => {
+			console.log(err);
 			res.json({
 				status: "ERROR",
 				statement: "upload file error"
