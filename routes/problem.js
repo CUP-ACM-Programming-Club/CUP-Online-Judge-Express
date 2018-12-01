@@ -42,8 +42,7 @@ const checkEmpty = (str) => {
 const _judgeValidNumber = (num) => {
 	if (isNaN(num)) {
 		return -1;
-	}
-	else {
+	} else {
 		return parseInt(num);
 	}
 };
@@ -55,8 +54,7 @@ const judgeValidNumber = (num) => {
 			returnArr.push(_judgeValidNumber(i));
 		}
 		return returnArr;
-	}
-	else {
+	} else {
 		return _judgeValidNumber(num);
 	}
 };
@@ -65,8 +63,7 @@ const checkUploader = async (problem_id) => {
 	const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
 	if (_uploader && _uploader.length > 0) {
 		return _uploader[0].user_id;
-	}
-	else {
+	} else {
 		return "Administrator";
 	}
 };
@@ -90,8 +87,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				cachePack[opt.id] = _packed_problem;
 				resolve();
 			});
-		}
-		else {
+		} else {
 			packed_problem = Object.assign({}, rows[0]);
 			packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase() || "local"];
 			packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
@@ -121,8 +117,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 						editor: req.session.editor || false
 					});
 				});
-		}
-		else {
+		} else {
 			send_json(res, {
 				problem: packed_problem,
 				source: "",
@@ -132,8 +127,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			});
 			cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);
 		}
-	}
-	else {
+	} else {
 		const obj = {
 			status: "error",
 			statement: "problem not found or not a public problem"
@@ -171,8 +165,7 @@ router.get("/module/search/:val", function (req, res) {
 			send_json(res, result);
 			cache.set("/module/search/" + req.session.isadmin + val, result, 10 * 24 * 60 * 60);
 		});
-	}
-	else {
+	} else {
 		send_json(res, _res);
 	}
 });
@@ -181,8 +174,7 @@ router.get("/:source/:id", function (req, res, next) {
 	const id = parseInt(req.params.id);
 	if (isNaN(id)) {
 		next();
-	}
-	else {
+	} else {
 		next("route");
 	}
 }, function (req, res) {
@@ -198,8 +190,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 	const sid = parseInt(req.params.sid);
 	if (isNaN(sid) || isNaN(id)) {
 		next();
-	}
-	else {
+	} else {
 		next("route");
 	}
 }, function (req, res) {
@@ -218,8 +209,7 @@ const make_cache = async (res, req, opt = {
 }) => {
 	if (ENVIRONMENT === "test") {
 		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
-	}
-	else {
+	} else {
 		logger.info(opt.problem_id);
 	}
 	let sql;
@@ -231,8 +221,7 @@ const make_cache = async (res, req, opt = {
 				opt.prepend = {};
 			}
 			opt.prepend[parseInt(i.type)] = i.code;
-		}
-		else {
+		} else {
 			if (!opt.append) {
 				opt.append = {};
 			}
@@ -253,8 +242,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 				.then((rows) => {
 					problem_callback(rows, req, res, opt);
 				});
-		}
-		else {
+		} else {
 			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
@@ -262,18 +250,15 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 					problem_callback(rows, req, res, opt);
 				});
 		}
-	}
-	else {
+	} else {
 		if (opt.source.length === 0) {
-			sql = `SELECT * FROM problem WHERE problem_id = ?
-			        AND defunct = 'N'`;
+			sql = "SELECT * FROM problem WHERE problem_id = ?";
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
 					problem_callback(rows, req, res, opt);
 				});
-		}
-		else {
+		} else {
 			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
 			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
@@ -296,8 +281,7 @@ router.get("/:source/:id", function (req, res) {
 			console.log("match cache");
 		}
 		make_cache(res, req, {problem_id: id, source: source});
-	}
-	else {
+	} else {
 		if (process.env.NODE_ENV === "test") {
 			console.log("not match");
 		}
@@ -336,15 +320,13 @@ router.get("/:source/", async function (req, res) {
 				langmask: langmask,
 				after_contest: dayjs().isAfter(dayjs(end_time))
 			});
-		}
-		else {
+		} else {
 			res.json({
 				status: "error",
 				statement: "invalid parameter id"
 			});
 		}
-	}
-	else if (~tid && ~pid) {
+	} else if (~tid && ~pid) {
 		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
             "num = ?", [tid, pid]);
 		if (result.length > 0) {
@@ -356,15 +338,13 @@ router.get("/:source/", async function (req, res) {
 				raw: raw,
 				after_contest: true
 			});
-		}
-		else {
+		} else {
 			res.json({
 				status: "error",
 				statement: "invalid parameter id"
 			});
 		}
-	}
-	else if (~id) {
+	} else if (~id) {
 		const browse_privilege = req.session.isadmin || req.session.source_browser;
 		if (browse_privilege) {
 			make_cache(res, req, {
@@ -375,16 +355,14 @@ router.get("/:source/", async function (req, res) {
 				after_contest: true,
 				uploader: await checkUploader(id)
 			});
-		}
-		else {
+		} else {
 			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
 		 where problem_id = ?)`, [id]);
 			if (_end_time.length > 0) {
 				const end_time = dayjs(_end_time[0]);
 				if (dayjs().isBefore(end_time)) {
 					res.json(error.problemInContest);
-				}
-				else {
+				} else {
 					make_cache(res, req, {
 						problem_id: id,
 						source: source,
@@ -395,8 +373,7 @@ router.get("/:source/", async function (req, res) {
 					});
 
 				}
-			}
-			else {
+			} else {
 				make_cache(res, req, {
 					problem_id: id,
 					source: source,
@@ -408,8 +385,7 @@ router.get("/:source/", async function (req, res) {
 			}
 		}
 
-	}
-	else if (labels) {
+	} else if (labels) {
 		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
 		cache_query(`select label_name from ${vjudge}label_list`)
 			.then(rows => {
@@ -446,8 +422,7 @@ WHERE NOT EXISTS (
 			})
 			.catch(() => {
 			});
-	}
-	else {
+	} else {
 		res.json({
 			status: "error",
 			statement: "invalid parameter id"
@@ -487,8 +462,7 @@ router.post("/:source/:id", function (req, res) {
 			if (local) {
 				sqlArr.push(json.hint,
 					problem_id);
-			}
-			else {
+			} else {
 				sqlArr.push(problem_id, from);
 			}
 			query(sql, sqlArr)
@@ -498,24 +472,21 @@ router.post("/:source/:id", function (req, res) {
 					if (ENVIRONMENT === "test") {
 						console.error(`${path.basename(__filename)} line 414:`);
 						console.error(err);
-					}
-					else {
+					} else {
 						logger.fatal(err);
 					}
 				});
 			send_json(res, {
 				status: "OK"
 			});
-		}
-		catch (e) {
+		} catch (e) {
 			logger.fatal(e);
 			send_json(res, {
 				status: "error",
 				statement: "parse error"
 			});
 		}
-	}
-	else {
+	} else {
 		send_json(res, {
 			status: "error",
 			statement: "illegal request"
@@ -535,8 +506,7 @@ router.get("/:source/:id/:sid", function (req, res) {
 					const user_id = rows2[0].user_id;
 					if (!req.session.isadmin && user_id !== req.session.user_id) {
 						send_json(res, no_privilege);
-					}
-					else {
+					} else {
 						let obj = rows[0];
 						obj.code = rows2[0].source;
 						cache.set("source/id/" + source + id + "/" + sid, rows[0], 10 * 24 * 60 * 60);
@@ -544,8 +514,7 @@ router.get("/:source/:id/:sid", function (req, res) {
 					}
 				});
 			});
-		}
-		else {
+		} else {
 			query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source])
 				.then(async (rows) => {
 					await query("SELECT source,user_id FROM vjudge_source_code WHERE solution_id=?", [sid])
@@ -553,8 +522,7 @@ router.get("/:source/:id/:sid", function (req, res) {
 							const user_id = rows2[0].user_id;
 							if (!req.session.isadmin && user_id !== req.session.user_id) {
 								send_json(res, no_privilege);
-							}
-							else {
+							} else {
 								let obj = rows[0];
 								obj.code = rows2[0].source;
 								cache.set("source/id/" + source + id + "/" + sid, rows[0], 10 * 24 * 60 * 60);
@@ -563,8 +531,7 @@ router.get("/:source/:id/:sid", function (req, res) {
 						});
 				});
 		}
-	}
-	else {
+	} else {
 		send_json(res, _res);
 	}
 });
