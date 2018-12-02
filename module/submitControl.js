@@ -120,7 +120,7 @@ function checkLangmask(language, langmask = LANGMASK) {
 }
 
 function getIP(req) {
-	return req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+	return (req.headers["x-forwarded-for"] || req.connection.remoteAddress).split(",")[0];
 }
 
 
