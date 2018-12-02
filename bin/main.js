@@ -439,14 +439,14 @@ io.on("connection", async function (socket) {
          *
          */
 		let data = Object.assign({}, _data);
-		if (socket.request.session.user_id === "2016011253" || socket.request.session.user_id === "test") {
-			const response = await submitControl(socket.request, data.val);
-			if (!response.solution_id) {
-				socket.emit("reject_submit", response);
-				return;
-			}
-			data.submission_id = response.solution_id;
+
+		const response = await submitControl(socket.request, data.val);
+		if (!response.solution_id) {
+			socket.emit("reject_submit", response);
+			return;
 		}
+		data.submission_id = response.solution_id;
+
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
