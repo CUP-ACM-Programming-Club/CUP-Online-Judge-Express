@@ -10,6 +10,7 @@ const port = process.env.PORT || config.ws.client_port;
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const cachePool = require("../module/cachePool");
+const submitControl = require("../module/submitControl");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 // const client = require("../module/redis");
@@ -106,8 +107,7 @@ wss.on("connection", function (ws) {
 			if (finished) {
 				delete problemFromContest[solution_id];
 			}
-		}
-		else if (problemFromSpecialSubject[solution_id]) {
+		} else if (problemFromSpecialSubject[solution_id]) {
 			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
 			solution_pack.num = problemFromSpecialSubject[solution_id].num;
 			if (finished) {
@@ -130,8 +130,7 @@ wss.on("connection", function (ws) {
 					submissionType.contest[submissionOrigin[solution_id]].splice(pos, 1);
 				}
 				delete submissionOrigin[solution_id];
-			}
-			else if (~(pos = submissionType.normal.indexOf(solution_id))) {
+			} else if (~(pos = submissionType.normal.indexOf(solution_id))) {
 				submissionType.normal.splice(pos, 1);
 			}
 			delete submitUserInfo[solution_id];
@@ -150,8 +149,7 @@ wss.on("connection", function (ws) {
 		let request;
 		try {
 			request = JSON.parse(message);
-		}
-		catch (e) {
+		} catch (e) {
 			logger.fatal(`Error:\n
 			Error name:${e.name}\n
 			Error Message:${e.message}
@@ -160,8 +158,7 @@ wss.on("connection", function (ws) {
 		}
 		if (request.type && typeof request.type === "string") {
 			ws.emit(request.type, request.value, request);
-		}
-		else {
+		} else {
 			logger.fatal(`Error:Parsing message failed.Receive data:${message}`);
 		}
 	});
@@ -191,8 +188,7 @@ function sendMessage(userArr, type, value, dimension = 2) {
 				userArr[i][j].emit(type, value);
 			}
 		}
-	}
-	else if (dimension === 1) {
+	} else if (dimension === 1) {
 		for (let i in userArr) {
 			userArr[i].emit(type, value);
 		}
@@ -256,8 +252,7 @@ io.use((socket, next) => {
 	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
 	if (!socket.user_id) {
 		next(new Error("Auth failed"));
-	}
-	else {
+	} else {
 		socket.auth = true;
 		next();
 	}
@@ -288,8 +283,7 @@ io.use(async (socket, next) => {
 		let _privilege;
 		if ((_privilege = cachePool.get(`${socket.user_id}privilege`))) {
 			socket.privilege = parseInt(_privilege) > 0;
-		}
-		else {
+		} else {
 			const privilege = await
 			query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
                     "user_id=?", [socket.user_id]);
@@ -301,8 +295,7 @@ io.use(async (socket, next) => {
 		let _nick;
 		if ((_nick = cachePool.get(`${socket.user_id}nick`)) && _nick.length) {
 			socket.user_nick = _nick;
-		}
-		else {
+		} else {
 			const nick = await
 			query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
 			socket.user_nick = nick[0].nick;
@@ -331,12 +324,10 @@ io.use((socket, next) => {
 		user_socket[socket.user_id].push(socket);
 		if (socket.privilege) {
 			admin_user[socket.user_id].push(socket);
-		}
-		else {
+		} else {
 			normal_user[socket.user_id].push(socket);
 		}
-	}
-	else {
+	} else {
 		let user = {
 			user_id: socket.user_id,
 			url: [],
@@ -347,8 +338,7 @@ io.use((socket, next) => {
 			const iplist = socket.handshake.headers["x-forwarded-for"].split(",");
 			user.ip = iplist[0];
 			user.intranet_ip = iplist[1];
-		}
-		else {
+		} else {
 			user.intranet_ip = socket.handshake.address;
 			user.ip = "";
 		}
@@ -359,8 +349,7 @@ io.use((socket, next) => {
 		onlineUser[socket.user_id] = user;
 		if (socket.privilege) {
 			admin_user[socket.user_id] = [socket];
-		}
-		else {
+		} else {
 			normal_user[socket.user_id] = [socket];
 		}
 	}
@@ -383,8 +372,7 @@ io.use((socket, next) => {
 				socket.contest_id = contest_id;
 				pagePush.contest_status[contest_id].push(socket);
 			}
-		}
-		else {
+		} else {
 			pagePush.status.push(socket);
 			socket.status = true;
 		}
@@ -451,6 +439,14 @@ io.on("connection", async function (socket) {
          *
          */
 		let data = Object.assign({}, _data);
+		if (socket.request.session.user_id === "2016011253" || socket.request.session.user_id === "test") {
+			const response = await submitControl(socket.request, data.val);
+			if (!response.solution_id) {
+				socket.emit("reject_submit", response);
+				return;
+			}
+			data.submission_id = response.solution_id;
+		}
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
@@ -470,8 +466,7 @@ io.on("connection", async function (socket) {
 					num: data.val.pid
 				};
 			}
-		}
-		else if (data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
+		} else if (data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
 			special_subject_problem WHERE topic_id = ? and num = ?`, [Math.abs(data.val.tid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
@@ -494,8 +489,7 @@ io.on("connection", async function (socket) {
 				submissionType.contest[contest_id].push(parseInt(data.submission_id));
 				submissionOrigin[submission_id] = contest_id;
 			}
-		}
-		else {
+		} else {
 			sendMessage(pagePush.status, "submit", data, 1);
 			submissionType.normal.push(parseInt(data.submission_id));
 		}
@@ -535,8 +529,7 @@ io.on("connection", async function (socket) {
 	socket.on("whiteboard", function (data) {
 		if (data.request === "register" && !whiteboard.has(socket)) {
 			whiteboard.add(socket);
-		}
-		else if (data.request === "text") {
+		} else if (data.request === "text") {
 			whiteBoardBroadCast(socket, data.content);
 		}
 	});
@@ -570,8 +563,7 @@ io.on("connection", async function (socket) {
 				socket_pos = admin_user[socket.user_id].indexOf(socket);
 				if (~socket_pos)
 					admin_user[socket.user_id].splice(socket_pos, 1);
-			}
-			else {
+			} else {
 				socket_pos = normal_user[socket.user_id].indexOf(socket);
 				if (~socket_pos)
 					normal_user[socket.user_id].splice(socket_pos, 1);
