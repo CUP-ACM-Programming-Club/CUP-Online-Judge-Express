@@ -33,25 +33,13 @@ const options = {
 };
 */
 
-app.use(sessionMiddleware);
-
 app.use(compression());
-/*
-const expiryDate = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
-app.use(session({
-	name: "session",
-	keys: ["maybeyoucannotguess", "whatthiskeyitis"],
-	cookie: {
-		httpOnly: true,
-		expires: expiryDate
-	}
-}));
-*/
 app.use(logger("dev"));
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
+app.use(sessionMiddleware);
 require("./module/router_loader")(app);
 // app.use("/",epf(options));
 app.use((req, res, next) => {

@@ -440,7 +440,7 @@ io.on("connection", async function (socket) {
          */
 		let data = Object.assign({}, _data);
 
-		const response = await submitControl(socket.request, data.val);
+		const response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
 		if (!response.solution_id) {
 			socket.emit("reject_submit", response);
 			return;

@@ -30,22 +30,19 @@ router.get("/", function (req, res) {
 router.post("/token", function (req, res, next) {
 	if (typeof req.body.token !== "string") {
 		res.json(error.invalidToken);
-	}
-	else {
+	} else {
 		next("route");
 	}
 });
 router.post("/token", async function (req, res) {
 	if (req.session.auth) {
 		res.json(ok.logined);
-	}
-	else {
+	} else {
 		// console.log(req.body.token);
 		let receive = "";
 		try {
 			receive = Buffer.from(req.body.token, "base64").toString();
-		}
-		catch (e) {
+		} catch (e) {
 			log.fatal(e);
 			return;
 		}
@@ -58,19 +55,20 @@ router.post("/token", async function (req, res) {
 			req.session.auth = true;
 			res.json(ok.ok);
 			await login_action(req, req.session.user_id);
-		}
-		else {
+		} else {
 			res.json(error.invalidToken);
 		}
 	}
 });
 
+/*
 router.post("/", function (req, res, next) {
 	if (req.session.auth) {
 		req.session.destroy();
 	}
 	next("route");
 });
+*/
 
 
 router.post("/", async function (req, res) {
@@ -82,8 +80,7 @@ router.post("/", async function (req, res) {
 	try {
 		receive = Buffer.from(receive, "base64").toString();
 		receive = Buffer.from(receive, "base64").toString();
-	}
-	catch (e) {
+	} catch (e) {
 		log.fatal(e);
 		return;
 	}
@@ -94,8 +91,7 @@ router.post("/", async function (req, res) {
 	}
 	try {
 		receive = JSON.parse(receive);
-	}
-	catch (e) {
+	} catch (e) {
 		log.fatal(`Error:${e.name}\n
 		Error message:${e.message}`);
 	}
@@ -122,8 +118,7 @@ router.post("/", async function (req, res) {
 					res.json({
 						status: "OK"
 					});
-				}
-				else {
+				} else {
 					res.json(error.invalidUser);
 				}
 			}
