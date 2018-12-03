@@ -2,6 +2,8 @@ const query = require("./mysql_query");
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
 const dayjs = require("dayjs");
+const client = require("./redis");
+
 const NORMAL_SUBMISSION = 1;
 const CONTEST_SUBMISSION = 2;
 const TOPIC_SUBMISSION = 3;
@@ -124,7 +126,20 @@ function getIP(req) {
 }
 
 
-module.exports = async function (req, data) {
+module.exports = async function (req, data, cookie) {
+	if (!req.session || !req.session.user_id) {
+		let obj = {};
+		obj.session = {};
+		obj.session.user_id = cookie["user_id"];
+		let user_id = cookie["user_id"];
+		let token = cookie["token"];
+		const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
+		if (original_token.indexOf(token) !== -1) {
+			const login_action = require("./login_action");
+			await login_action(obj, user_id);
+		}
+		Object.assign(req, obj);
+	}
 	let submission_type = 0;
 	if (data.type === "problem") {
 		submission_type = NORMAL_SUBMISSION;
