@@ -1,17 +1,21 @@
 {
-  "mysql":{
+  "mysql": {
     "host": "127.0.0.1",
     "user": "youruser",
     "password": "yourpassword",
     "port": "3306",
     "database": "root"
   },
-  "ws":{
-    "client_port":3000,
-    "judger_port":5100
+  "ws": {
+    "client_port": 3000,
+    "judger_port": 5100
   },
-  "judger":{
-    "oj_home":"/home/judge",
-    "oj_judge_num":8
-  }
+  "judger": {
+    "oj_home": "/home/judge",
+    "oj_judge_num": 8
+  },
+  "problem_upload_dest": {
+    "dir": "/path/to/upload"
+  },
+  "session_secret": "YourSecretKeytoSession"
 }
