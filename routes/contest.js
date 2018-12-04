@@ -11,6 +11,7 @@ const mk = require("@ryanlee2014/markdown-it-katex");
 md.use(mk);
 md.use(mh);
 const cache_query = require("../module/mysql_cache");
+const query = require("../module/mysql_query");
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 const router = express.Router();
@@ -26,12 +27,10 @@ const check = async (req, res, cid) => {
 	if (contest[0].private === 1 && !privilege) {
 		res.json(error.noprivilege);
 		return false;
-	}
-	else if (!privilege && start_time.isAfter(now)) {
+	} else if (!privilege && start_time.isAfter(now)) {
 		res.json(error.contestNotStart);
 		return false;
-	}
-	else {
+	} else {
 		return contest;
 	}
 };
@@ -46,8 +45,7 @@ router.get("/general/:cid", async (req, res) => {
   on t1.contest_id = t2.contest_id`, [cid, cid]);
 		if (contest_general_detail.length < 1) {
 			res.json(error.invalidParams);
-		}
-		else {
+		} else {
 			res.json({
 				status: "OK",
 				data: contest_general_detail[0]
@@ -85,8 +83,7 @@ left join(select problem_id pid1,num,count(1) accepted from vjudge_solution wher
 left join(select problem_id pid2,num,count(1) submit from vjudge_solution where contest_id= ? group by num) vp2 on vproblem.pid=vp2.pid2 and vproblem.pnum=vp2.num
 order by pnum;`, [cid, cid, cid, cid, cid, cid]));
 
-			}
-			else {
+			} else {
 				sqlQueue.push(cache_query(`select *
 from (SELECT
         \`problem\`.\`title\`      as \`title\`,
@@ -161,12 +158,10 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				if (typeof submission_map[i.pid + ""] !== "undefined") {
 					if (submission_map[i.pid + ""].ac) {
 						i.ac = 1;
-					}
-					else {
+					} else {
 						i.ac = -1;
 					}
-				}
-				else {
+				} else {
 					i.ac = 0;
 				}
 			}
@@ -184,8 +179,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				admin: browse_privilege
 			});
 		}
-	}
-	catch (e) {
+	} catch (e) {
 		console.log(e);
 		res.json(error.database);
 	}
@@ -226,8 +220,7 @@ union all SELECT
 			data: contest_statistics_detail,
 			total: total[0].total_problem
 		});
-	}
-	else {
+	} else {
 		res.json(error.invalidParams);
 	}
 });
@@ -238,8 +231,7 @@ router.post("/password/:cid", async (req, res) => {
 		const contest_detail = await cache_query("select * from contest where contest_id = ?", [cid]);
 		if (contest_detail.length < 1) {
 			res.json(error.invalidParams);
-		}
-		else {
+		} else {
 			const password = contest_detail[0].password;
 			const user_password = req.body.password;
 			if (password.toString() === user_password.toString()) {
@@ -247,15 +239,19 @@ router.post("/password/:cid", async (req, res) => {
 				res.json({
 					status: "OK"
 				});
-			}
-			else {
+				query("select * from privilege where user_id = ? and rightstr = ?", [req.session.user_id, `c${cid}`])
+					.then(rows => {
+						if (rows.length === 0) {
+							query("insert into privilege(user_id,rightstr)values(?,?)", [req.session.user_id, `c${cid}`]);
+						}
+					});
+			} else {
 				res.json({
 					status: "Wrong password"
 				});
 			}
 		}
-	}
-	else {
+	} else {
 		res.json(error.invalidParams);
 	}
 });
