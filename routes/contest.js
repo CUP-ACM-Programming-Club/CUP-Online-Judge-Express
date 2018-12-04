@@ -247,7 +247,8 @@ router.post("/password/:cid", async (req, res) => {
 					});
 			} else {
 				res.json({
-					status: "Wrong password"
+					status: "error",
+					statement: "Wrong password"
 				});
 			}
 		}
