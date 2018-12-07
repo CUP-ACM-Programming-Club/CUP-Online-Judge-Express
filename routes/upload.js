@@ -16,6 +16,7 @@ const {checkCaptcha} = require("../module/captcha_checker");
 const [error] = require("../module/const_var");
 const jschardet = require("jschardet");
 const iconv = require("iconv-lite");
+const stripBom = require("strip-bom");
 
 
 const base64ToString = (base64) => {
@@ -23,7 +24,7 @@ const base64ToString = (base64) => {
 	if (jschardet.detect(data).encoding === "GB2312") {
 		data = iconv.decode(data, "gb2312");
 	}
-	return data.toString();
+	return stripBom(data.toString());
 };
 
 const convertLanguage = (language_name) => {

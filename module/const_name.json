@@ -29,6 +29,8 @@
       "PyPy",
       "PyPy3",
       "Java 6",
+      "Clang11",
+      "Clang++17",
       "Other Language"
     ],
     "common": [
@@ -60,6 +62,8 @@
       "Python",
       "Python",
       "Java",
+      "C",
+      "C++",
       "Other Language",
       "Other Language"
     ],
@@ -160,7 +164,9 @@
       "java",
       "py",
       "py",
-      "java"
+      "java",
+      "c",
+      "cpp"
     ]
   },
   "markdown_language": {
@@ -193,6 +199,8 @@
       "python",
       "python",
       "java",
+      "c++",
+      "c++",
       ""
     ],
     "hdu": [
@@ -292,7 +300,9 @@
       "java",
       "python",
       "python",
-      "java"
+      "java",
+      "c_cpp",
+      "c_cpp"
     ]
   },
   "langmask": 171440,
@@ -427,7 +437,9 @@
     "devicon-java-plain",
     "devicon-python-plain",
     "devicon-python-plain",
-    "devicon-java-plain"
+    "devicon-java-plain",
+    "devicon-c-plain",
+    "devicon-cplusplus-plain"
   ],
   "judge_icon": [
     "hourglass half",
