@@ -500,7 +500,7 @@ io.on("connection", async function (socket) {
 			dockerRunner.addTask(data);
 			break;
 		default:
-			localJudge.addTask(data.submission_id);
+			localJudge.addTask(data.submission_id, socket.privilege);
 		}
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});

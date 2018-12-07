@@ -4,6 +4,7 @@
  */
 const {spawn} = require("child_process");
 const query = require("../module/mysql_query");
+const cache_query = require("../module/mysql_cache");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 const PriorityQueue = require("tinyqueue");
@@ -31,8 +32,7 @@ class localJudger extends eventEmitter {
 		this.waiting_queue = new PriorityQueue([], function (a, b) {
 			if (a.priority !== b.priority) {
 				return b.priority - a.priority;
-			}
-			else {
+			} else {
 				return b.solution_id - a.solution_id;
 			}
 		});
@@ -84,19 +84,16 @@ class localJudger extends eventEmitter {
      * @param {Number} solution_id 提交ID
      */
 
-	addTask(solution_id) {
+	addTask(solution_id, admin) {
 		if (typeof solution_id === "object") {
 			if (!isNaN(solution_id.submission_id)) {
 				solution_id = solution_id.submission_id;
-			}
-			else if (!isNaN(solution_id.solution_id)) {
+			} else if (!isNaN(solution_id.solution_id)) {
 				solution_id = solution_id.solution_id;
-			}
-			else {
+			} else {
 				console.log("Error:Not valid solution_id");
 			}
-		}
-		else {
+		} else {
 			solution_id = parseInt(solution_id);
 		}
 		if (solution_id > this.latestSolutionID &&
@@ -104,13 +101,13 @@ class localJudger extends eventEmitter {
             !this.in_waiting_queue[solution_id]) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
-				this.runJudger(solution_id, this.judge_queue.shift());
+				this.runJudger(solution_id, this.judge_queue.shift(), admin);
 				this.judging_queue.push(solution_id);
-			}
-			else {
+			} else {
 				this.waiting_queue.push({
 					solution_id: solution_id,
-					priority: 1
+					priority: 1,
+					admin
 				});
 				this.in_waiting_queue[solution_id] = true;
 			}
@@ -125,8 +122,9 @@ class localJudger extends eventEmitter {
 		if (this.judge_queue.length && this.waiting_queue.length) {
 			const task = this.waiting_queue.pop();
 			const solution_id = task.solution_id;
+			const admin = task.admin;
 			delete this.in_waiting_queue[solution_id];
-			this.runJudger(solution_id, this.judge_queue.shift());
+			this.runJudger(solution_id, this.judge_queue.shift(), admin);
 		}
 	}
 
@@ -171,11 +169,16 @@ class localJudger extends eventEmitter {
      * 运行后台判题机
      * @param {Number} solution_id 提交ID
      * @param {Number} runner_id 判题机ID
+     * @param {Boolean} admin 管理员提交
      * @returns {Promise<void>} 返回一个空Promise
      */
 
-	async runJudger(solution_id, runner_id) {
-		const judger = spawn(`${process.cwd()}/wsjudged`, [solution_id, runner_id, this.oj_home]);
+	async runJudger(solution_id, runner_id, admin = false) {
+		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
+		if (admin) {
+			args.push("-admin");
+		}
+		const judger = spawn(`${process.cwd()}/wsjudged`, args);
 		this.emit("change", this.getStatus().free_judger);
 		judger.on("close", EXITCODE => {
 			this.judge_queue.push(runner_id);
@@ -213,19 +216,20 @@ class localJudger extends eventEmitter {
      */
 
 	async collectSubmissionFromDatabase() {
-		let result = await query("SELECT solution_id FROM solution WHERE result<2 and language not in (15,22)");
+		let result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
 		for (let i in result) {
-
+			const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
+				[result[i].user_id]);
+			const admin = Boolean(_data && _data.length && _data[0].cnt);
 			const solution_id = parseInt(result[i].solution_id);
 			const priority = parseInt(result[i].result);
 			if (!isNaN(solution_id) &&
                 !this.in_waiting_queue[solution_id] &&
                 !~this.judging_queue.indexOf(solution_id)) {
 				if (this.judge_queue.length) {
-					this.runJudger(solution_id, this.judge_queue.shift());
+					this.runJudger(solution_id, this.judge_queue.shift(), admin);
 					this.judging_queue.push(solution_id);
-				}
-				else {
+				} else {
 					this.waiting_queue.push({
 						solution_id: solution_id,
 						priority: !priority
