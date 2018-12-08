@@ -190,7 +190,7 @@ module.exports = async function (req, data, cookie) {
 				};
 			}
 		}
-		if (await problemInFutureOrCurrentContest(positiveProblemId)) {
+		if (await problemInFutureOrCurrentContest(positiveProblemId) && !(req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`])) {
 			return {
 				status: "error",
 				statement: "problem is in current or future contest."
