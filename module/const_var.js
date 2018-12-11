@@ -77,6 +77,18 @@ error.contestMode = {
 	contest_mode:true
 };
 
+error.invalidProblemID = {
+	status: "error",
+	statement: "Problem ID is invalid"
+};
+
+error.errorMaker = function(statement) {
+	return {
+		status: "error",
+		statement
+	};
+};
+
 ok.logined = {
 	status: "OK",
 	statment: "logined"
@@ -89,4 +101,12 @@ ok.serverReceived = {
 	status:"OK",
 	statement:"server has receive your post"
 };
+
+ok.okMaker = function(data) {
+	return {
+		status: "OK",
+		data
+	};
+};
+
 module.exports = [error, ok];

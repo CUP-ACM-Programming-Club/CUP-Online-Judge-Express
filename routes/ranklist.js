@@ -12,13 +12,13 @@ const get_ranklist = async (req, res, opt = {}) => {
 	let result;
 	if (!opt.search && !opt.time_stamp) {
 		if (opt.vjudge) {
-			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar FROM users
-			 ${opt.acm_member ? " where user_id in (select user_id from acm_member) " : ""}ORDER BY vjudge_accept
+			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar FROM users where
+			 ${opt.acm_member ? " user_id in (select user_id from acm_member) " : ""} school != 'your_own_school' ORDER BY vjudge_accept
 			 DESC,vjudge_submit DESC,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
 		else {
-			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar FROM users 
-			${opt.acm_member ? " where user_id in (select user_id from acm_member) " : ""} ORDER BY solved 
+			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar FROM users where
+			${opt.acm_member ? " user_id in (select user_id from acm_member) and" : ""} school != 'your_own_school' ORDER BY solved 
 				DESC,submit,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
 	}
@@ -143,7 +143,7 @@ router.get("/acmmember", async function (req, res) {
 });
 
 router.get("/user", async function (req, res) {
-	let result = await cache_query("SELECT count(1) as tot_user FROM users")
+	let result = await cache_query("SELECT count(1) as tot_user FROM users where school != 'your_own_school'")
 		.catch(() => {
 			//console.log(errs);
 			res.json({
