@@ -148,7 +148,7 @@ class dockerRunner {
 	}
 
 	addTask(task) {
-		const solution_id = parseInt(task.submission_id);
+		const solution_id = parseInt(task.solution_id);
 		if (solution_id > this.latestSolutionID) {
 			this.latestSolutionID = solution_id;
 			const language = parseInt(task.val.language);

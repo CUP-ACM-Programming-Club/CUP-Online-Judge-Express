@@ -84,9 +84,16 @@ let submissionOrigin = {};
 let problemFromContest = {};
 let problemFromSpecialSubject = {};
 let submitUserInfo = {};
+let solutionContext = {};
 
 global.submissions = submissions;
 global.contest_mode = false;
+
+function saveDelete(target,hash) {
+	if (target[hash]) {
+		delete target[hash];
+	}
+}
 
 wss.on("connection", function (ws) {
 	/**
@@ -114,6 +121,9 @@ wss.on("connection", function (ws) {
 				delete problemFromSpecialSubject[solution_id];
 			}
 		}
+		if (solutionContext[solution_id]) {
+			Object.assign(solution_pack, solutionContext[solution_id]);
+		}
 		if (submissions[solution_id]) {
 			submissions[solution_id].emit("result", solution_pack);
 			sendMessage(pagePush.status, "result", solution_pack, 1);
@@ -133,8 +143,9 @@ wss.on("connection", function (ws) {
 			} else if (~(pos = submissionType.normal.indexOf(solution_id))) {
 				submissionType.normal.splice(pos, 1);
 			}
-			delete submitUserInfo[solution_id];
-			delete submissions[solution_id];
+			saveDelete(submitUserInfo, solution_id);
+			saveDelete(submissions, solution_id);
+			saveDelete(solutionContext, solution_id);
 		}
 	});
 
@@ -426,7 +437,7 @@ io.on("connection", async function (socket) {
      */
 	socket.on("submit", async function (_data) {
 		/**
-         * { submission_id: 61459,
+         * { solution_id: 61459,
          * val:
          * { id: '',
          * input_text: '1 2',
@@ -441,17 +452,23 @@ io.on("connection", async function (socket) {
 		let data = Object.assign({}, _data);
 
 		const response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
+
 		if (!response.solution_id) {
 			socket.emit("reject_submit", response);
 			return;
 		}
-		data.submission_id = response.solution_id;
-
+		data.solution_id = response.solution_id;
+		const ip = onlineUser[socket.user_id].ip;
+		const fingerprint = data.val.fingerprint;
+		solutionContext[data.solution_id] = {
+			ip,
+			fingerprint
+		};
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
-		const submission_id = parseInt(data.submission_id);
-		submissions[submission_id] = socket;
-		submitUserInfo[submission_id] = {
+		const solution_id = parseInt(data.solution_id);
+		submissions[solution_id] = socket;
+		submitUserInfo[solution_id] = {
 			nick: data.nick,
 			user_id: data.user_id,
 			in_date: new Date().toISOString()
@@ -461,7 +478,7 @@ io.on("connection", async function (socket) {
                 contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
-				problemFromContest[submission_id] = {
+				problemFromContest[solution_id] = {
 					contest_id: data.val.cid,
 					num: data.val.pid
 				};
@@ -471,7 +488,7 @@ io.on("connection", async function (socket) {
 			special_subject_problem WHERE topic_id = ? and num = ?`, [Math.abs(data.val.tid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
-				problemFromSpecialSubject[submission_id] = {
+				problemFromSpecialSubject[solution_id] = {
 					topic: data.val.topic_id,
 					num: data.val.pid
 				};
@@ -486,12 +503,12 @@ io.on("connection", async function (socket) {
 				if (!submissionType.contest[contest_id]) {
 					submissionType.contest[contest_id] = [];
 				}
-				submissionType.contest[contest_id].push(parseInt(data.submission_id));
-				submissionOrigin[submission_id] = contest_id;
+				submissionType.contest[contest_id].push(parseInt(data.solution_id));
+				submissionOrigin[solution_id] = contest_id;
 			}
 		} else {
 			sendMessage(pagePush.status, "submit", data, 1);
-			submissionType.normal.push(parseInt(data.submission_id));
+			submissionType.normal.push(parseInt(data.solution_id));
 		}
 		const language = parseInt(data.val.language);
 		switch (language) {
@@ -500,7 +517,7 @@ io.on("connection", async function (socket) {
 			dockerRunner.addTask(data);
 			break;
 		default:
-			localJudge.addTask(data.submission_id, socket.privilege);
+			localJudge.addTask(data.solution_id, socket.privilege);
 		}
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
