@@ -62,15 +62,7 @@ let pagePush = {
 };
 
 let whiteboard = new Set();
-/**
- * 记录提交的submission,根据类型分离Socket连接
- * @type {{contest: {}, normal: Array}}
- */
 
-let submissionType = {
-	contest: {},
-	normal: []
-};
 /**
  * 根据submission类型绑定对应的contest_id
  * @type {{Number}}
@@ -84,6 +76,7 @@ let submissionOrigin = {};
 let problemFromContest = {};
 let problemFromSpecialSubject = {};
 let submitUserInfo = {};
+let solutionContext = {};
 
 global.submissions = submissions;
 global.contest_mode = false;
@@ -105,14 +98,19 @@ wss.on("connection", function (ws) {
 			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
 			solution_pack.num = problemFromContest[solution_id].num;
 			if (finished) {
-				delete problemFromContest[solution_id];
+				problemFromContest[solution_id] = null;
+				//delete problemFromContest[solution_id];
 			}
 		} else if (problemFromSpecialSubject[solution_id]) {
 			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
 			solution_pack.num = problemFromSpecialSubject[solution_id].num;
 			if (finished) {
-				delete problemFromSpecialSubject[solution_id];
+				problemFromSpecialSubject[solution_id] = null;
+				//delete problemFromSpecialSubject[solution_id];
 			}
+		}
+		if (solutionContext[solution_id]) {
+			Object.assign(solution_pack, solutionContext[solution_id]);
 		}
 		if (submissions[solution_id]) {
 			submissions[solution_id].emit("result", solution_pack);
@@ -123,18 +121,12 @@ wss.on("connection", function (ws) {
 		}
 
 		if (finished) {
-			let pos;
 			if (submissionOrigin[solution_id]) {
-				pos = submissionType.contest[submissionOrigin[solution_id]].indexOf(solution_id);
-				if (~pos) {
-					submissionType.contest[submissionOrigin[solution_id]].splice(pos, 1);
-				}
-				delete submissionOrigin[solution_id];
-			} else if (~(pos = submissionType.normal.indexOf(solution_id))) {
-				submissionType.normal.splice(pos, 1);
+				submissionOrigin[solution_id] = null;
 			}
-			delete submitUserInfo[solution_id];
-			delete submissions[solution_id];
+			submitUserInfo[solution_id] = null;
+			submissions[solution_id] = null;
+			solutionContext[solution_id] = null;
 		}
 	});
 
@@ -416,7 +408,6 @@ io.on("connection", async function (socket) {
 		if (socket.privilege) {
 			const request = data["request"];
 			if (request && request === "judger") {
-				//socket.emit(dockerRunner.getStatus());
 				socket.emit(localJudge.getStatus());
 			}
 		}
@@ -446,7 +437,12 @@ io.on("connection", async function (socket) {
 			return;
 		}
 		data.submission_id = response.solution_id;
-
+		const ip = onlineUser[socket.user_id].ip;
+		const fingerprint = data.val.fingerprint;
+		solutionContext[data.submission_id] = {
+			ip,
+			fingerprint
+		};
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
@@ -477,21 +473,16 @@ io.on("connection", async function (socket) {
 				};
 			}
 		}
-
+		Object.assign(data.val, solutionContext[submission_id]);
 		if ((data.val && data.val.cid)) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
 				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
 				sendMessage(pagePush.status, "submit", data, 1);
-				if (!submissionType.contest[contest_id]) {
-					submissionType.contest[contest_id] = [];
-				}
-				submissionType.contest[contest_id].push(parseInt(data.submission_id));
 				submissionOrigin[submission_id] = contest_id;
 			}
 		} else {
 			sendMessage(pagePush.status, "submit", data, 1);
-			submissionType.normal.push(parseInt(data.submission_id));
 		}
 		const language = parseInt(data.val.language);
 		switch (language) {
@@ -537,7 +528,8 @@ io.on("connection", async function (socket) {
      * 断开连接销毁所有保存的数据
      */
 	socket.on("disconnect", function () {
-		let pos = onlineUser[socket.user_id];
+		const user_id = socket.user_id;
+		let pos = onlineUser[user_id];
 		if (pos !== undefined && !socket.hasClosed) {
 			socket.hasClosed = true;
 			if (whiteboard.has(socket)) {
@@ -546,10 +538,11 @@ io.on("connection", async function (socket) {
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
 				pos.url.splice(url_pos, 1);
-			if (socket.contest_id) {
-				const socket_pos = pagePush.contest_status[socket.contest_id].indexOf(socket);
+			const contest_id = socket.contest_id;
+			if (contest_id) {
+				const socket_pos = pagePush.contest_status[contest_id].indexOf(socket);
 				if (~socket_pos) {
-					pagePush.contest_status[socket.contest_id].splice(socket_pos, 1);
+					pagePush.contest_status[contest_id].splice(socket_pos, 1);
 				}
 			}
 			if (socket.status) {
@@ -560,25 +553,25 @@ io.on("connection", async function (socket) {
 			}
 			let socket_pos;
 			if (socket.privilege) {
-				socket_pos = admin_user[socket.user_id].indexOf(socket);
+				socket_pos = admin_user[user_id].indexOf(socket);
 				if (~socket_pos)
-					admin_user[socket.user_id].splice(socket_pos, 1);
+					admin_user[user_id].splice(socket_pos, 1);
 			} else {
-				socket_pos = normal_user[socket.user_id].indexOf(socket);
+				socket_pos = normal_user[user_id].indexOf(socket);
 				if (~socket_pos)
-					normal_user[socket.user_id].splice(socket_pos, 1);
+					normal_user[user_id].splice(socket_pos, 1);
 			}
 			if (!pos.url.length) {
-				delete user_socket[socket.user_id];
-				delete onlineUser[socket.user_id];
-				if (admin_user[socket.user_id])
-					delete admin_user[socket.user_id];
-				if (normal_user[socket.user_id])
-					delete normal_user[socket.user_id];
+				user_socket[user_id] = null;
+				onlineUser[user_id] = null;
+				if (admin_user[user_id]) {
+					admin_user[user_id] = null;
+				}
+				if (normal_user[user_id]) {
+					normal_user[user_id] = null;
+				}
 			}
 			onlineUserBroadcast();
 		}
 	});
-
-	//console.log(socket.request.session);
 });
