@@ -6,7 +6,7 @@ const path = require("path");
 const query = require("../module/mysql_cache");
 const suffix = require("../module/const_name").language_suffix.local;
 const zlib = require("zlib");
-const home_dir = path.join(require("../config.json").judger.oj_home, "data");
+const home_dir = path.join(global.config.judger.oj_home, "data");
 const middleWare = require("../middleware/admin");
 const auth = require("../middleware/auth");
 

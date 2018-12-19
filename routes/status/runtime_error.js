@@ -6,7 +6,7 @@ const cache_query = require("../../module/mysql_cache");
 
 router.get("/", (req, res, next) => {
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
-	if (global.contest_mode && !browse_privilege) {
+	if (!browse_privilege) {
 		res.json(error.noprivilege);
 	}
 	else {

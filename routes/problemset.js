@@ -1,5 +1,6 @@
 const express = require("express");
 const query = require("../module/mysql_query");
+const cache_query = require("../module/mysql_cache");
 const router = express.Router();
 const dayjs = require("dayjs");
 const page_cnt = 50;
@@ -22,19 +23,6 @@ function order_rule(order, sort) {
 	return _order_rule[order] || "problem_id asc";
 }
 
-async function cache_query(sql, sqlArr = []) {
-	let identified = sql.toString() + sqlArr.toString();
-	if (cache_pool[identified]) {
-		query(sql, sqlArr)
-			.then(resolve => {
-				cache_pool[identified] = resolve;
-			})
-			.catch(() => {
-			});
-		return cache_pool[identified];
-	}
-	return (cache_pool[identified] = await query(sql, sqlArr));
-}
 
 async function get_problem(req, res) {
 	const target = req.query.source || "local";
