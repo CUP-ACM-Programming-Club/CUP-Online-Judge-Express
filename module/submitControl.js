@@ -3,6 +3,7 @@ const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
 const dayjs = require("dayjs");
 const client = require("./redis");
+const detectClassroom = require("./detect_classroom");
 
 const NORMAL_SUBMISSION = 1;
 const CONTEST_SUBMISSION = 2;
@@ -56,6 +57,47 @@ async function checkContestPrivilege(req, contest_id) {
 	return !_private;
 }
 
+async function limitAddressForContest(req, contest_id) {
+	const referer = req.headers.referer;
+	const data = await query("select limit_hostname from contest where contest_id = ?", [contest_id]);
+	let limit_hostname;
+	if (data && data[0] && data[0].limit_hostname) {
+		limit_hostname = data[0].limit_hostname;
+	}
+	if (limit_hostname && referer.indexOf(limit_hostname) !== -1) {
+		return true;
+	} else if (!limit_hostname) {
+		return true;
+	} else {
+		return limit_hostname;
+	}
+}
+
+async function limitClassroomAccess(req, contest_id) {
+	const ip = getIP(req);
+	let detectResult = detectClassroom(ip);
+
+	const data = await query("select ip_policy from contest where contest_id = ?", [contest_id]);
+	let limitClassroom;
+	if (data && data[0] && data[0].ip_policy) {
+		limitClassroom = data[0].ip_policy.split(",");
+	} else {
+		return true;
+	}
+	if(detectResult === null) {
+		return false;
+	}
+	detectResult = detectResult.toString();
+	let result = false;
+	for (let i of limitClassroom) {
+		if (i === detectResult) {
+			result = true;
+			break;
+		}
+	}
+	return result;
+}
+
 async function checkTopicPrivilege(req, topic_id) {
 	if (req.session.isadmin) {
 		return true;
@@ -79,6 +121,9 @@ async function contestIncludeProblem(contest_id, num) {
 	}
 }
 
+/**
+ * @return {number}
+ */
 async function TopicIncludeProblem(topic_id, num) {
 	const data = await cache_query(`select problem_id from contest_problem
      where topic_id = ? and num = ?`, [topic_id, num]);
@@ -232,6 +277,20 @@ module.exports = async function (req, data, cookie) {
 			};
 		}
 		const positiveContestID = Math.abs(originalContestID);
+		let limit_address = await limitAddressForContest(req, positiveContestID);
+		if (typeof limit_address === "string") {
+			return {
+				status: "error",
+				statement: "根据管理员设置的策略，请从" + limit_address + "访问本页提交"
+			};
+		}
+		let limit_classroom = await limitClassroomAccess(req, positiveContestID);
+		if (!limit_classroom) {
+			return {
+				status: "error",
+				statement: "根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。"
+			};
+		}
 		let problem_id = await contestIncludeProblem(positiveContestID, originalPID);
 		if (problem_id === false) {
 			return {

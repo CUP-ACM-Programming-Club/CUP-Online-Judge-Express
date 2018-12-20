@@ -144,8 +144,10 @@ order by pnum;`, [cid, cid, cid, cid, cid, cid]));
 			user_id = ? and contest_id = ?
 and result <> 13
 group by problem_id,result`, [req.session.user_id, cid]));
+			sqlQueue.push(cache_query("select limit_hostname from contest where contest_id = ?", [cid]));
 			let submission_data;
-			[contest_general_detail, submission_data] = await Promise.all(sqlQueue);
+			let limit_data;
+			[contest_general_detail, submission_data, limit_data] = await Promise.all(sqlQueue);
 			let browse_privilege = req.session.isadmin || req.session.contest_manager;
 			let submission_map = {};
 			for (let i of submission_data) {
@@ -171,12 +173,14 @@ group by problem_id,result`, [req.session.user_id, cid]));
 					i.pid = i.pid1 = i.pid2 = "";
 				}
 			}
+			console.log(limit_data);
 			delete contest_detail.password;
 			res.json({
 				status: "OK",
 				data: contest_general_detail,
 				info: contest_detail,
-				admin: browse_privilege
+				admin: browse_privilege,
+				limit:limit_data[0].limit_hostname
 			});
 		}
 	} catch (e) {
