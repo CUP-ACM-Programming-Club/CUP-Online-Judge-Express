@@ -522,5 +522,6 @@ router.use("/runtimeerror", require("./status/runtime_error"));
 router.use("/submit_hour", require("./status/submit_hour"));
 router.use("/ban_submission", admin_auth, require("./status/ban_submission"));
 router.use("/rejudge", admin_auth, require("./status/rejudge"));
+router.use(...require("./status/ip"));
 
 module.exports = ["/status", auth, router];

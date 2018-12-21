@@ -97,30 +97,28 @@ wss.on("connection", function (ws) {
 		if (problemFromContest[solution_id]) {
 			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
 			solution_pack.num = problemFromContest[solution_id].num;
-			if (finished) {
-				problemFromContest[solution_id] = null;
-				//delete problemFromContest[solution_id];
-			}
 		} else if (problemFromSpecialSubject[solution_id]) {
 			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
 			solution_pack.num = problemFromSpecialSubject[solution_id].num;
-			if (finished) {
-				problemFromSpecialSubject[solution_id] = null;
-				//delete problemFromSpecialSubject[solution_id];
-			}
 		}
 		if (solutionContext[solution_id]) {
 			Object.assign(solution_pack, solutionContext[solution_id]);
 		}
 		if (submissions[solution_id]) {
 			submissions[solution_id].emit("result", solution_pack);
-			sendMessage(pagePush.status, "result", solution_pack, 1);
+			sendMessage(pagePush.status, "result", solution_pack, 1, !!problemFromContest[solution_id]);
 			if (submissionOrigin[solution_id]) {
 				sendMessage(pagePush.contest_status[submissionOrigin[solution_id]], "result", solution_pack, 1);
 			}
 		}
 
 		if (finished) {
+			if (problemFromContest[solution_id]) {
+				problemFromContest[solution_id] = null;
+			}
+			if (problemFromSpecialSubject[solution_id]) {
+				problemFromSpecialSubject[solution_id] = null;
+			}
 			if (submissionOrigin[solution_id]) {
 				submissionOrigin[solution_id] = null;
 			}
@@ -171,18 +169,23 @@ server.listen(port, function () {
  * @param type 发送信息类型
  * @param value 发送对象
  * @param dimension 数组维度
+ * @param privilege 权限限制
  */
 
-function sendMessage(userArr, type, value, dimension = 2) {
+function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
 			for (let j in userArr[i]) {
-				userArr[i][j].emit(type, value);
+				if (!privilege || userArr[i][j].privilege) {
+					userArr[i][j].emit(type, value);
+				}
 			}
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
-			userArr[i].emit(type, value);
+			if (!privilege || userArr[i].privilege) {
+				userArr[i].emit(type, value);
+			}
 		}
 	}
 }
@@ -201,9 +204,16 @@ function onlineUserBroadcast() {
 	let userArr = {
 		user_cnt: online.length,
 		user: online.map(e => {
-			return {
-				user_id: e.user_id
-			};
+			if(e && e.user_id) {
+				return {
+					user_id: e.user_id
+				};
+			}
+			else {
+				return {
+					user_id: ""
+				};
+			}
 		})
 	};
 	sendMessage(normal_user, "user", {
@@ -478,7 +488,7 @@ io.on("connection", async function (socket) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
 				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
-				sendMessage(pagePush.status, "submit", data, 1);
+				sendMessage(pagePush.status, "submit", data, 1, !!problemFromContest[submission_id]);
 				submissionOrigin[submission_id] = contest_id;
 			}
 		} else {

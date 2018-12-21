@@ -4,6 +4,7 @@ const const_variable = require("./const_name");
 const dayjs = require("dayjs");
 const client = require("./redis");
 const detectClassroom = require("./detect_classroom");
+const getIP = require("./getIP");
 
 const NORMAL_SUBMISSION = 1;
 const CONTEST_SUBMISSION = 2;
@@ -164,10 +165,6 @@ async function makePrependAndAppendCode(problem_id, source, language) {
 
 function checkLangmask(language, langmask = LANGMASK) {
 	return Boolean((~langmask) & (1 << language));
-}
-
-function getIP(req) {
-	return (req.headers["x-forwarded-for"] || req.connection.remoteAddress).split(",")[0];
 }
 
 
