@@ -8,8 +8,7 @@ router.get("/", (req, res, next) => {
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (!browse_privilege) {
 		res.json(error.noprivilege);
-	}
-	else {
+	} else {
 		next();
 	}
 });
@@ -18,18 +17,19 @@ router.get("/", async (req, res) => {
 	try {
 		const sql = "SELECT `error` FROM `runtimeinfo` WHERE `solution_id`= ?";
 		const solution_id = parseInt(req.query.sid) || "";
+		const browse_privilege = req.session.isadmin || req.session.source_browser;
 		if (!solution_id || isNaN(solution_id)) {
 			res.json(error.invalidParams);
-		}
-		else {
+		} else if (!browse_privilege) {
+			res.json(error.noprivilege);
+		} else {
 			const data = await cache_query(sql, [solution_id]);
 			res.json({
 				status: "OK",
 				data
 			});
 		}
-	}
-	catch (e) {
+	} catch (e) {
 		console.log(e);
 		res.json(error.database);
 	}

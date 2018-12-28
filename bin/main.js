@@ -114,17 +114,17 @@ wss.on("connection", function (ws) {
 
 		if (finished) {
 			if (problemFromContest[solution_id]) {
-				problemFromContest[solution_id] = null;
+				delete problemFromContest[solution_id];
 			}
 			if (problemFromSpecialSubject[solution_id]) {
-				problemFromSpecialSubject[solution_id] = null;
+				delete problemFromSpecialSubject[solution_id];
 			}
 			if (submissionOrigin[solution_id]) {
-				submissionOrigin[solution_id] = null;
+				delete submissionOrigin[solution_id];
 			}
-			submitUserInfo[solution_id] = null;
-			submissions[solution_id] = null;
-			solutionContext[solution_id] = null;
+			delete submitUserInfo[solution_id];
+			delete submissions[solution_id];
+			delete solutionContext[solution_id];
 		}
 	});
 
@@ -319,7 +319,7 @@ io.use((socket, next) => {
 	if (_url.length && _url.length > 0) {
 		socket.url = _url;
 	}
-	if (pos !== undefined) {
+	if (pos !== null && pos !== undefined && pos && pos.url) {
 		if (_url.length > 0) {
 			pos.url.push(_url);
 		}
@@ -540,7 +540,7 @@ io.on("connection", async function (socket) {
 	socket.on("disconnect", function () {
 		const user_id = socket.user_id;
 		let pos = onlineUser[user_id];
-		if (pos !== undefined && !socket.hasClosed) {
+		if (pos && !socket.hasClosed) {
 			socket.hasClosed = true;
 			if (whiteboard.has(socket)) {
 				whiteboard.delete(socket);
@@ -572,13 +572,13 @@ io.on("connection", async function (socket) {
 					normal_user[user_id].splice(socket_pos, 1);
 			}
 			if (!pos.url.length) {
-				user_socket[user_id] = null;
-				onlineUser[user_id] = null;
+				delete user_socket[user_id];
+				delete onlineUser[user_id];
 				if (admin_user[user_id]) {
-					admin_user[user_id] = null;
+					delete admin_user[user_id];
 				}
 				if (normal_user[user_id]) {
-					normal_user[user_id] = null;
+					delete normal_user[user_id];
 				}
 			}
 			onlineUserBroadcast();

@@ -28,10 +28,22 @@ where user_id = ? and in_date >= DATE_SUB(NOW(),INTERVAL 1 YEAR)
 group by year(in_date),month(in_date),day(in_date)`, [user_id]));
 	sqlQueue.push(query(`select count(1) as cnt,os_name,os_version from loginlog 
 where user_id = ? and os_name is not null
-group by os_name,os_version`,[user_id]));
+group by os_name,os_version`, [user_id]));
 	sqlQueue.push(query(`select count(1) as cnt,browser_name,browser_version from loginlog
 where user_id = ? and browser_name is not null
-group by browser_name,browser_version`,[user_id]));
+group by browser_name,browser_version`, [user_id]));
+	sqlQueue.push(query(`select count(distinct(problem_id)) as cnt from solution where solution_id in (
+  select s_id as solution_id
+  from sim
+  where s_user_id = ?
+)`, [user_id]));
+	sqlQueue.push(query("select avg(sim) as average from sim where s_user_id = ?", [user_id]));
+	sqlQueue.push(query(`select avg(code_length) as average from solution where solution_id in (
+  select s_id as solution_id
+  from sim
+  where s_user_id = ?
+)`, [user_id]));
+	sqlQueue.push(query("select count(1) as cnt from sim where s_user_id = ?", [user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -47,10 +59,14 @@ group by browser_name,browser_version`,[user_id]));
 			login_time: result[7],
 			article_publish: result[8],
 			submission_count: result[9],
-			browser:result[11],
-			os:result[10]
+			browser: result[11],
+			os: result[10],
+			sim_count: result[12][0].cnt || 0,
+			sim_average_percentage: result[13][0].average || 0,
+			sim_average_length: result[14][0].average || 0,
+			total_sim_time: result[15][0].cnt || 0
 		},
-		isadmin:req.session.isadmin
+		isadmin: req.session.isadmin
 	});
 });
 module.exports = ["/user", auth, router];
