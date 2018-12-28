@@ -23,18 +23,36 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let where_sql = "";
 	let sql_arr = [];
 	for (let i in request_query) {
-		if (typeof request_query[i] !== "undefined") {
+		if (typeof request_query[i] !== "undefined" && typeof request_query[i] !== "boolean") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
 		}
 	}
+
+	let pre_sim = "", end_sim = "";
+
+	if(request_query.sim) {
+		if(request_query.user_id) {
+			let user_id_sql = "";
+			if (request_query.user_id) {
+				user_id_sql = " where s_user_id = ?";
+				sql_arr.push(request_query.user_id);
+			}
+			where_sql += ` and solution_id in (select s_id as solution_id from sim${user_id_sql})`;
+		}
+		else {
+			pre_sim = "select * from(";
+			end_sim = ")t where sim is not null";
+		}
+	}
 	let _end = false;
 	const browser_privilege = req.session.isadmin || req.session.source_browser;
+
 	if (browser_privilege) {
 		if (request_query.contest_id) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
-			_res = await cache_query(`select * from
+			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
@@ -46,23 +64,23 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		} else {
 			sql_arr.push(limit);
-			_res = await cache_query(`select * from
+			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where 1=1
 								${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		}
 	} else if (request_query.contest_id) {
 		sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
 		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
 		_end = _end[0].cnt;
-		_res = await cache_query(`select * from
+		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
 								from solution
 								where problem_id > 0 
@@ -74,7 +92,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								${where_sql}
 								order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc, sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.in_date desc, sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	} else {
 		// sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
@@ -91,7 +109,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
                                 left join sim on sim.s_id = sol.solution_id
                                 order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
                                 */
-		_res = await cache_query(`select * from
+		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,solution_id,
 								if((share = 1
            and not exists
@@ -105,7 +123,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								where problem_id > 0 and contest_id is null 
 								${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
+								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	}
 	let result = [];
 	for (const val of _res) {
@@ -386,6 +404,10 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
 	let problem_id;
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
 	if (isNaN(req.params.problem_id)) {
 		if (req.params.problem_id === "null" || !req.params.problem_id) {
 			problem_id = undefined;
@@ -398,7 +420,6 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async f
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
-	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	await get_status(req, res, next, {
 		num: problem_id,
@@ -406,6 +427,63 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async f
 		language: language,
 		result: result,
 		contest_id: contest_id
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim", async function (req, res, next) {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	if (isNaN(problem_id) && problem_id !== undefined) {
+		res.json({
+			result: result,
+			const_list: const_name,
+			self: req.session.user_id,
+			isadmin: req.session.isadmin,
+			browse_code: req.session.source_browser,
+			end: false
+		});
+	} else {
+		await get_status(req, res, next, {
+			problem_id: problem_id,
+			user_id: user_id,
+			language: language,
+			result: result,
+			sim: !!sim
+		}, limit);
+	}
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", async function (req, res, next) {
+	let problem_id;
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			problem_id = undefined;
+		} else {
+			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	} else {
+		problem_id = parseInt(req.params.problem_id);
+	}
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		num: problem_id,
+		user_id: user_id,
+		language: language,
+		result: result,
+		contest_id: contest_id,
+		sim: !!sim
 	}, limit);
 });
 

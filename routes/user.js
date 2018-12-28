@@ -38,6 +38,12 @@ group by browser_name,browser_version`, [user_id]));
   where s_user_id = ?
 )`, [user_id]));
 	sqlQueue.push(query("select avg(sim) as average from sim where s_user_id = ?", [user_id]));
+	sqlQueue.push(query(`select avg(code_length) as average from solution where solution_id in (
+  select s_id as solution_id
+  from sim
+  where s_user_id = ?
+)`, [user_id]));
+	sqlQueue.push(query("select count(1) as cnt from sim where s_user_id = ?", [user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -55,8 +61,10 @@ group by browser_name,browser_version`, [user_id]));
 			submission_count: result[9],
 			browser: result[11],
 			os: result[10],
-			sim_count:result[12],
-			sim_average:result[13]
+			sim_count: result[12][0].cnt || 0,
+			sim_average_percentage: result[13][0].average || 0,
+			sim_average_length: result[14][0].average || 0,
+			total_sim_time: result[15][0].cnt || 0
 		},
 		isadmin: req.session.isadmin
 	});
