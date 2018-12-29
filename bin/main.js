@@ -83,16 +83,19 @@ global.contest_mode = false;
 
 wss.on("connection", function (ws) {
 	/**
-     * 绑定judger发送的事件
-     */
+	 * 绑定judger发送的事件
+	 */
 	ws.on("judger", function (message) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = parseInt(solution_pack.solution_id);
 		if (submitUserInfo[solution_id]) {
+			Object.assign(solution_pack, submitUserInfo[solution_id]);
+			/*
 			solution_pack.nick = submitUserInfo[solution_id].nick;
 			solution_pack.user_id = submitUserInfo[solution_id].user_id;
 			solution_pack.in_date = submitUserInfo[solution_id].in_date;
+			*/
 		}
 		if (problemFromContest[solution_id]) {
 			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
@@ -133,8 +136,8 @@ wss.on("connection", function (ws) {
 	});
 
 	/**
-     * 获得推送信息，根据信息类型emit对应事件
-     */
+	 * 获得推送信息，根据信息类型emit对应事件
+	 */
 	ws.on("message", function (message) {
 		let request;
 		try {
@@ -204,12 +207,11 @@ function onlineUserBroadcast() {
 	let userArr = {
 		user_cnt: online.length,
 		user: online.map(e => {
-			if(e && e.user_id) {
+			if (e && e.user_id) {
 				return {
 					user_id: e.user_id
 				};
-			}
-			else {
+			} else {
 				return {
 					user_id: ""
 				};
@@ -288,7 +290,7 @@ io.use(async (socket, next) => {
 		} else {
 			const privilege = await
 			query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-                    "user_id=?", [socket.user_id]);
+					"user_id=?", [socket.user_id]);
 			socket.privilege = parseInt(privilege[0].cnt) > 0;
 			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
 		}
@@ -411,8 +413,8 @@ io.on("connection", async function (socket) {
 	});
 
 	/**
-     * 获取状态信息
-     */
+	 * 获取状态信息
+	 */
 
 	socket.on("status", function (data) {
 		if (socket.privilege) {
@@ -423,22 +425,22 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-     * 提交推送处理
-     */
+	 * 提交推送处理
+	 */
 	socket.on("submit", async function (_data) {
 		/**
-         * { submission_id: 61459,
-         * val:
-         * { id: '',
-         * input_text: '1 2',
-         * language: '1',
-         * source: '',
-         * type: 'problem',
-         * csrf: '' },
-         * user_id: '',
-         * nick: '' }
-         *
-         */
+		 * { submission_id: 61459,
+		 * val:
+		 * { id: '',
+		 * input_text: '1 2',
+		 * language: '1',
+		 * source: '',
+		 * type: 'problem',
+		 * csrf: '' },
+		 * user_id: '',
+		 * nick: '' }
+		 *
+		 */
 		let data = Object.assign({}, _data);
 
 		const response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
@@ -457,11 +459,14 @@ io.on("connection", async function (socket) {
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
 		submissions[submission_id] = socket;
+		const avatar = await cache_query("select avatar from users where user_id = ?", [data.user_id]);
 		submitUserInfo[submission_id] = {
 			nick: data.nick,
 			user_id: data.user_id,
-			in_date: new Date().toISOString()
+			in_date: new Date().toISOString(),
+			avatar: !!avatar[0].avatar
 		};
+		data.val.avatar = !!avatar[0].avatar;
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
                 contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);
@@ -506,15 +511,15 @@ io.on("connection", async function (socket) {
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
-     * 全局推送功能
-     */
+	 * 全局推送功能
+	 */
 	socket.on("msg", function (data) {
 		socket.broadcast.emit("msg", data);
 		socket.emit("msg", data);
 	});
 	/**
-     * 聊天功能，向目标用户发送聊天信息
-     */
+	 * 聊天功能，向目标用户发送聊天信息
+	 */
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data.to;
@@ -535,8 +540,8 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-     * 断开连接销毁所有保存的数据
-     */
+	 * 断开连接销毁所有保存的数据
+	 */
 	socket.on("disconnect", function () {
 		const user_id = socket.user_id;
 		let pos = onlineUser[user_id];
