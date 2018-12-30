@@ -9,6 +9,7 @@ before_install:
   - sudo service mysql restart
 services:
   - mysql
+  - redis-server
 addons:
   apt:
     sources:
