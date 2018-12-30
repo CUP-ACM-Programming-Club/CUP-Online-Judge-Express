@@ -9,7 +9,6 @@ const path = require("path");
 const Promise = require("bluebird");
 const query = require("../module/mysql_query");
 const fs = Promise.promisifyAll(require("fs"));
-const checker = require("./docker/checker");
 const eventEmitter = require("events").EventEmitter;
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
@@ -249,7 +248,9 @@ class dockerJudger extends eventEmitter {
 		this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
 		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
 		if (this.mode === 0) {
-			this.submit.setCompareFunction(checker.compareDiff);
+			if(fs.existsSync("./docker/checker")) {
+				this.submit.setCompareFunction(require("./docker/checker").compareDiff);
+			}
 		}
 		await this.submit.pushInputRawFiles({
 			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
