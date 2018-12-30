@@ -5,7 +5,7 @@ const config = global.config = require("../config.json");
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
-if(ENVIRONMENT === "test") {
+if(ENVIRONMENT === "autotest") {
 	console.log(global.config);
 }
 const logger = log4js.logger("normal", "info");
@@ -597,3 +597,7 @@ io.on("connection", async function (socket) {
 		}
 	});
 });
+
+if (ENVIRONMENT === "autotest") {
+	process.exit(0);
+}
