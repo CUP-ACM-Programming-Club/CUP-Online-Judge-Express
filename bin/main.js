@@ -451,9 +451,11 @@ io.on("connection", async function (socket) {
 		data.submission_id = response.solution_id;
 		const ip = onlineUser[socket.user_id].ip;
 		const fingerprint = data.val.fingerprint;
+		const fingerprintRaw = data.val.fingerprintRaw;
 		solutionContext[data.submission_id] = {
 			ip,
-			fingerprint
+			fingerprint,
+			fingerprintRaw
 		};
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;

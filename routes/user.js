@@ -17,7 +17,7 @@ select oj_name,problem_id,result,language,time from vjudge_record where user_id 
 `, [user_id, user_id, user_id]));
 	sqlQueue.push(query("select * from privilege where user_id = ? and rightstr in ('administrator','editor','source_browser')", [user_id]));
 	sqlQueue.push(query("select * from award where user_id = ? order by year", [user_id]));
-	sqlQueue.push(query("select avatar,school,email,blog,github,reg_time,nick,biography from users where user_id = ?", [user_id]));
+	sqlQueue.push(query("select avatar,school,email,blog,github,reg_time,nick,biography,vjudge_accept from users where user_id = ?", [user_id]));
 	sqlQueue.push(query("select * from acm_member where user_id = ?", [user_id]));
 	sqlQueue.push(query("select * from special_subject_problem"));
 	sqlQueue.push(query("select count(1) + 1 as rnk from users where solved > (select solved from users where user_id = ?)", [user_id]));
@@ -44,6 +44,7 @@ group by browser_name,browser_version`, [user_id]));
   where s_user_id = ?
 )`, [user_id]));
 	sqlQueue.push(query("select count(1) as cnt from sim where s_user_id = ?", [user_id]));
+	sqlQueue.push(query("select count(1) + 1 as rnk from users where vjudge_accept > (select vjudge_accept from users where user_id = ?)", [user_id]));
 	const result = await Promise.all(sqlQueue);
 	res.json({
 		status: "OK",
@@ -64,7 +65,8 @@ group by browser_name,browser_version`, [user_id]));
 			sim_count: result[12][0].cnt || 0,
 			sim_average_percentage: result[13][0].average || 0,
 			sim_average_length: result[14][0].average || 0,
-			total_sim_time: result[15][0].cnt || 0
+			total_sim_time: result[15][0].cnt || 0,
+			vjudge_rank: result[16][0].rnk
 		},
 		isadmin: req.session.isadmin
 	});
