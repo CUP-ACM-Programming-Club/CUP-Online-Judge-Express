@@ -54,6 +54,9 @@ class dockerJudger extends eventEmitter {
 			this.Sandbox = require("./docker/index");
 			this.submit = this.Sandbox.createSubmit();
 		}
+		else {
+			console.error("You don't have CUP Online Judge docker judger in ./docker directory\nPlease clone it in this directory");
+		}
 		this.language = NaN;
 		this.submit_id = NaN;
 		this.mode = 0;
