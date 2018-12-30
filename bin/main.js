@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+require("../module/init/preinstall")();
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
