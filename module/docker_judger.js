@@ -5,7 +5,6 @@
 //const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 //const logger = log4js.logger("normal", "info");
-const Sandbox = require("./docker/index");
 const path = require("path");
 const Promise = require("bluebird");
 const query = require("../module/mysql_query");
@@ -52,8 +51,10 @@ class dockerJudger extends eventEmitter {
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
-		this.Sandbox = Sandbox;
-		this.submit = this.Sandbox.createSubmit();
+		if(fs.existsSync("./docker/index")) {
+			this.Sandbox = require("./docker/index");
+			this.submit = this.Sandbox.createSubmit();
+		}
 		this.language = NaN;
 		this.submit_id = NaN;
 		this.mode = 0;
@@ -254,7 +255,9 @@ class dockerJudger extends eventEmitter {
 			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
 			data: this.code
 		});
-		this.result = await this.Sandbox.runner(this.submit);
+		if(this.Sandbox) {
+			this.result = await this.Sandbox.runner(this.submit);
+		}
 		this.submit.emit("finish");
 	}
 
