@@ -244,10 +244,11 @@ module.exports = async function (req, data, cookie) {
 		const IP = getIP(req);
 		const judger = "待分配";
 		const fingerprint = data.fingerprint;
+		const fingerprintRaw = data.fingerprintRaw;
 		const code_length = source_code_user.length;
 		const share = Boolean(data.share);
-		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint)
-		values(?,?,NOW(),?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint]);
+		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
+		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
 		let promiseArray = [query(`insert into source_code_user(solution_id,source)
 		values(?,?)`, [solution_id, source_code_user]),
@@ -319,12 +320,13 @@ module.exports = async function (req, data, cookie) {
 		const IP = getIP(req);
 		const judger = "待分配";
 		const fingerprint = data.fingerprint;
+		const fingerprintRaw = data.fingerprintRaw;
 		const code_length = source_code_user.length;
 		if (originalContestID !== positiveContestID) {
 			problem_id = -Math.abs(problem_id);
 		}
-		const result = await query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint)
-	    values(?,?,NOW(),?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint]);
+		const result = await query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
+	    values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
 		let promiseArray = [query(`insert into source_code_user(solution_id,source)
 		values(?,?)`, [solution_id, source_code_user]),
@@ -378,12 +380,13 @@ module.exports = async function (req, data, cookie) {
 		const IP = getIP(req);
 		const judger = "待分配";
 		const fingerprint = data.fingerprint;
+		const fingerprintRaw = data.fingerprintRaw;
 		const code_length = source_code_user.length;
 		if (originalTopicID !== positiveTopicID) {
 			problem_id = -Math.abs(problem_id);
 		}
-		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint)
-		values(?,?,NOW(),?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint]);
+		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint,fingerprintRaw)
+		values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
 
 		const solution_id = result.insertId;
 		let promiseArray = [query(`insert into source_code_user(solution_id,source)

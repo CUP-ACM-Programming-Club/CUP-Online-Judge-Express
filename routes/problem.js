@@ -443,7 +443,8 @@ router.post("/:source/:id", function (req, res) {
 				output: "",
 				sampleinput: "",
 				sampleoutput: "",
-				label: ""
+				label: "",
+				spj: 0
 			}, req.body.json);
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
