@@ -178,7 +178,9 @@ class dockerJudger extends eventEmitter {
 	on(event, callback) {
 		if (typeof event === "string") {
 			if (typeof callback === "function") {
-				this.submit.on(event, callback);
+				if(this.submit) {
+					this.submit.on(event, callback);
+				}
 			}
 			else {
 				return new TypeError("callback must be function");
