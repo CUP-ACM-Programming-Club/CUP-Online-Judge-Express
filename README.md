@@ -1,4 +1,6 @@
 # CUP-Online-Judge-Express
+[![Build Status](https://travis-ci.com/ryanlee2014/CUP-Online-Judge-Express.svg?branch=master)](https://travis-ci.com/ryanlee2014/CUP-Online-Judge-Express)
+
 CUP Online Judge后端模块
 
 请使用git clone到本地安装

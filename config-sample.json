@@ -1,10 +1,10 @@
 {
   "mysql": {
     "host": "127.0.0.1",
-    "user": "youruser",
-    "password": "yourpassword",
+    "user": "root",
+    "password": "new_password",
     "port": "3306",
-    "database": "root"
+    "database": "jol"
   },
   "ws": {
     "client_port": 3000,

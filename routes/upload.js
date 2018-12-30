@@ -9,7 +9,13 @@ const zlib = require("zlib");
 const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const config = require("../config.json");
-const upload = multer({dest: config.problem_upload_dest.dir});
+let upload = false;
+try {
+	upload = multer({dest: config.problem_upload_dest.dir});
+}
+catch(e) {
+	console.error(e);
+}
 const path = require("path");
 const auth = require("../middleware/auth");
 const {checkCaptcha} = require("../module/captcha_checker");
@@ -274,17 +280,19 @@ const createProblemModule = (req, res) => {
 		});
 };
 
-router.post("/", upload.single("fps"), (req, res) => {
-	createProblemModule(req, res);
-});
-
-router.post("/user", upload.single("fps"), (req, res) => {
-	if (!checkCaptcha(req, "upload")) {
-		res.json(error.invalidCaptcha);
-	} else {
+if(upload !== false) {
+	router.post("/", upload.single("fps"), (req, res) => {
 		createProblemModule(req, res);
-	}
-});
+	});
+
+	router.post("/user", upload.single("fps"), (req, res) => {
+		if (!checkCaptcha(req, "upload")) {
+			res.json(error.invalidCaptcha);
+		} else {
+			createProblemModule(req, res);
+		}
+	});
+}
 
 router.get("/", async (req, res) => {
 	const problem_dir = "/home/upload_problems";

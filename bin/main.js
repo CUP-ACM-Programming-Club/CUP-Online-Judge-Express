@@ -1,8 +1,13 @@
 /* eslint-disable no-console */
+const ENVIRONMENT = process.env.NODE_ENV;
+require("../module/init/preinstall")();
+const config = global.config = require("../config.json");
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
-const config = global.config = require("../config.json");
+if(ENVIRONMENT === "autotest") {
+	console.log(global.config);
+}
 const logger = log4js.logger("normal", "info");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
@@ -592,3 +597,7 @@ io.on("connection", async function (socket) {
 		}
 	});
 });
+
+if (ENVIRONMENT === "autotest") {
+	process.exit(0);
+}

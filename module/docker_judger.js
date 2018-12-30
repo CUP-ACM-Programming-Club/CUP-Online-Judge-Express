@@ -5,12 +5,10 @@
 //const query = require("../module/mysql_query");
 const log4js = require("../module/logger");
 //const logger = log4js.logger("normal", "info");
-const Sandbox = require("./docker/index");
 const path = require("path");
 const Promise = require("bluebird");
 const query = require("../module/mysql_query");
 const fs = Promise.promisifyAll(require("fs"));
-const checker = require("./docker/checker");
 const eventEmitter = require("events").EventEmitter;
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
@@ -52,8 +50,10 @@ class dockerJudger extends eventEmitter {
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
-		this.Sandbox = Sandbox;
-		this.submit = this.Sandbox.createSubmit();
+		if(fs.existsSync("./docker/index")) {
+			this.Sandbox = require("./docker/index");
+			this.submit = this.Sandbox.createSubmit();
+		}
 		this.language = NaN;
 		this.submit_id = NaN;
 		this.mode = 0;
@@ -178,7 +178,9 @@ class dockerJudger extends eventEmitter {
 	on(event, callback) {
 		if (typeof event === "string") {
 			if (typeof callback === "function") {
-				this.submit.on(event, callback);
+				if(this.submit) {
+					this.submit.on(event, callback);
+				}
 			}
 			else {
 				return new TypeError("callback must be function");
@@ -248,13 +250,17 @@ class dockerJudger extends eventEmitter {
 		this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
 		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
 		if (this.mode === 0) {
-			this.submit.setCompareFunction(checker.compareDiff);
+			if(fs.existsSync("./docker/checker")) {
+				this.submit.setCompareFunction(require("./docker/checker").compareDiff);
+			}
 		}
 		await this.submit.pushInputRawFiles({
 			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
 			data: this.code
 		});
-		this.result = await this.Sandbox.runner(this.submit);
+		if(this.Sandbox) {
+			this.result = await this.Sandbox.runner(this.submit);
+		}
 		this.submit.emit("finish");
 	}
 
