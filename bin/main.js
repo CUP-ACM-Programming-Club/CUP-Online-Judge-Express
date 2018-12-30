@@ -5,9 +5,6 @@ const config = global.config = require("../config.json");
 const app = require("../app");
 require("debug")("express:server");
 const log4js = require("../module/logger");
-if(ENVIRONMENT === "autotest") {
-	console.log(global.config);
-}
 const logger = log4js.logger("normal", "info");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);

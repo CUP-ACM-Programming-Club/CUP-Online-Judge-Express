@@ -12,9 +12,8 @@ const config = require("../config.json");
 let upload = false;
 try {
 	upload = multer({dest: config.problem_upload_dest.dir});
-}
-catch(e) {
-	console.error(e);
+} catch (e) {
+	console.error("Your upload directory in your config.json is invalid.Please modify it to a valid path.\nError message:", e);
 }
 const path = require("path");
 const auth = require("../middleware/auth");
@@ -280,7 +279,7 @@ const createProblemModule = (req, res) => {
 		});
 };
 
-if(upload !== false) {
+if (upload !== false) {
 	router.post("/", upload.single("fps"), (req, res) => {
 		createProblemModule(req, res);
 	});
