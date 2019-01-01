@@ -4,6 +4,6 @@ module.exports = async (req, res, next) => {
 		return next();
 	}
 	const result = await cache_query("select value from global_setting where label = 'contest'");
-	global.contest_mode = !!(result && result[0].value);
+	global.contest_mode = !!(result && parseInt(result[0].value));
 	return next();
 };
