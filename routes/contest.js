@@ -193,7 +193,8 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				data: contest_general_detail,
 				info: contest_detail,
 				admin: browse_privilege,
-				limit:limit_data[0].limit_hostname
+				limit:limit_data[0].limit_hostname,
+				contest_mode: global.contest_mode
 			});
 		}
 	} catch (e) {
