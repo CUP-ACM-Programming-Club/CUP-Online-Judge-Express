@@ -17,6 +17,7 @@ const language_name = cnameList.language_name;
 const result = cnameList.result.cn;
 const judge_color = cnameList.judge_color;
 const icon_list = cnameList.icon_list;
+const [error] = require("../module/const_var");
 const markdownPack = (html) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
@@ -26,8 +27,18 @@ const make_code = (data, source = "local") => {
 	return markdownPack(md.render(["```" + const_name[source.toLowerCase()][data.language], data.source, "```"].join("\n")));
 };
 
+const checkPrivilege = (req) => {
+	return req.session.isadmin || req.session.source_browser;
+};
+
 router.get("/:source/:id", (req, res, next) => {
 	const id = isNaN(req.params.id) ? -1 : parseInt(req.params.id);
+	if(!checkPrivilege(req)) {
+		if(global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
+	}
 	if (id === -1) {
 		res.json({
 			status: "error",

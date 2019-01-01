@@ -7,13 +7,16 @@ const page_cnt = 20;
 const auth = require("../middleware/auth");
 const {checkCaptcha} = require("../module/captcha_checker");
 
+const checkPrivilege = (req) => {
+	return req.session.isadmin || req.session.source_browser;
+};
+
 
 const checkValidation = (number) => {
 	number = parseInt(number);
 	if (isNaN(number) || number <= 0) {
 		return 0;
-	}
-	else {
+	} else {
 		return number;
 	}
 };
@@ -34,13 +37,18 @@ router.get("/my", async (req, res) => {
 			discuss: _discuss_list,
 			total: _tot[0].cnt
 		});
-	}
-	catch (e) {
+	} catch (e) {
 		res.json(error.invalidParams);
 	}
 });
 
 router.get("/:id", async (req, res) => {
+	if (!checkPrivilege(req)) {
+		if (global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
+	}
 	let page = checkValidation(req.query.page);
 	const id = checkValidation(req.params.id);
 	if (id === 0) {
@@ -72,6 +80,12 @@ router.get("/:id", async (req, res) => {
 });
 router.get("/", async (req, res) => {
 	let page = checkValidation(req.query.page);
+	if (!checkPrivilege(req)) {
+		if (global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
+	}
 	let discuss_list;
 	let tot = 0;
 	let count = 0;
@@ -105,12 +119,10 @@ router.post("/reply/:id", (req, res) => {
 	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
 	if (id < 1) {
 		res.json(error.invalidParams);
-	}
-	else {
+	} else {
 		if (!checkCaptcha(req, "discuss")) {
 			res.json(error.invalidCaptcha);
-		}
-		else {
+		} else {
 			const content = req.body.comment;
 			query(`insert into article_content(user_id,content,article_id)
 		values(?,?,?)`, [req.session.user_id, content, id]);
@@ -140,8 +152,7 @@ router.get("/search/:search_val", async (req, res) => {
 router.post("/newpost", (req, res) => {
 	if (!checkCaptcha(req, "newpost")) {
 		res.json(error.invalidCaptcha);
-	}
-	else {
+	} else {
 		const content = req.body.content;
 		const title = req.body.title;
 		query("insert into article(user_id,title,content)values(?,?,?)", [req.session.user_id, title, content])
@@ -164,8 +175,7 @@ router.post("/newpost", (req, res) => {
 router.post("/update/main/:id", (req, res) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
-	}
-	else {
+	} else {
 		const article_id = parseInt(req.params.id);
 		const content = req.body.content;
 		const title = req.body.title;
@@ -196,8 +206,7 @@ router.get("/update/main/:id", async (req, res) => {
 router.post("/update/reply/:id/:comment_id", (req, res) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
-	}
-	else {
+	} else {
 		const article_id = parseInt(req.params.id);
 		const content = req.body.content;
 		const comment_id = parseInt(req.params.comment_id);

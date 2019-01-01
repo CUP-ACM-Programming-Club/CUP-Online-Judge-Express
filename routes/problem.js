@@ -68,11 +68,15 @@ const checkUploader = async (problem_id) => {
 	}
 };
 
+const checkPrivilege = (req) => {
+	return req.session.isadmin || req.session.source_browser;
+};
+
 const checkContestPrivilege = (req, cid) => {
 	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
 };
 
-const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}) => {
+const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}, copyVal = {}) => {
 	let packed_problem = {};
 	if (rows.length !== 0) {
 		if (!opt.raw && (packed_problem = cachePack[opt.id])) {
@@ -103,28 +107,28 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
 			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
-                "           and not exists\n" +
-                "           (select * from contest where contest_id in\n" +
-                "           (select contest_id from contest_problem\n" +
-                "           where solution.problem_id = contest_problem.problem_id)\n" +
-                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
+				"           and not exists\n" +
+				"           (select * from contest where contest_id in\n" +
+				"           (select contest_id from contest_problem\n" +
+				"           where solution.problem_id = contest_problem.problem_id)\n" +
+				"          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
-					send_json(res, {
+					send_json(res, Object.assign({
 						problem: packed_problem,
 						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
 						isadmin: req.session.isadmin,
 						browse_code: req.session.source_browser,
 						editor: req.session.editor || false
-					});
+					}, copyVal));
 				});
 		} else {
-			send_json(res, {
+			send_json(res, Object.assign({
 				problem: packed_problem,
 				source: "",
 				isadmin: req.session.isadmin,
 				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
-			});
+			}, copyVal));
 			cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);
 		}
 	} else {
@@ -154,7 +158,7 @@ router.get("/module/search/:val", function (req, res) {
 			return;
 		}
 		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-            " problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
+			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 				rows[i].source = cheerio.load(rows[i].source).text();
@@ -206,7 +210,7 @@ const make_cache = async (res, req, opt = {
 	raw: false,
 	after_contest: false,
 	uploader: "Administrator"
-}) => {
+}, copyVal = {}) => {
 	if (ENVIRONMENT === "test") {
 		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
 	} else {
@@ -240,14 +244,14 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.problem_id])
 				.then((rows) => {
-					problem_callback(rows, req, res, opt);
+					problem_callback(rows, req, res, opt, copyVal);
 				});
 		} else {
 			sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then((rows) => {
-					problem_callback(rows, req, res, opt);
+					problem_callback(rows, req, res, opt, copyVal);
 				});
 		}
 	} else {
@@ -256,7 +260,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id])
 				.then(rows => {
-					problem_callback(rows, req, res, opt);
+					problem_callback(rows, req, res, opt, copyVal);
 				});
 		} else {
 			sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
@@ -266,7 +270,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 			opt.sql = sql;
 			cache_query(sql, [opt.problem_id, opt.source])
 				.then(rows => {
-					problem_callback(rows, req, res, opt);
+					problem_callback(rows, req, res, opt, copyVal);
 				});
 		}
 	}
@@ -295,8 +299,16 @@ router.get("/:source/", async function (req, res) {
 	let raw = req.query.raw !== undefined;
 	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
 	if (~cid && ~pid) {
-		const [contest, result] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-            "num = ?", [cid, pid])]);
+		const [contest, result, limit_hostname] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
+			"num = ?", [cid, pid]), cache_query("select limit_hostname from contest where contest_id = ?", [cid])]);
+		if (!checkPrivilege(req)) {
+			if (global.contest_mode) {
+				if (contest[0].cmod_visible === 0) {
+					res.json(error.contestMode);
+					return;
+				}
+			}
+		}
 		if (contest[0].private === 1 && !checkContestPrivilege(req, cid)) {
 			res.json(error.problemInContest);
 			return;
@@ -313,7 +325,7 @@ router.get("/:source/", async function (req, res) {
 				raw: raw,
 				langmask: langmask,
 				after_contest: dayjs().isAfter(dayjs(end_time))
-			});
+			}, {limit_hostname: limit_hostname[0].limit_hostname});
 		} else {
 			res.json({
 				status: "error",
@@ -321,8 +333,12 @@ router.get("/:source/", async function (req, res) {
 			});
 		}
 	} else if (~tid && ~pid) {
+		if (!checkPrivilege(req) && global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
 		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
-            "num = ?", [tid, pid]);
+			"num = ?", [tid, pid]);
 		if (result.length > 0) {
 			let problem_id = result[0].problem_id;
 			make_cache(res, req, {
@@ -339,7 +355,11 @@ router.get("/:source/", async function (req, res) {
 			});
 		}
 	} else if (~id) {
-		const browse_privilege = req.session.isadmin || req.session.source_browser;
+		const browse_privilege = checkPrivilege(req);
+		if (!browse_privilege && global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
 		if (browse_privilege) {
 			make_cache(res, req, {
 				problem_id: id,
@@ -422,7 +442,9 @@ WHERE NOT EXISTS (
 			statement: "invalid parameter id"
 		});
 	}
-});
+
+})
+;
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);

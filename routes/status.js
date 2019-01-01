@@ -185,6 +185,8 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 					length: check_owner(val.code_length),
 					in_date: val.in_date,
 					judger: val.judger,
+					fingerprint: val.fingerprint,
+					fingerprintRaw: val.fingerprintRaw
 				});
 			}
 		}
