@@ -1,16 +1,19 @@
 const express = require("express");
-const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const router = express.Router();
 const dayjs = require("dayjs");
 const page_cnt = 50;
-let cache_pool = {};
+const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 
 function sort_string(sort) {
 	const _sort = ["asc", "desc"];
 	return _sort[sort] || "asc";
 }
+
+const checkPrivilege = (req) => {
+	return req.session.isadmin || req.session.source_browser;
+};
 
 
 function order_rule(order, sort) {
@@ -26,6 +29,12 @@ function order_rule(order, sort) {
 
 async function get_problem(req, res) {
 	const target = req.query.source || "local";
+	if(!checkPrivilege(req)) {
+		if(global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		}
+	}
 	let search_table = target === "local" ? "problem" : target === "virtual" ? "vjudge_problem" : "problem";
 	const start = parseInt(req.params.start);
 	let search = req.params.search;
