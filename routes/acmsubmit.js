@@ -34,6 +34,7 @@ left join users
 	const data = await cache_query(sql,sqlArr);
 	res.json({
 		status: "OK",
+		admin: req.session.isadmin,
 		data: data,
 		const_data: const_variable.result.cn,
 		language_name: const_variable.language_name,

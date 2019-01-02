@@ -27,14 +27,19 @@ router.get("/:cid", async (req, res) => {
 	const cid = parseInt(req.params.cid);
 	const sql = `SELECT
         users.user_id,users.nick,users.avatar,solution.result,solution.num,
-        solution.in_date,solution.fingerprint,solution.fingerprintRaw
+        solution.in_date,solution.fingerprint,solution.fingerprintRaw,solution.ip,
+        sim.sim
         FROM
         (select * from solution where solution.contest_id=? 
         and num>=0 and problem_id>0) solution
         left join users
         on users.user_id=solution.user_id 
+        left join sim
+        on sim.s_id = solution.solution_id
         union all 
-        select users.user_id,users.nick,users.avatar,vsol.result,vsol.num,vsol.in_date,'' as fingerprint,'' as fingerprintRaw
+        select users.user_id,users.nick,users.avatar,vsol.result,vsol.num,vsol.in_date,'' as fingerprint,'' as fingerprintRaw,
+        null as sim,
+        vsol.ip
         from
         (select * from 
         vjudge_solution where vjudge_solution.contest_id=? 

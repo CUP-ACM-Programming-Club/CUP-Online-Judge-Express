@@ -1,15 +1,16 @@
 {
-  "name"        : "CUP Online Judge Express", 
-  "script"      : "./bin/main.js",  
-  "cwd"         : "./", 
-  "watch": [  
+  "name"        : "CUP Online Judge Express",
+  "script"      : "./bin/main.js",
+  "exec_mode"   : "fork",
+  "cwd"         : "./",
+  "watch": [
     "bin",
     "routers",
     "module",
     "middleware",
     "views"
   ],
-  "ignore_watch" : [  
+  "ignore_watch" : [
     "node_modules",
     "logs",
     "static"
@@ -17,9 +18,9 @@
   "watch_options": {
     "followSymlinks": false
   },
-  "error_file" : "./logs/app-err.log", 
-  "out_file"   : "./logs/app-out.log", 
+  "error_file" : "./logs/app-err.log",
+  "out_file"   : "./logs/app-out.log",
   "env": {
-    "NODE_ENV": "production"  
+    "NODE_ENV": "production"
   }
 }

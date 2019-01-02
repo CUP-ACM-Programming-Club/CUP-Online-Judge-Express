@@ -23,7 +23,7 @@ const check = async (req, res, cid) => {
 	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
 	const start_time = dayjs(contest[0].start_time);
 	const now = dayjs();
-	const privilege = req.session.isadmin || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
 	if(global.contest_mode) {
 		if(!privilege) {
 			if(contest[0].cmod_visible === 0) {
@@ -32,15 +32,21 @@ const check = async (req, res, cid) => {
 			}
 		}
 	}
-	if(!privilege) {
-		if (contest[0].private === 1) {
+	// req.session.contest[`c${cid}`]
+	if (privilege) {
+		return contest;
+	}
+	if (start_time.isAfter(now)) {
+		res.json(error.contestNotStart);
+		return false;
+	}
+	else if (parseInt(contest[0].private) === 1) {
+		if(req.session.contest[`c${cid}`]) {
+			return contest;
+		}
+		else {
 			res.json(error.noprivilege);
 			return false;
-		} else if (start_time.isAfter(now)) {
-			res.json(error.contestNotStart);
-			return false;
-		} else {
-			return contest;
 		}
 	}
 	else {
