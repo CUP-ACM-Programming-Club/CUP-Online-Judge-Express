@@ -141,7 +141,7 @@ const send_file = (req, res, data, filename) => {
 			"Content-disposition": "attachment;filename=" + filename + ".rpk",
 			"Content-Length": result.length
 		});
-		res.end(new Buffer(result, "binary"));
+		res.end(Buffer.from(result, "binary"));
 	});
 };
 

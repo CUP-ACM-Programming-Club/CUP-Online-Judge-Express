@@ -370,10 +370,10 @@ router.get("/:source/", async function (req, res) {
 				uploader: await checkUploader(id)
 			});
 		} else {
-			const _end_time = await cache_query(`select end_time from contest where contest_id in (select contest_id from contest_problem
+			const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
 		 where problem_id = ?)`, [id]);
 			if (_end_time.length > 0) {
-				const end_time = dayjs(_end_time[0]);
+				const end_time = dayjs(_end_time[0].t * 1000);
 				if (dayjs().isBefore(end_time)) {
 					res.json(error.problemInContest);
 				} else {

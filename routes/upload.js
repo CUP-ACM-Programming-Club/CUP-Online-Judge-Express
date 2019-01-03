@@ -120,7 +120,7 @@ const writeFiles = async (_path, files) => {
 
 const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 	for (let i of files) {
-		const content = new Buffer(i.content, "base64").toString();
+		const content = Buffer.from(i.content, "base64").toString();
 		const language = JSON.stringify(convertLanguage(i.name));
 		let prepend_code = prepend.find((el) => JSON.stringify(convertLanguage(el.name)) === language) || "";
 		let append_code = append.find((el) => JSON.stringify(convertLanguage(el.name)) === language) || "";
