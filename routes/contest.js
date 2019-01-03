@@ -24,18 +24,25 @@ const check = async (req, res, cid) => {
 	const start_time = dayjs(contest[0].start_time);
 	const now = dayjs();
 	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
+	if (privilege) {
+		return contest;
+	}
 	if(global.contest_mode) {
 		if(!privilege) {
-			if(contest[0].cmod_visible === 0) {
+			if(parseInt(contest[0].cmod_visible) === 0) {
 				res.json(error.contestMode);
 				return false;
 			}
 		}
 	}
-	// req.session.contest[`c${cid}`]
-	if (privilege) {
-		return contest;
+	else {
+		if(parseInt(contest[0].cmod_visible) === 1) {
+			res.json(error.contestMode);
+			return false;
+		}
 	}
+	// req.session.contest[`c${cid}`]
+
 	if (start_time.isAfter(now)) {
 		res.json(error.contestNotStart);
 		return false;
