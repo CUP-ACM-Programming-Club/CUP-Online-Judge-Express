@@ -2,7 +2,53 @@ const express = require("express");
 
 const router = express.Router();
 const query = require("../module/mysql_cache");
+const dayjs = require("dayjs");
+const cache_query = query;
 const auth = require("../middleware/auth");
+const [error] = require("../module/const_var");
+
+const check = async (req, res, cid) => {
+	if (cid < 1000) {
+		res.json(error.invalidParams);
+		return false;
+	}
+	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+	const start_time = dayjs(contest[0].start_time);
+	const now = dayjs();
+	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
+	if (privilege) {
+		return contest;
+	}
+	if (global.contest_mode) {
+		if (!privilege) {
+			if (parseInt(contest[0].cmod_visible) === 0) {
+				res.json(error.contestMode);
+				return false;
+			}
+		}
+	} else {
+		if (parseInt(contest[0].cmod_visible) === 1) {
+			res.json(error.contestMode);
+			return false;
+		}
+	}
+	// req.session.contest[`c${cid}`]
+	console.log(contest);
+	if (start_time.isAfter(now)) {
+		res.json(error.contestNotStart);
+		return false;
+	} else if (parseInt(contest[0].private) === 1) {
+		if (req.session.contest[`c${cid}`]) {
+			return contest;
+		} else {
+			res.json(error.noprivilege);
+			return false;
+		}
+	} else {
+		return contest;
+	}
+};
+
 
 router.get("/:cid", (req, res, next) => {
 	const cid = isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
@@ -11,20 +57,21 @@ router.get("/:cid", (req, res, next) => {
 			status: "error",
 			statement: "contest_id is not a number"
 		});
-	}
-	else if (cid < 1000) {
+	} else if (cid < 1000) {
 		res.json({
 			status: "error",
 			statement: "contest_id invalid"
 		});
-	}
-	else {
+	} else {
 		next();
 	}
 });
 
 router.get("/:cid", async (req, res) => {
 	const cid = parseInt(req.params.cid);
+	if (!await check(req, res, cid)) {
+		return;
+	}
 	const sql = `SELECT
         users.user_id,users.nick,users.avatar,solution.result,solution.num,
         solution.in_date,solution.fingerprint,solution.fingerprintRaw,solution.ip,
@@ -60,8 +107,7 @@ left join users on users.user_id = t.user_id`;
 				status: "error",
 				statement: "no such contest"
 			});
-		}
-		else {
+		} else {
 			res.json({
 				status: "OK",
 				data: result[0],

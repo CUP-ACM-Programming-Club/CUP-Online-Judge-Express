@@ -17,15 +17,83 @@ const DAYS = 24 * HOURS;
 const WEEKS = 7 * DAYS;
 const MONTH = 30 * DAYS;
 const YEARS = 365 * DAYS;
+const NOT_EQUAL = 1;
+const EQUAL = 0;
+const LESS_OR_EQUAL = 2;
+const GREATER_OR_EQUAL = 3;
+const GREATER = 4;
+const LESSER = 5;
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
 	let where_sql = "";
 	let sql_arr = [];
 	for (let i in request_query) {
-		if (typeof request_query[i] !== "undefined" && typeof request_query[i] !== "boolean") {
+		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
+			continue;
+		}
+		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
+		}
+		else if(typeof request_query[i] === "object") {
+			const ele = request_query[i];
+			if(ele.length) {
+				for(let val of ele) {
+					if(!val) {
+						continue;
+					}
+					if (typeof val === "string" || typeof val === "number") {
+						where_sql += ` and ${i} = ?`;
+						sql_arr.push(val);
+					}
+					else if (val.type === NOT_EQUAL) {
+						where_sql += ` and ${i} != ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === EQUAL) {
+						where_sql += ` and ${i} = ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === LESS_OR_EQUAL) {
+						where_sql += ` and ${i} <= ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === LESSER) {
+						where_sql += ` and ${i} < ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === GREATER) {
+						where_sql += ` and ${i} > ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === GREATER_OR_EQUAL) {
+						where_sql += ` and ${i} >= ?`;
+						sql_arr.push(val.value);
+					} else {
+						// do nothing
+					}
+
+				}
+			}
+			else {
+				if (ele.type === NOT_EQUAL) {
+					where_sql += ` and ${i} != ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === EQUAL) {
+					where_sql += ` and ${i} = ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === LESS_OR_EQUAL) {
+					where_sql += ` and ${i} <= ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === LESSER) {
+					where_sql += ` and ${i} < ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === GREATER) {
+					where_sql += ` and ${i} > ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === GREATER_OR_EQUAL) {
+					where_sql += ` and ${i} >= ?`;
+					sql_arr.push(ele.value);
+				} else {
+					// do nothing
+				}
+			}
 		}
 	}
 
@@ -46,7 +114,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		}
 	}
 	let _end = false;
-	const browser_privilege = (req.session.isadmin || req.session.source_browser) && request_query.privilege;
+	const browser_privilege = req.session.isadmin || req.session.source_browser;
 
 	if (browser_privilege) {
 		if (request_query.contest_id) {
@@ -211,12 +279,12 @@ async function getGraphData(req, res, request_query = {}) {
 				let diff_time = timediff(start_time, new Date(Math.min(new Date(), end_time)));
 
 				const diffMilliseconds = diff_time.years * YEARS
-                    + diff_time.months * MONTH
-                    + diff_time.weeks * WEEKS
-                    + diff_time.days * DAYS
-                    + diff_time.minutes * MINUTES
-                    + diff_time.seconds * SECONDS
-                    + diff_time.milliseconds;
+					+ diff_time.months * MONTH
+					+ diff_time.weeks * WEEKS
+					+ diff_time.days * DAYS
+					+ diff_time.minutes * MINUTES
+					+ diff_time.seconds * SECONDS
+					+ diff_time.milliseconds;
 				if (diffMilliseconds > 10 * MONTH) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
@@ -509,12 +577,11 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 		});
 	} else {
 		await get_status(req, res, next, {
-			problem_id: problem_id,
+			problem_id: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
 			user_id: user_id,
 			language: language,
 			result: result,
-			sim: !!sim,
-			privilege: !!privilege
+			sim: !!sim
 		}, limit);
 	}
 });
@@ -541,13 +608,12 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	await get_status(req, res, next, {
-		num: problem_id,
+		num: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
 		user_id: user_id,
 		language: language,
-		result: result,
+		result:  result,
 		contest_id: contest_id,
-		sim: !!sim,
-		privilege: !!privilege
+		sim: !!sim
 	}, limit);
 });
 
