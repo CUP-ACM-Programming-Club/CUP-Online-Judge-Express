@@ -17,18 +17,47 @@ const DAYS = 24 * HOURS;
 const WEEKS = 7 * DAYS;
 const MONTH = 30 * DAYS;
 const YEARS = 365 * DAYS;
+const NOT_EQUAL = 1;
+const EQUAL = 0;
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
 	let where_sql = "";
 	let sql_arr = [];
 	for (let i in request_query) {
-		if (typeof request_query[i] !== "undefined" && typeof request_query[i] !== "boolean") {
+		if (typeof request_query[i] === "string") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
 		}
+		else if(typeof request_query[i] === "object") {
+			const ele = request_query[i];
+			if(ele.length) {
+				console.log(ele);
+				for(let val of ele) {
+					if(!val) {
+						continue;
+					}
+					if (val.type === NOT_EQUAL) {
+						where_sql += ` and ${i} != ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === EQUAL) {
+						where_sql += ` and ${i} = ?`;
+						sql_arr.push(val.value);
+					}
+				}
+			}
+			else {
+				if (ele.type === NOT_EQUAL) {
+					where_sql += ` and ${i} != ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === EQUAL) {
+					where_sql += ` and ${i} = ?`;
+					sql_arr.push(ele.value);
+				}
+			}
+		}
 	}
-
+	console.log(where_sql);
 	let pre_sim = "", end_sim = "";
 
 	if(request_query.sim) {
@@ -211,12 +240,12 @@ async function getGraphData(req, res, request_query = {}) {
 				let diff_time = timediff(start_time, new Date(Math.min(new Date(), end_time)));
 
 				const diffMilliseconds = diff_time.years * YEARS
-                    + diff_time.months * MONTH
-                    + diff_time.weeks * WEEKS
-                    + diff_time.days * DAYS
-                    + diff_time.minutes * MINUTES
-                    + diff_time.seconds * SECONDS
-                    + diff_time.milliseconds;
+					+ diff_time.months * MONTH
+					+ diff_time.weeks * WEEKS
+					+ diff_time.days * DAYS
+					+ diff_time.minutes * MINUTES
+					+ diff_time.seconds * SECONDS
+					+ diff_time.milliseconds;
 				if (diffMilliseconds > 10 * MONTH) {
 					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
   												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
@@ -485,6 +514,65 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", as
 		user_id: user_id,
 		language: language,
 		result: result,
+		contest_id: contest_id,
+		sim: !!sim
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", async function (req, res, next) {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	if (isNaN(problem_id) && problem_id !== undefined) {
+		res.json({
+			result: result,
+			const_list: const_name,
+			self: req.session.user_id,
+			isadmin: req.session.isadmin,
+			browse_code: req.session.source_browser,
+			end: false
+		});
+	} else {
+		await get_status(req, res, next, {
+			problem_id: problem_id,
+			user_id: user_id,
+			language: language,
+			result: [result, privilege ? {type:NOT_EQUAL, value: 13}:undefined],
+			sim: !!sim
+		}, limit);
+	}
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
+	let problem_id;
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			problem_id = undefined;
+		} else {
+			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	} else {
+		problem_id = parseInt(req.params.problem_id);
+	}
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		num: problem_id,
+		user_id: user_id,
+		language: language,
+		result:  [result, privilege ? {type:NOT_EQUAL, value: 13}:undefined],
 		contest_id: contest_id,
 		sim: !!sim
 	}, limit);
