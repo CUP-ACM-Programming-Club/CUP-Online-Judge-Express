@@ -19,6 +19,10 @@ const MONTH = 30 * DAYS;
 const YEARS = 365 * DAYS;
 const NOT_EQUAL = 1;
 const EQUAL = 0;
+const LESS_OR_EQUAL = 2;
+const GREATER_OR_EQUAL = 3;
+const GREATER = 4;
+const LESSER = 5;
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
@@ -39,13 +43,32 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 					if(!val) {
 						continue;
 					}
-					if (val.type === NOT_EQUAL) {
+					if (typeof val === "string" || typeof val === "number") {
+						where_sql += ` and ${i} = ?`;
+						sql_arr.push(val);
+					}
+					else if (val.type === NOT_EQUAL) {
 						where_sql += ` and ${i} != ?`;
 						sql_arr.push(val.value);
 					} else if (val.type === EQUAL) {
 						where_sql += ` and ${i} = ?`;
 						sql_arr.push(val.value);
+					} else if (val.type === LESS_OR_EQUAL) {
+						where_sql += ` and ${i} <= ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === LESSER) {
+						where_sql += ` and ${i} < ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === GREATER) {
+						where_sql += ` and ${i} > ?`;
+						sql_arr.push(val.value);
+					} else if (val.type === GREATER_OR_EQUAL) {
+						where_sql += ` and ${i} >= ?`;
+						sql_arr.push(val.value);
+					} else {
+						// do nothing
 					}
+
 				}
 			}
 			else {
@@ -55,6 +78,20 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 				} else if (ele.type === EQUAL) {
 					where_sql += ` and ${i} = ?`;
 					sql_arr.push(ele.value);
+				} else if (ele.type === LESS_OR_EQUAL) {
+					where_sql += ` and ${i} <= ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === LESSER) {
+					where_sql += ` and ${i} < ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === GREATER) {
+					where_sql += ` and ${i} > ?`;
+					sql_arr.push(ele.value);
+				} else if (ele.type === GREATER_OR_EQUAL) {
+					where_sql += ` and ${i} >= ?`;
+					sql_arr.push(ele.value);
+				} else {
+					// do nothing
 				}
 			}
 		}
@@ -540,10 +577,10 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 		});
 	} else {
 		await get_status(req, res, next, {
-			problem_id: problem_id,
+			problem_id: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
 			user_id: user_id,
 			language: language,
-			result: [result, privilege ? {type:NOT_EQUAL, value: 13}:undefined],
+			result: result,
 			sim: !!sim
 		}, limit);
 	}
@@ -571,10 +608,10 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	await get_status(req, res, next, {
-		num: problem_id,
+		num: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
 		user_id: user_id,
 		language: language,
-		result:  [result, privilege ? {type:NOT_EQUAL, value: 13}:undefined],
+		result:  result,
 		contest_id: contest_id,
 		sim: !!sim
 	}, limit);
