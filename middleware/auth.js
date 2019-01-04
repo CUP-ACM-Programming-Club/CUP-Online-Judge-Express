@@ -1,6 +1,7 @@
 const [error] = require("../module/const_var");
 const client = require("../module/redis");
 const contest_mode = require("./contest_mode");
+const ban_check = require("./ban_check");
 module.exports = async (req, res, next) => {
 	if (process.env.NODE_ENV === "local") {
 		if (!req.session.auth) {
@@ -14,6 +15,10 @@ module.exports = async (req, res, next) => {
 		//req.cookies is an object
 		const token = original_cookie["token"];
 		const user_id = original_cookie["user_id"];
+		if(user_id === "2017011714") {
+			req.session.destroy();
+			return;
+		}
 		//get token and user_id from cookie
 		if (typeof user_id === "string") {//whether user_id is string or not,maybe it is an undefined variable
 			//const original_token = await memcache.get(user_id + "token");
@@ -22,7 +27,7 @@ module.exports = async (req, res, next) => {
 				// if (token === original_token) {//check token
 				const login_action = require("../module/login_action");
 				await login_action(req, user_id);
-				return contest_mode(req, res, next);
+				return await ban_check(req, res,await contest_mode(req, res, next));
 			}
 			else {
 				return res.json(error.nologin);
@@ -34,6 +39,6 @@ module.exports = async (req, res, next) => {
 
 	}
 	else {
-		return contest_mode(req, res, next);
+		return await ban_check(req, res,await contest_mode(req, res, next));
 	}
 };
