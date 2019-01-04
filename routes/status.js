@@ -46,7 +46,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		}
 	}
 	let _end = false;
-	const browser_privilege = req.session.isadmin || req.session.source_browser;
+	const browser_privilege = (req.session.isadmin || req.session.source_browser) && request_query.privilege;
 
 	if (browser_privilege) {
 		if (request_query.contest_id) {
@@ -487,6 +487,67 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", as
 		result: result,
 		contest_id: contest_id,
 		sim: !!sim
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", async function (req, res, next) {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	if (isNaN(problem_id) && problem_id !== undefined) {
+		res.json({
+			result: result,
+			const_list: const_name,
+			self: req.session.user_id,
+			isadmin: req.session.isadmin,
+			browse_code: req.session.source_browser,
+			end: false
+		});
+	} else {
+		await get_status(req, res, next, {
+			problem_id: problem_id,
+			user_id: user_id,
+			language: language,
+			result: result,
+			sim: !!sim,
+			privilege: !!privilege
+		}, limit);
+	}
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
+	let problem_id;
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			problem_id = undefined;
+		} else {
+			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	} else {
+		problem_id = parseInt(req.params.problem_id);
+	}
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		num: problem_id,
+		user_id: user_id,
+		language: language,
+		result: result,
+		contest_id: contest_id,
+		sim: !!sim,
+		privilege: !!privilege
 	}, limit);
 });
 
