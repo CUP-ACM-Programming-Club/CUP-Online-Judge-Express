@@ -75,7 +75,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		}
 	}
 	let _end = false;
-	const browser_privilege = req.session.isadmin || req.session.source_browser;
+	const browser_privilege = (req.session.isadmin || req.session.source_browser) && request_query.privilege;
 
 	if (browser_privilege) {
 		if (request_query.contest_id) {
