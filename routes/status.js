@@ -57,7 +57,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			}
 		}
 	}
-	console.log(where_sql);
+
 	let pre_sim = "", end_sim = "";
 
 	if(request_query.sim) {
