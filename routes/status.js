@@ -25,14 +25,16 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let where_sql = "";
 	let sql_arr = [];
 	for (let i in request_query) {
-		if (typeof request_query[i] === "string") {
+		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
+			continue;
+		}
+		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
 		}
 		else if(typeof request_query[i] === "object") {
 			const ele = request_query[i];
 			if(ele.length) {
-				console.log(ele);
 				for(let val of ele) {
 					if(!val) {
 						continue;
