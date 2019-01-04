@@ -25,7 +25,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let where_sql = "";
 	let sql_arr = [];
 	for (let i in request_query) {
-		if (typeof request_query[i] === "string") {
+		if (typeof request_query[i] === "string" || typeof request_query[i] === "int") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
 		}
