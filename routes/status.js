@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+const ENVIRONMENT = process.env.NODE_ENV;
+const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
 const express = require("express");
 const router = express.Router();
 const query = require("../module/mysql_query");
@@ -35,19 +37,17 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
 			where_sql += ` and ${i} = ?`;
 			sql_arr.push(request_query[i]);
-		}
-		else if(typeof request_query[i] === "object") {
+		} else if (typeof request_query[i] === "object") {
 			const ele = request_query[i];
-			if(ele.length) {
-				for(let val of ele) {
-					if(!val) {
+			if (ele.length) {
+				for (let val of ele) {
+					if (!val) {
 						continue;
 					}
 					if (typeof val === "string" || typeof val === "number") {
 						where_sql += ` and ${i} = ?`;
 						sql_arr.push(val);
-					}
-					else if (val.type === NOT_EQUAL) {
+					} else if (val.type === NOT_EQUAL) {
 						where_sql += ` and ${i} != ?`;
 						sql_arr.push(val.value);
 					} else if (val.type === EQUAL) {
@@ -70,8 +70,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 					}
 
 				}
-			}
-			else {
+			} else {
 				if (ele.type === NOT_EQUAL) {
 					where_sql += ` and ${i} != ?`;
 					sql_arr.push(ele.value);
@@ -99,23 +98,25 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 
 	let pre_sim = "", end_sim = "";
 
-	if(request_query.sim) {
-		if(request_query.user_id) {
+	if (request_query.sim) {
+		if (request_query.user_id) {
 			let user_id_sql = "";
 			if (request_query.user_id) {
 				user_id_sql = " where s_user_id = ?";
 				sql_arr.push(request_query.user_id);
 			}
 			where_sql += ` and solution_id in (select s_id as solution_id from sim${user_id_sql})`;
-		}
-		else {
+		} else {
 			pre_sim = "select * from(";
 			end_sim = ")t where sim is not null";
 		}
 	}
 	let _end = false;
 	const browser_privilege = req.session.isadmin || req.session.source_browser;
-
+	if (TEST_MODE) {
+		console.log("where_sql", where_sql);
+		console.log("sql_arr", sql_arr);
+	}
 	if (browser_privilege) {
 		if (request_query.contest_id) {
 			sql_arr.push(...sql_arr);
@@ -476,7 +477,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
-	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
 	if (isNaN(req.params.problem_id)) {
@@ -532,7 +533,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", as
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
-	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
 	if (isNaN(req.params.problem_id)) {
@@ -577,7 +578,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 		});
 	} else {
 		await get_status(req, res, next, {
-			problem_id: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
+			problem_id: [problem_id, privilege ? {type: GREATER, value: 0} : undefined],
 			user_id: user_id,
 			language: language,
 			result: result,
@@ -588,10 +589,13 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
 	let problem_id;
+	if (TEST_MODE) {
+		console.log("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege");
+	}
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
 	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
-	if(typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
 	if (isNaN(req.params.problem_id)) {
@@ -608,10 +612,11 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	await get_status(req, res, next, {
-		num: [problem_id,privilege ?{type:GREATER, value: 0}:undefined],
+		num: [problem_id],
+		problem_id: [privilege ? {type: GREATER, value: 0} : undefined],
 		user_id: user_id,
 		language: language,
-		result:  result,
+		result: result,
 		contest_id: contest_id,
 		sim: !!sim
 	}, limit);
