@@ -182,6 +182,18 @@ module.exports = async function (req, data, cookie) {
 		}
 		Object.assign(req, obj);
 	}
+	if(!data) {
+		return {
+			status: "error",
+			statement: "submission invalid!"
+		};
+	}
+	else if(data.source && data.source.length > 64 * 1024) {
+		return {
+			status: "error",
+			statement: "Your code is too long!"
+		};
+	}
 	let submission_type = 0;
 	if (data.type === "problem") {
 		submission_type = NORMAL_SUBMISSION;
