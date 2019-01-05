@@ -7,22 +7,29 @@ const [error, ok] = require("../../module/const_var");
 
 
 router.get("/", async (req, res) => {
-	if (req.session.isadmin) {
-		const data = await cache_query("select * from ban_user");
+	const data = await cache_query("select * from ban_user");
+	res.json({
+		status: "OK",
+		data
+	});
+});
+
+router.get("/:user_id", async (req, res) => {
+	try {
+		const user_id = req.params.user_id;
+		const data = await cache_query("select * from ban_user where user_id = ?", [user_id]);
 		res.json({
 			status: "OK",
 			data
 		});
-	} else {
-		res.json(error.noprivilege);
+	} catch (e) {
+		console.log(e);
+		res.json(error.database);
 	}
 });
 
+
 router.post("/", async (req, res) => {
-	if (!req.session.isadmin) {
-		res.json(error.noprivilege);
-		return;
-	}
 	try {
 		let user_id = req.body.user_id;
 		let datetime = req.body.date;
