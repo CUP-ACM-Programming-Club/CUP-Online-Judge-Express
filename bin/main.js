@@ -3,11 +3,13 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 const config = global.config = require("../config.json");
 const app = require("../app");
+
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
+require("../module/init/express_loader")(app, io);
 const port = process.env.PORT || config.ws.client_port;
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
