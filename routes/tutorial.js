@@ -46,6 +46,16 @@ const checkOwner = async (solution_id, req) => {
 	return user_id === req.session.user_id;
 };
 
+const checkTutorialOwner = async (tutorial_id, req) => {
+	const _data = await cache_query("select user_id from tutorial where tutorial_id = ?", [tutorial_id]);
+	if (!_data || _data.length <= 0) {
+		console.log("false 1");
+		return false;
+	}
+	const user_id = _data[0].user_id;
+	return user_id === req.session.user_id;
+};
+
 const getSourceProblemId = async (tutorial_id) => {
 	const _data = await cache_query("select source,problem_id from tutorial where tutorial_id = ?", [tutorial_id]);
 	if (_data && _data.length > 0) {
@@ -167,10 +177,16 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 		const solution_id = req.body.solution_id;
 		const sourceProblemId = await getSourceProblemId(tid);
 		const {source, problem_id} = sourceProblemId;
-		let sqlQuery = [checkSolutionId(solution_id, problem_id, source.toUpperCase() === "LOCAL", source), checkOwner(solution_id, req)];
+		let sqlQuery = [checkSolutionId(solution_id, problem_id, source.toUpperCase() === "LOCAL", source), checkOwner(solution_id, req), checkTutorialOwner(tid, req)];
 		const _data = await Promise.all(sqlQuery);
 		console.log(sqlQuery);
-		if (_data[0] && _data[1]) {
+		if (!_data[0] || !_data[1]){
+			res.json(error.solutionIdNotValid);
+		}
+		else if (!_data[2] && !req.session.isadmin){
+			res.json(error.noprivilege);
+		}
+		else {
 			cache_query(`update tutorial set content = ?,
         solution_id = ? where tutorial_id = ?`, [content, solution_id, tid])
 				.then(() => {
@@ -180,9 +196,6 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 					res.json(error.database);
 					console.log(err);
 				});
-		}
-		else {
-			res.json(error.solutionIdNotValid);
 		}
 	}
 	catch (e) {
