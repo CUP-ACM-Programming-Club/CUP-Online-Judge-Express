@@ -39,7 +39,7 @@ const checkSolutionId = async (solution_id, problem_id, local = true, source = "
 const checkOwner = async (solution_id, req) => {
 	const _data = await cache_query("select user_id from solution where solution_id = ?", [solution_id]);
 	if (!_data || _data.length <= 0) {
-		console.log("false 1");
+		console.log("checkOwner false");
 		return false;
 	}
 	const user_id = _data[0].user_id;
@@ -49,7 +49,7 @@ const checkOwner = async (solution_id, req) => {
 const checkTutorialOwner = async (tutorial_id, req) => {
 	const _data = await cache_query("select user_id from tutorial where tutorial_id = ?", [tutorial_id]);
 	if (!_data || _data.length <= 0) {
-		console.log("false 1");
+		console.log("checkTutorialOwner false");
 		return false;
 	}
 	const user_id = _data[0].user_id;
