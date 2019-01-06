@@ -1,5 +1,6 @@
 # CUP-Online-Judge-Express
 [![Build Status](https://travis-ci.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.svg?branch=master)](https://travis-ci.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express)
+[![](https://img.shields.io/github/license/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.svg)](https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express/blob/master/LICENSE)
 
 CUP Online Judge后端模块
 
@@ -22,7 +23,7 @@ CUP Online Judge后端模块
 ``npm stop``
 
 ### Run Program
-``npm test``
+``npm run front``
 
 ### Debug
 ``npm run debug``
