@@ -183,6 +183,9 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
 			for (let j in userArr[i]) {
+				if(userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
+					continue;
+				}
 				if (!privilege || userArr[i][j].privilege) {
 					userArr[i][j].emit(type, value);
 				}
@@ -190,6 +193,9 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
+			if(userArr[i].url && userArr[i].url.indexOf("monitor") !== -1) {
+				continue;
+			}
 			if (!privilege || userArr[i].privilege) {
 				userArr[i].emit(type, value);
 			}
