@@ -70,7 +70,7 @@ router.get("/:source/:id", async (req, res) => {
 left join users on users.user_id = tutorial.user_id
 left join solution on solution.solution_id = tutorial.solution_id
 left join source_code_user on source_code_user.solution_id = tutorial.solution_id 
-where tutorial.source = ? and tutorial.problem_id = ?`, [source, id]));
+where tutorial.source = ? and tutorial.problem_id = ? order by 'like' desc, dislike asc,tutorial.in_date desc`, [source, id]));
 	let data = await Promise.all(sqlQuery);
 	data = data[0];
 	if (data && data.length > 0) {
