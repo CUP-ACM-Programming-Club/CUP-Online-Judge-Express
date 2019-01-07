@@ -26,10 +26,8 @@ const GREATER_OR_EQUAL = 3;
 const GREATER = 4;
 const LESSER = 5;
 
-async function get_status(req, res, next, request_query = {}, limit = 0) {
-	let _res;
-	let where_sql = "";
-	let sql_arr = [];
+function generateSqlData(request_query) {
+	let where_sql = "",sql_arr = [];
 	for (let i in request_query) {
 		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
 			continue;
@@ -95,7 +93,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 			}
 		}
 	}
+	return [where_sql, sql_arr];
+}
 
+async function get_status(req, res, next, request_query = {}, limit = 0) {
+	let _res;
+	let [where_sql, sql_arr] = generateSqlData(request_query);
 	let pre_sim = "", end_sim = "";
 
 	if (request_query.sim) {
@@ -632,9 +635,6 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
 	let problem_id;
-	if (TEST_MODE) {
-		console.log("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege");
-	}
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
 	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);

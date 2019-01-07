@@ -128,24 +128,6 @@ class localJudger extends eventEmitter {
 		}
 	}
 
-	/**
-     * 启动查询数据库的轮询
-     * @param {Number} time 轮询事件间隔
-     * @returns {TypeError}
-     */
-
-	startLoopJudge(time = SECOND.ONE_SECOND) {
-		if (typeof time !== "number") {
-			return new TypeError("variable time must be a number");
-		}
-		if (this.isLooping()) {
-			this.stopLoopJudge();
-		}
-		this.loopingFlag = true;
-		this.loopJudgeFlag = setInterval(() => {
-			this.collectSubmissionFromDatabase();
-		}, time);
-	}
 
 	/**
      * 返回judger是否轮询拾取数据库数据
@@ -195,19 +177,15 @@ class localJudger extends eventEmitter {
 				runner_id:${runner_id}\n
 				`);
 				if (process.env.NODE_ENV === "test") {
-					console.error(`Fatal Error:\n
+					console.log(`Fatal Error:\n
 				solution_id:${solution_id}\n
 				runner_id:${runner_id}\n
 				`);
 				}
 			}
 		});
-		judger.stdout.on("data", () => {
-
-		});
-		judger.stderr.on("data", () => {
-
-		});
+		//judger.stdout.on("data", () => {});no use
+		//judger.stderr.on("data", () => {});no use
 	}
 
 	/**

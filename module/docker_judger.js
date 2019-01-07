@@ -195,7 +195,7 @@ class dockerJudger extends eventEmitter {
 	}
 
 	setSpecialJudge(file, language) {
-
+		// TODO:complete set special judge module in docker
 	}
 
 	setCustomInput(input) {

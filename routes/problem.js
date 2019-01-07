@@ -23,14 +23,8 @@ const auth = require("../middleware/auth");
 const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
-const [error] = require("../module/const_var");
+const [error, ok] = require("../module/const_var");
 
-const send_json = (res, val) => {
-	if (res !== null) {
-		res.header("Content-Type", "application/json");
-		res.json(val);
-	}
-};
 
 const checkEmpty = (str) => {
 	if (str === "" || str === null) {
@@ -113,7 +107,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				"           where solution.problem_id = contest_problem.problem_id)\n" +
 				"          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
-					send_json(res, Object.assign({
+					res.json(Object.assign({
 						problem: packed_problem,
 						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
 						isadmin: req.session.isadmin,
@@ -122,7 +116,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 					}, copyVal));
 				});
 		} else {
-			send_json(res, Object.assign({
+			res.json(Object.assign({
 				problem: packed_problem,
 				source: "",
 				isadmin: req.session.isadmin,
@@ -136,29 +130,21 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			status: "error",
 			statement: "problem not found or not a public problem"
 		};
-		send_json(res, obj);
+		res.json(obj);
 	}
 };
 
-const no_privilege = {
-	status: "error",
-	statement: "Permission Denied"
-};
 
 router.get("/module/search/:val", function (req, res) {
 	const val = "%" + req.params.val + "%";
 	const _res = cache.get("/module/search/" + req.session.isadmin + val);
 	if (_res === undefined) {
 		if (val.length < 3) {
-			const obj = {
-				msg: "ERROR",
-				statement: "Value too short!"
-			};
-			send_json(res, obj);
+			res.json(error.errorMaker("Value too short!"));
 			return;
 		}
-		query("SELECT * FROM problem WHERE " + (req.session.isadmin ? "" : " defunct='N' AND") +
-			" problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?", [val, val, val, val, val], function (rows) {
+		query(`SELECT * FROM problem WHERE ${(req.session.isadmin ? "" : " defunct='N' AND")} 
+			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [val, val, val, val, val], function (rows) {
 			for (let i in rows) {
 				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
 				rows[i].source = cheerio.load(rows[i].source).text();
@@ -166,11 +152,11 @@ router.get("/module/search/:val", function (req, res) {
 			const result = {
 				items: rows
 			};
-			send_json(res, result);
+			res.json(result);
 			cache.set("/module/search/" + req.session.isadmin + val, result, 10 * 24 * 60 * 60);
 		});
 	} else {
-		send_json(res, _res);
+		res.json(_res);
 	}
 });
 
@@ -182,11 +168,7 @@ router.get("/:source/:id", function (req, res, next) {
 		next("route");
 	}
 }, function (req, res) {
-	const errmsg = {
-		status: "error",
-		statement: "invalid parameter id"
-	};
-	send_json(res, errmsg);
+	res.json(error.invalidParams);
 });
 
 router.get("/:source/:id/:sid", function (req, res, next) {
@@ -198,11 +180,7 @@ router.get("/:source/:id/:sid", function (req, res, next) {
 		next("route");
 	}
 }, function (req, res) {
-	const errmsg = {
-		status: "error",
-		statement: "invalid parameter id or sid"
-	};
-	send_json(res, errmsg);
+	res.json(error.invalidParams);
 });
 
 const make_cache = async (res, req, opt = {
@@ -283,18 +261,22 @@ router.get("/:source/:id", function (req, res) {
 	if (_res === undefined) {
 		make_cache(res, req, {problem_id: id, source: source});
 	} else {
-		send_json(res, _res);
+		res.json(_res);
 		make_cache(null, req, {problem_id: id, source: source});
 	}
 });
 
+function queryValidate(val) {
+	let returnVal = {};
+	for(let i in val) {
+		returnVal[i] = val[i] === undefined ? -1 : val[i];
+	}
+	return returnVal;
+}
+
 router.get("/:source/", async function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
-	let cid = req.query.cid === undefined ? -1 : req.query.cid;
-	let tid = req.query.tid === undefined ? -1 : req.query.tid;
-	let pid = req.query.pid === undefined ? -1 : req.query.pid;
-	let id = req.query.id === undefined ? -1 : req.query.id;
-	let sid = req.query.sid === undefined ? -1 : req.query.sid;
+	let {cid, tid, pid, id, sid} = queryValidate(req.query);
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
 	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
@@ -372,30 +354,24 @@ router.get("/:source/", async function (req, res) {
 		} else {
 			const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
 		 where problem_id = ?)`, [id]);
+			const parseData = [res, req, {
+				problem_id: id,
+				source: source,
+				solution_id: sid,
+				raw: raw,
+				after_contest: true,
+				uploader: await checkUploader(id)
+			}];
 			if (_end_time.length > 0) {
 				const end_time = dayjs(_end_time[0].t * 1000);
 				if (dayjs().isBefore(end_time)) {
 					res.json(error.problemInContest);
 				} else {
-					make_cache(res, req, {
-						problem_id: id,
-						source: source,
-						solution_id: sid,
-						raw: raw,
-						after_contest: true,
-						uploader: await checkUploader(id)
-					});
+					make_cache(...parseData);
 
 				}
 			} else {
-				make_cache(res, req, {
-					problem_id: id,
-					source: source,
-					solution_id: sid,
-					raw: raw,
-					after_contest: true,
-					uploader: await checkUploader(id)
-				});
+				make_cache(...parseData);
 			}
 		}
 
@@ -491,63 +467,43 @@ router.post("/:source/:id", function (req, res) {
 						logger.fatal(err);
 					}
 				});
-			send_json(res, {
-				status: "OK"
-			});
+			res.json(ok.ok);
 		} catch (e) {
 			logger.fatal(e);
-			send_json(res, {
-				status: "error",
-				statement: "parse error"
-			});
+			res.json(error.errorMaker("parse error"));
 		}
 	} else {
-		send_json(res, {
-			status: "error",
-			statement: "illegal request"
-		});
+		res.json(error.errorMaker("illegal request"));
 	}
 });
 
-router.get("/:source/:id/:sid", function (req, res) {
+async function getSourceCode(req, res, obj, opt = {}) {
+	opt = Object.assign({prefix:"",id: 0, sid: 0, source:"LOCAL"}, opt);
+	let {id, sid, source, prefix} = opt;
+	const rows2 = await query(`SELECT source,user_id FROM ${prefix}source_code WHERE solution_id=?`, [sid]);
+	const user_id = rows2[0].user_id;
+	if (!req.session.isadmin && user_id !== req.session.user_id) {
+		res.json(error.noprivilege);
+	} else {
+		obj.code = rows2[0].source;
+		cache.set("source/id/" + source + id + "/" + sid, obj, 10 * 24 * 60 * 60);
+		res.json(obj);
+	}
+}
+
+router.get("/:source/:id/:sid", async function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
 	const sid = parseInt(req.params.sid);
 	const _res = cache.get("source/id/" + source + id + "/" + sid);
 	if (_res === undefined) {
 		if (source.length === 0) {
-			query("SELECT * FROM problem WHERE problem_id=?", [id]).then(async (rows) => {
-				await query("SELECT source,user_id FROM source_code WHERE solution_id=?", [sid]).then(async (rows2) => {
-					const user_id = rows2[0].user_id;
-					if (!req.session.isadmin && user_id !== req.session.user_id) {
-						send_json(res, no_privilege);
-					} else {
-						let obj = rows[0];
-						obj.code = rows2[0].source;
-						cache.set("source/id/" + source + id + "/" + sid, rows[0], 10 * 24 * 60 * 60);
-						send_json(res, obj);
-					}
-				});
-			});
+			await getSourceCode(req, res, await query("SELECT * FROM problem WHERE problem_id=?", [id])[0], {id, sid, source});
 		} else {
-			query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source])
-				.then(async (rows) => {
-					await query("SELECT source,user_id FROM vjudge_source_code WHERE solution_id=?", [sid])
-						.then(async (rows2) => {
-							const user_id = rows2[0].user_id;
-							if (!req.session.isadmin && user_id !== req.session.user_id) {
-								send_json(res, no_privilege);
-							} else {
-								let obj = rows[0];
-								obj.code = rows2[0].source;
-								cache.set("source/id/" + source + id + "/" + sid, rows[0], 10 * 24 * 60 * 60);
-								send_json(res, obj);
-							}
-						});
-				});
+			await getSourceCode(req, res, await query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source])[0], {id, sid, source, prefix: "vjudge_"});
 		}
 	} else {
-		send_json(res, _res);
+		res.json(_res);
 	}
 });
 

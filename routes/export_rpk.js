@@ -24,14 +24,7 @@ const readDir = async (dir) => {
 		append: [],
 		solution: []
 	};
-	const fileList = await new Promise((resolve, reject) => {
-		fs.readdir(dir, (err, res) => {
-			if (err) {
-				reject(err);
-			}
-			resolve(res);
-		});
-	});
+	const fileList = await fs.readdirAsync(dir);
 	fileList.forEach((name) => {
 		if (name.match(/\.in$/)) {
 			_dir.input.push(path.join(dir, name));

@@ -16,6 +16,7 @@
     "rules": {
         "no-console": "off",
         "no-useless-escape":0,
+        "consistent-return": "off",
         "indent": [
             "error",
             "tab"
