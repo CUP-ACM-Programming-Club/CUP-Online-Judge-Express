@@ -7,7 +7,7 @@ CUP Online Judge后端模块
 请使用git clone到本地安装
 
 ### Requirements
-
+* Ubuntu 16.04 or later(Recommend)
 * Node.js 10.0.0 or later
 * MySQL 5.7 or later
 * Redis latest

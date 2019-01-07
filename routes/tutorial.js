@@ -104,24 +104,40 @@ where tutorial.source = ? and tutorial.problem_id = ? order by 'like' desc, disl
 	});
 });
 
-router.get("/:tutorial_id", async (req, res) => {
+const getTutorialController = async (req, res, opt = {}) => {
 	try {
-		let tutorial_id = req.params.tutorial_id;
-
-		if (isNaN(tutorial_id)) {
+		let tutorial_id = opt.tid;
+		let sql = "select solution_id,content,tutorial_id,user_id,in_date,problem_id,source from tutorial ";
+		let sqlArr = [];
+		if(tutorial_id) {
+			sql += " where tutorial_id = ?";
+			sqlArr.push(tutorial_id);
+		}
+		else {
+			sql += " order by tutorial_id desc";
+		}
+		if (typeof tutorial_id !== "undefined" && isNaN(tutorial_id)) {
 			res.json(error.invalidParams);
 			return;
 		}
 
-		const _data = await cache_query("select solution_id,content from tutorial where tutorial_id = ?", [tutorial_id]);
+		const _data = await cache_query(sql, sqlArr);
 		if (_data && _data.length > 0) {
-			res.json({
-				status: "OK",
-				data: {
-					solution_id: _data[0].solution_id,
-					content: _data[0].content
-				}
-			});
+			if(_data.length === 1) {
+				res.json({
+					status: "OK",
+					data: {
+						solution_id: _data[0].solution_id,
+						content: _data[0].content
+					}
+				});
+			}
+			else {
+				res.json({
+					status: "OK",
+					data: _data
+				});
+			}
 		}
 		else {
 			res.json({
@@ -137,6 +153,14 @@ router.get("/:tutorial_id", async (req, res) => {
 		res.json(error.database);
 		console.log(e);
 	}
+};
+
+router.get("/:tutorial_id", async (req, res) => {
+	getTutorialController(req, res, {tid:req.params.tutorial_id});
+});
+
+router.get("/", async (req, res) => {
+	getTutorialController(req, res);
 });
 
 router.post("/new/:source/:id", async (req, res) => {
