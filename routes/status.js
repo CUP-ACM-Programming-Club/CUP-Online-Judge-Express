@@ -287,136 +287,178 @@ async function getGraphData(req, res, request_query = {}) {
 					+ diff_time.seconds * SECONDS
 					+ diff_time.milliseconds;
 				if (diffMilliseconds > 10 * MONTH) {
-					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
-												FROM solution
-												WHERE contest_id = ?
-												GROUP BY YEAR(in_date),MONTH(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
-												FROM vjudge_solution
-												WHERE contest_id = ?
-												GROUP BY YEAR(in_date),MONTH(in_date)) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
-												FROM solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY YEAR(in_date),MONTH(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
-												FROM vjudge_solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY YEAR(in_date),MONTH(in_date)) accept
-												ON sub.year = accept.year AND sub.month = accept.month`,
+					const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
+                                                      FROM (SELECT count(1) as cnt,YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month
+                                                            FROM solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY YEAR(in_date),MONTH(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month
+                                                            FROM vjudge_solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY YEAR(in_date),MONTH(in_date)) sub
+                                                             LEFT JOIN
+                                                           (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
+                                                            FROM solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY YEAR(in_date),MONTH(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
+                                                            FROM vjudge_solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY YEAR(in_date),MONTH(in_date)) accept
+                                                           ON sub.year = accept.year AND sub.month = accept.month`,
 					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result: result,
 						label: ["year", "month"]
 					});
 				} else if (diffMilliseconds > 12 * DAYS) {
-					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
-												FROM solution
-												WHERE contest_id = ?
-												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
-												FROM vjudge_solution
-												WHERE contest_id = ?
-												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
-												FROM solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month, DATE_FORMAT(in_date,"%d") as day
-												FROM vjudge_solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY MONTH(in_date),DATE_FORMAT(in_date,"%d")) accept
-												ON sub.month = accept.month AND sub.day = accept.day AND sub.year = accept.year
-												ORDER BY sub.year,sub.month,sub.day`,
+					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.cnt as submit,accept.cnt as accepted
+                                                      FROM (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day
+                                                            FROM solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day
+                                                            FROM vjudge_solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")) sub
+                                                             LEFT JOIN
+                                                           (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day
+                                                            FROM solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day
+                                                            FROM vjudge_solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")) accept
+                                                           ON sub.month = accept.month AND sub.day = accept.day AND
+                                                              sub.year = accept.year
+                                                      ORDER BY sub.year,sub.month,sub.day`,
 					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result: result,
 						label: ["month", "day"]
 					});
 				} else if (diffMilliseconds > 12 * HOURS) {
-					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
-												FROM solution
-												WHERE contest_id = ?
-												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
-												FROM vjudge_solution
-												WHERE contest_id = ?
-												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
-												FROM solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month,DATE_FORMAT(in_date,"%d") as day, HOUR(in_date) as hour
-												FROM vjudge_solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY DATE_FORMAT(in_date,"%d"),HOUR(in_date)) accept
-												ON sub.day = accept.day AND sub.hour = accept.hour AND sub.year = accept.year AND sub.month = accept.month`,
+					const result = await cache_query(`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted
+                                                      FROM (SELECT count(1) as cnt,
+                                                                   YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day,
+                                                                   HOUR(in_date) as hour
+                                                            FROM solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,
+                                                                   YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day,
+                                                                   HOUR(in_date) as hour
+                                                            FROM vjudge_solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)) sub
+                                                             LEFT JOIN
+                                                           (SELECT count(1) as cnt,
+                                                                   YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day,
+                                                                   HOUR(in_date) as hour
+                                                            FROM solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,
+                                                                   YEAR(in_date) as year,
+                                                                   MONTH(in_date) as month,
+                                                                   DATE_FORMAT(in_date, "%d") as day,
+                                                                   HOUR(in_date) as hour
+                                                            FROM vjudge_solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)) accept
+                                                           ON sub.day = accept.day AND sub.hour = accept.hour AND
+                                                              sub.year = accept.year AND sub.month = accept.month`,
 					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result: result,
 						label: ["day", "hour"]
 					});
 				} else if (diffMilliseconds > 12 * MINUTES) {
-					const result = await cache_query(`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
-												FROM solution
-												WHERE contest_id = ?
-												GROUP BY HOUR(in_date),MINUTE(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
-												FROM vjudge_solution
-												WHERE contest_id = ?
-												GROUP BY HOUR(in_date),MINUTE(in_date)) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
-												FROM solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY HOUR(in_date),MINUTE(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,HOUR(in_date) as hour, MINUTE(in_date) as minute
-												FROM vjudge_solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY HOUR(in_date),MINUTE(in_date)) accept
-												ON sub.hour = accept.hour AND sub.minute = accept.minute`,
+					const result = await cache_query(`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted
+                                                      FROM (SELECT count(1) as cnt,HOUR(in_date) as hour,
+                                                                   MINUTE(in_date) as minute
+                                                            FROM solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY HOUR(in_date),MINUTE(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,HOUR(in_date) as hour,
+                                                                   MINUTE(in_date) as minute
+                                                            FROM vjudge_solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY HOUR(in_date),MINUTE(in_date)) sub
+                                                             LEFT JOIN
+                                                           (SELECT count(1) as cnt,HOUR(in_date) as hour,
+                                                                   MINUTE(in_date) as minute
+                                                            FROM solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY HOUR(in_date),MINUTE(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,HOUR(in_date) as hour,
+                                                                   MINUTE(in_date) as minute
+                                                            FROM vjudge_solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY HOUR(in_date),MINUTE(in_date)) accept
+                                                           ON sub.hour = accept.hour AND sub.minute = accept.minute`,
 					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result: result,
 						label: ["hour", "minute"]
 					});
 				} else {
-					const result = await cache_query(`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
-												FROM solution
-												WHERE contest_id = ?
-												GROUP BY MINUTE(in_date),SECOND(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
-												FROM vjudge_solution
-												WHERE contest_id = ?
-												GROUP BY MINUTE(in_date),SECOND(in_date)) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
-												FROM solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY MINUTE(in_date),SECOND(in_date)
-												UNION ALL
-												SELECT count(1) as cnt ,MINUTE(in_date) as minute, SECOND(in_date) as second
-												FROM vjudge_solution 
-												WHERE result = 4 AND contest_id = ?
-												GROUP BY MINUTE(in_date),SECOND(in_date)) accept
-												ON sub.minute = accept.minute AND sub.second = accept.second`,
+					const result = await cache_query(`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted
+                                                      FROM (SELECT count(1) as cnt,MINUTE(in_date) as minute,
+                                                                   SECOND(in_date) as second
+                                                            FROM solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY MINUTE(in_date),SECOND(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,MINUTE(in_date) as minute,
+                                                                   SECOND(in_date) as second
+                                                            FROM vjudge_solution
+                                                            WHERE contest_id = ?
+                                                            GROUP BY MINUTE(in_date),SECOND(in_date)) sub
+                                                             LEFT JOIN
+                                                           (SELECT count(1) as cnt,MINUTE(in_date) as minute,
+                                                                   SECOND(in_date) as second
+                                                            FROM solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY MINUTE(in_date),SECOND(in_date)
+                                                            UNION ALL
+                                                            SELECT count(1) as cnt,MINUTE(in_date) as minute,
+                                                                   SECOND(in_date) as second
+                                                            FROM vjudge_solution
+                                                            WHERE result = 4
+                                                              AND contest_id = ?
+                                                            GROUP BY MINUTE(in_date),SECOND(in_date)) accept
+                                                           ON sub.minute = accept.minute AND sub.second = accept.second`,
 					[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]);
 					res.json({
 						result: result,
@@ -425,16 +467,17 @@ async function getGraphData(req, res, request_query = {}) {
 				}
 			}
 		} else {
-			const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted FROM
-  												(SELECT count(1) as cnt ,YEAR(in_date) as year, MONTH(in_date) as month
-												FROM solution
-												GROUP BY YEAR(in_date),MONTH(in_date)) sub
-												LEFT JOIN
-												(SELECT count(1) as cnt ,YEAR(in_date) as year,MONTH(in_date) as month
-												FROM solution 
-												WHERE result = 4 
-												GROUP BY YEAR(in_date),MONTH(in_date)) accept
-												ON sub.year = accept.year AND sub.month = accept.month`);
+			const result = await cache_query(`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
+                                              FROM (SELECT count(1)       as cnt,YEAR(in_date) as year,
+                                                           MONTH(in_date) as month
+                                                    FROM solution
+                                                    GROUP BY YEAR(in_date),MONTH(in_date)) sub
+                                                     LEFT JOIN
+                                                   (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
+                                                    FROM solution
+                                                    WHERE result = 4
+                                                    GROUP BY YEAR(in_date),MONTH(in_date)) accept
+                                                   ON sub.year = accept.year AND sub.month = accept.month`);
 			res.json({
 				result: result,
 				label: ["year", "month"]
@@ -635,13 +678,24 @@ router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
 	const browse_privilege = req.session.isadmin || req.session.source_browser;
 	if (sid) {
-		const _result = await query(`SELECT user_id,language,if((share = 1
-    or solution_id in (select solution_id from tutorial where solution.solution_id = ?))
-           and not exists
-           (select * from contest where contest_id in
-           (select contest_id from contest_problem
-           where solution.problem_id = contest_problem.problem_id)
-          and end_time > NOW()),1,0) as share,time,memory,code_length from solution WHERE solution_id = ?`, [sid, sid]);
+		const _result = await query(`SELECT user_id,
+                                            language,
+                                            if((share = 1
+                                              or solution_id in
+                                                 (select solution_id from tutorial where solution.solution_id = ?))
+                                                 and not exists
+                                                (select *
+                                                 from contest
+                                                 where contest_id in
+                                                       (select contest_id
+                                                        from contest_problem
+                                                        where solution.problem_id = contest_problem.problem_id)
+                                                   and end_time > NOW()), 1, 0) as share,
+                                            time,
+                                            memory,
+                                            code_length
+                                     from solution
+                                     WHERE solution_id = ?`, [sid, sid]);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
 				status: "OK",
@@ -699,23 +753,14 @@ router.get("/:sid/:tr", async function (req, res) {
 		};
 		if (test_run.length > 0 && parseInt(dataPack["result"]) > 3) {
 			const result_flag = parseInt(dataPack["result"]);
-			if (result_flag === 11) {
-				await cache_query("select error from compileinfo where solution_id=?", [sid])
-					.then((val) => {
-						if (val.length > 0) {
-							sendmsg.data["tr"] = escape(val[0].error);
-							query("delete error from compileinfo where solution_id=?", [sid]);
-						}
-					});
-			} else {
-				await cache_query("select error from runtimeinfo where solution_id=?", [sid])
-					.then((val) => {
-						if (val.length > 0) {
-							sendmsg[res]["tr"] = escape(val[0]["error"]);
-							cache_query("delete error from runtimeinfo where solution_id=?", [sid]);
-						}
-					});
-			}
+			const infoHandler = async (sid, table_name) => {
+				const data = await cache_query(`select error from ${table_name} where solution_id=?`, [sid]);
+				if (data.length > 0) {
+					sendmsg.data["tr"] = escape(data[0].error);
+					query(`delete error from ${table_name} where solution_id=?`, [sid]);
+				}
+			};
+			await infoHandler(sid, result_flag === 11 ? "compileinfo" : "runtimeinfo");
 		}
 		res.header("Content-Type", "application/json");
 		res.json(sendmsg);

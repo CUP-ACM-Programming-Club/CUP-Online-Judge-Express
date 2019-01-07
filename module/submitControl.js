@@ -112,9 +112,8 @@ async function checkTopicPrivilege(req, topic_id) {
 	return !_private;
 }
 
-async function contestIncludeProblem(contest_id, num) {
-	const data = await cache_query(`select problem_id from contest_problem
-     where contest_id = ? and num = ?`, [contest_id, num]);
+async function includeProblem(id, num, sql) {
+	const data = await cache_query(sql, [id, num]);
 	if (!data || data.length === 0) {
 		return false;
 	} else {
@@ -122,17 +121,15 @@ async function contestIncludeProblem(contest_id, num) {
 	}
 }
 
-/**
- * @return {number}
- */
+async function contestIncludeProblem(contest_id, num) {
+	return await includeProblem(contest_id, num,`select problem_id from contest_problem
+     where contest_id = ? and num = ?`);
+}
+
+
 async function TopicIncludeProblem(topic_id, num) {
-	const data = await cache_query(`select problem_id from contest_problem
-     where topic_id = ? and num = ?`, [topic_id, num]);
-	if (!data || data.length === 0) {
-		return false;
-	} else {
-		return parseInt(data[0].problem_id);
-	}
+	return await includeProblem(topic_id, num, `select problem_id from special_subject_problem
+     where topic_id = ? and num = ?`);
 }
 
 async function problemPublic(problem_id) {

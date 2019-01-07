@@ -48,7 +48,7 @@ class localJudger extends eventEmitter {
 		}
 		localJudger.startupInit();// Reset result whose solution didn't finish
 		//this.collectSubmissionFromDatabase();
-		this.startLoopJudge(SECOND.THREE_SECOND);
+		require("./judger/looper").call(this, SECOND.THREE_SECOND);
 	}
 
 	/**
