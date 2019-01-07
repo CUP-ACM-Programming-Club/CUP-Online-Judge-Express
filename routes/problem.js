@@ -66,8 +66,39 @@ const checkPrivilege = (req) => {
 	return req.session.isadmin || req.session.source_browser;
 };
 
+const checkProblemAvailable = async (problem_id) => {
+	const data = await cache_query("select defunct from problem where problem_id = ?", [problem_id]);
+	return !(!data || data.length === 0 || data[0].defunct === "Y");
+};
+
+
 const checkContestPrivilege = (req, cid) => {
 	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+};
+
+const maintainLabels = (vjudge) => {
+	cache_query(`select label from ${vjudge}problem`)
+		.then(rows => {
+			let all_label = [];
+			for (let i of rows) {
+				if (typeof i.label === "string" && i.label.length > 0) {
+					for (let j of i.label.split(" ")) {
+						all_label.push(j);
+					}
+				}
+			}
+			const data = [...new Set(all_label)];
+			(async () => {
+				for (let i of data) {
+					await query(`INSERT INTO ${vjudge}label_list (label_name)
+SELECT * FROM (SELECT ?) AS tmp
+WHERE NOT EXISTS (
+    SELECT label_name FROM ${vjudge}label_list WHERE label_name = ?
+) LIMIT 1;`, [i, i]);
+				}
+			})();
+
+		});
 };
 
 const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}, copyVal = {}) => {
@@ -268,7 +299,7 @@ router.get("/:source/:id", function (req, res) {
 
 function queryValidate(val) {
 	let returnVal = {};
-	for(let i in val) {
+	for (let i in val) {
 		returnVal[i] = val[i] === undefined ? -1 : val[i];
 	}
 	return returnVal;
@@ -338,30 +369,30 @@ router.get("/:source/", async function (req, res) {
 		}
 	} else if (~id) {
 		const browse_privilege = checkPrivilege(req);
-		if (!browse_privilege && global.contest_mode) {
-			res.json(error.contestMode);
-			return;
+		if (!browse_privilege) {
+			if (global.contest_mode) {
+				res.json(error.contestMode);
+				return;
+			}
+			else if(!await checkProblemAvailable(id)) {
+				res.json(error.errorMaker("problem not available!"));
+				return;
+			}
 		}
+		const parseData = [res, req, {
+			problem_id: id,
+			source: source,
+			solution_id: sid,
+			raw: raw,
+			after_contest: true,
+			uploader: await checkUploader(id)
+		}];
 		if (browse_privilege) {
-			make_cache(res, req, {
-				problem_id: id,
-				source: source,
-				solution_id: sid,
-				raw: raw,
-				after_contest: true,
-				uploader: await checkUploader(id)
-			});
+			make_cache(...parseData);
 		} else {
 			const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
 		 where problem_id = ?)`, [id]);
-			const parseData = [res, req, {
-				problem_id: id,
-				source: source,
-				solution_id: sid,
-				raw: raw,
-				after_contest: true,
-				uploader: await checkUploader(id)
-			}];
+
 			if (_end_time.length > 0) {
 				const end_time = dayjs(_end_time[0].t * 1000);
 				if (dayjs().isBefore(end_time)) {
@@ -388,39 +419,12 @@ router.get("/:source/", async function (req, res) {
 					data: data
 				});
 			});
-		cache_query(`select label from ${vjudge}problem`)
-			.then(rows => {
-				let all_label = [];
-				for (let i of rows) {
-					if (typeof i.label === "string" && i.label.length > 0) {
-						for (let j of i.label.split(" ")) {
-							all_label.push(j);
-						}
-					}
-				}
-				const data = [...new Set(all_label)];
-				(async () => {
-					for (let i of data) {
-						await query(`INSERT INTO ${vjudge}label_list (label_name)
-SELECT * FROM (SELECT ?) AS tmp
-WHERE NOT EXISTS (
-    SELECT label_name FROM ${vjudge}label_list WHERE label_name = ?
-) LIMIT 1;`, [i, i]);
-					}
-				})();
-
-			})
-			.catch(() => {
-			});
+		maintainLabels(vjudge);
 	} else {
-		res.json({
-			status: "error",
-			statement: "invalid parameter id"
-		});
+		res.json(error.invalidParams);
 	}
 
-})
-;
+});
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
@@ -478,7 +482,7 @@ router.post("/:source/:id", function (req, res) {
 });
 
 async function getSourceCode(req, res, obj, opt = {}) {
-	opt = Object.assign({prefix:"",id: 0, sid: 0, source:"LOCAL"}, opt);
+	opt = Object.assign({prefix: "", id: 0, sid: 0, source: "LOCAL"}, opt);
 	let {id, sid, source, prefix} = opt;
 	const rows2 = await query(`SELECT source,user_id FROM ${prefix}source_code WHERE solution_id=?`, [sid]);
 	const user_id = rows2[0].user_id;
@@ -500,7 +504,8 @@ router.get("/:source/:id/:sid", async function (req, res) {
 		if (source.length === 0) {
 			await getSourceCode(req, res, await query("SELECT * FROM problem WHERE problem_id=?", [id])[0], {id, sid, source});
 		} else {
-			await getSourceCode(req, res, await query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source])[0], {id, sid, source, prefix: "vjudge_"});
+			await getSourceCode(req, res, await query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?",
+				[id, source])[0], {id,sid,source,prefix: "vjudge_"});
 		}
 	} else {
 		res.json(_res);
