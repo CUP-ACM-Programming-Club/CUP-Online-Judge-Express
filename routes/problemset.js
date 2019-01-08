@@ -5,7 +5,8 @@ const dayjs = require("dayjs");
 const page_cnt = 50;
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
-
+const NONE_PRIVILEGE_AND_SQL = ` and problem_id not in(select problem_id from contest_problem
+			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) `;
 function sort_string(sort) {
 	const _sort = ["asc", "desc"];
 	return _sort[sort] || "asc";
@@ -26,11 +27,31 @@ function order_rule(order, sort) {
 	return _order_rule[order] || "problem_id asc";
 }
 
+async function searchHandler(val = {}, normal = false) {
+	let {search, label, has_from, from, start, search_table, order} = val;
+	let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
+	if (label) {
+		sqlArr.push(`%${label}%`);
+	}
+	sqlArr.push(start * page_cnt, page_cnt);
+	return await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
+			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
+			${normal ? `and defunct='N' ${NONE_PRIVILEGE_AND_SQL}` : ""}
+			`, sqlArr),
+	cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
+			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
+			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
+			${normal ? `and defunct='N' ${NONE_PRIVILEGE_AND_SQL}` : ""}
+			order by ${order}
+		 	limit ?,?`, sqlArr)]);
+}
+
 
 async function get_problem(req, res) {
 	const target = req.query.source || "local";
-	if(!checkPrivilege(req)) {
-		if(global.contest_mode) {
+	if (!checkPrivilege(req)) {
+		if (global.contest_mode) {
 			res.json(error.contestMode);
 			return;
 		}
@@ -57,30 +78,13 @@ async function get_problem(req, res) {
 	if (search) {
 		search = `%${search}%`;
 	}
-	let result;
-	let total_num;
-	let _total;
-	let recent_one_month;
-	let one_month_add_problem = undefined;
+	let result, total_num, _total, recent_one_month, one_month_add_problem = undefined;
 	const one_month_ago = dayjs().subtract(1, "month").format("YYYY-MM-DD");
 	const browse_privilege = req.session.isadmin || req.session.source_browser || req.session.editor;
 	if (browse_privilege) {
 		if (search) {
-			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
-			if (label) {
-				sqlArr.push(`%${label}%`);
-			}
-			sqlArr.push(start * page_cnt, page_cnt);
-			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
-			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
-			 `, sqlArr),
-			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
-			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			 or label like ?) ${has_from ? "and source = ?" : "or source like ?"} ) ${label ? "and label like ?" : ""}
-			order by ${order} limit ?,?`, sqlArr)]);
-		}
-		else {
+			[_total, result] = await searchHandler({search, label, has_from, from, start, search_table, order});
+		} else {
 			let sqlArr = [];
 			if (has_from) {
 				sqlArr.push(from);
@@ -109,28 +113,10 @@ async function get_problem(req, res) {
 			}
 			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}
-	}
-	else {
+	} else {
 		if (search) {
-			let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
-			if (label) {
-				sqlArr.push(`%${label}%`);
-			}
-			sqlArr.push(start * page_cnt, page_cnt);
-			[_total, result] = await Promise.all([cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
-			 and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			`, sqlArr),
-			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' and ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
-			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
-			where contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
-			order by ${order}
-		 	limit ?,?`, sqlArr)]);
-		}
-		else {
+			[_total, result] = await searchHandler({search, label, has_from, from, start, search_table, order}, true);
+		} else {
 			let sqlArr = [];
 			if (has_from) {
 				sqlArr.push(from);
@@ -140,18 +126,15 @@ async function get_problem(req, res) {
 			}
 			sqlArr.push(start * page_cnt, page_cnt);
 			let promiseArray = [cache_query(`select count(1) as cnt from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
+			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} ${NONE_PRIVILEGE_AND_SQL}
 			`, sqlArr),
 			cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
-			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} and problem_id not in(select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) 
+			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} ${NONE_PRIVILEGE_AND_SQL}
 			order by ${order}
 		 	limit ?,?`, sqlArr)];
 			if (!has_from && !label) {
 				promiseArray.push(cache_query(`select count(1) as cnt from problem where defunct='N' and in_date > ${one_month_ago}
-			    and problem_id not in (select problem_id from contest_problem
-			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1)))`));
+			    ${NONE_PRIVILEGE_AND_SQL}`));
 			}
 			[_total, result, recent_one_month] = await Promise.all(promiseArray);
 		}
@@ -167,8 +150,7 @@ async function get_problem(req, res) {
 			acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
 		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`,
 			[req.session.user_id, i.problem_id, req.session.user_id, i.problem_id]);
-		}
-		else {
+		} else {
 			acnum = await cache_query(`select count(1) as cnt from vjudge_solution where user_id = ? and problem_id = ?
 			and oj_name = ? and result = 4 union all select count(1) as cnt from vjudge_solution where user_id = ? 
 			and oj_name = ? and problem_id = ?`, [req.session.user_id, i.problem_id, i.source, req.session.user_id,
@@ -196,16 +178,7 @@ async function get_problem(req, res) {
 		step: page_cnt
 	};
 	if (search_table === "vjudge_problem") {
-		send_target.from = await new Promise(resolve => {
-			cache_query("select name from vjudge_source")
-				.then(rows => {
-					let source = [];
-					for (let i of rows) {
-						source.push(i.name);
-					}
-					resolve(source);
-				});
-		});
+		send_target.from = (await cache_query("select name from vjudge_source")).map(val => val.name);
 	}
 	res.json(send_target);
 }
