@@ -12,10 +12,7 @@ const checkSourceId = (req) => {
 	if (isNaN(id)) {
 		return false;
 	}
-	return {
-		source: source.toUpperCase(),
-		id
-	};
+	return {source: source.toUpperCase(), id};
 };
 
 const checkSolutionId = async (solution_id, problem_id, local = true, source = "") => {
@@ -23,21 +20,13 @@ const checkSolutionId = async (solution_id, problem_id, local = true, source = "
 	if (isNaN(solution_id)) {
 		return false;
 	}
-	else if (local) {
-		const _data = await cache_query(`select result,problem_id from solution where 
+	const _data = await cache_query(`select result,problem_id${!local ? ",oj_name" : ""} from ${!local ? "vjudge_" : ""}solution where 
 	    solution_id = ?`, [solution_id]);
-		return _data.length > 0 && parseInt(_data[0].result) === 4 && parseInt(problem_id) === parseInt(_data[0].problem_id);
-	}
-	else {
-		const _data = await cache_query(`select result,problem_id,oj_name from vjudge_solution where 
-	    solution_id = ?`, [solution_id]);
-		return _data.length > 0 && parseInt(_data[0].result) === 4 && parseInt(problem_id) === parseInt(_data[0].problem_id)
-            && source === _data[0].oj_name;
-	}
+	return _data.length > 0 && parseInt(_data[0].result) === 4 && parseInt(problem_id) === parseInt(_data[0].problem_id) && (!_data[0].oj_name || source === _data[0].oj_name);
 };
 
-const checkOwner = async (solution_id, req) => {
-	const _data = await cache_query("select user_id from solution where solution_id = ?", [solution_id]);
+const checkHandler = async (id, req, table_name) => {
+	const _data = await cache_query(`select user_id from ${table_name} where ${table_name}_id = ?`, [id]);
 	if (!_data || _data.length <= 0) {
 		console.log("checkOwner false");
 		return false;
@@ -46,14 +35,12 @@ const checkOwner = async (solution_id, req) => {
 	return user_id === req.session.user_id;
 };
 
+const checkOwner = async (solution_id, req) => {
+	return await checkHandler(solution_id, req, "solution");
+};
+
 const checkTutorialOwner = async (tutorial_id, req) => {
-	const _data = await cache_query("select user_id from tutorial where tutorial_id = ?", [tutorial_id]);
-	if (!_data || _data.length <= 0) {
-		console.log("checkTutorialOwner false");
-		return false;
-	}
-	const user_id = _data[0].user_id;
-	return user_id === req.session.user_id;
+	return await checkHandler(tutorial_id, req, "tutorial");
 };
 
 const getSourceProblemId = async (tutorial_id) => {
@@ -63,8 +50,7 @@ const getSourceProblemId = async (tutorial_id) => {
 			source: _data[0].source,
 			problem_id: _data[0].problem_id
 		};
-	}
-	else {
+	} else {
 		throw new Error("wrong tutorial_id");
 	}
 };
@@ -109,54 +95,34 @@ const getTutorialController = async (req, res, opt = {}) => {
 		let tutorial_id = opt.tid;
 		let sql = "select solution_id,content,tutorial_id,user_id,in_date,problem_id,source from tutorial ";
 		let sqlArr = [];
-		if(tutorial_id) {
+		if (tutorial_id) {
 			sql += " where tutorial_id = ?";
 			sqlArr.push(tutorial_id);
-		}
-		else {
+		} else {
 			sql += " order by tutorial_id desc";
 		}
 		if (typeof tutorial_id !== "undefined" && isNaN(tutorial_id)) {
 			res.json(error.invalidParams);
 			return;
 		}
-
-		const _data = await cache_query(sql, sqlArr);
-		if (_data && _data.length > 0) {
-			if(_data.length === 1) {
-				res.json({
-					status: "OK",
-					data: {
-						solution_id: _data[0].solution_id,
-						content: _data[0].content
-					}
-				});
+		const data = await cache_query(sql, sqlArr);
+		if (data && data.length > 0) {
+			if (data.length === 1) {
+				res.json({status: "OK", data: data[0]});
+			} else {
+				res.json({status: "OK", data});
 			}
-			else {
-				res.json({
-					status: "OK",
-					data: _data
-				});
-			}
+		} else {
+			res.json({status: "OK", data: {solution_id: null, content: null}});
 		}
-		else {
-			res.json({
-				status: "OK",
-				data: {
-					solution_id: null,
-					content: null
-				}
-			});
-		}
-	}
-	catch (e) {
+	} catch (e) {
 		res.json(error.database);
 		console.log(e);
 	}
 };
 
 router.get("/:tutorial_id", async (req, res) => {
-	getTutorialController(req, res, {tid:req.params.tutorial_id});
+	getTutorialController(req, res, {tid: req.params.tutorial_id});
 });
 
 router.get("/", async (req, res) => {
@@ -183,8 +149,7 @@ router.post("/new/:source/:id", async (req, res) => {
 				res.json(error.database);
 				console.log(err);
 			});
-	}
-	else {
+	} else {
 		res.json(error.solutionIdNotValid);
 	}
 });
@@ -204,13 +169,11 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 		let sqlQuery = [checkSolutionId(solution_id, problem_id, source.toUpperCase() === "LOCAL", source), checkOwner(solution_id, req), checkTutorialOwner(tid, req)];
 		const _data = await Promise.all(sqlQuery);
 		console.log(sqlQuery);
-		if (!_data[0] || !_data[1]){
+		if (!_data[0] || !_data[1]) {
 			res.json(error.solutionIdNotValid);
-		}
-		else if (!_data[2] && !req.session.isadmin){
+		} else if (!_data[2] && !req.session.isadmin) {
 			res.json(error.noprivilege);
-		}
-		else {
+		} else {
 			cache_query(`update tutorial set content = ?,
         solution_id = ? where tutorial_id = ?`, [content, solution_id, tid])
 				.then(() => {
@@ -221,12 +184,8 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 					console.log(err);
 				});
 		}
-	}
-	catch (e) {
-		res.json({
-			status: "error",
-			statement: e
-		});
+	} catch (e) {
+		res.json(error.errorMaker(e));
 	}
 });
 
