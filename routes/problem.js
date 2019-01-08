@@ -101,6 +101,88 @@ WHERE NOT EXISTS (
 		});
 };
 
+async function contestProblemHandler(httpInstance, val = {}) {
+	let {req, res} = httpInstance;
+	let {source, solution_id, raw, cid, pid} = val;
+	const [contest, result] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
+		"num = ?", [cid, pid])]);
+	if (!checkPrivilege(req)) {
+		if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {
+			res.json(error.contestMode);
+			return;
+		}
+	}
+	if (parseInt(contest[0].private) === 1 && !checkContestPrivilege(req, cid)) {
+		res.json(error.problemInContest);
+		return;
+	}
+	if (result.length > 0) {
+		let {langmask, end_time} = contest[0];
+		let problem_id = result[0].problem_id;
+		make_cache(res, req, {problem_id,source,solution_id,raw,langmask,after_contest: dayjs().isAfter(dayjs(end_time))
+		}, {limit_hostname: contest[0].limit_hostname});
+	} else {
+		res.json(error.invalidParams);
+	}
+}
+
+async function TopicProblemHandler(httpInstance,val = {}) {
+	let {req, res} = httpInstance;
+	let {tid, pid, source, solution_id, raw} = val;
+	if (!checkPrivilege(req) && global.contest_mode) {
+		res.json(error.contestMode);
+		return;
+	}
+	const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
+		"num = ?", [tid, pid]);
+	if (result.length > 0) {
+		let problem_id = result[0].problem_id;
+		make_cache(res, req, {problem_id, source, solution_id, raw, after_contest: true});
+	} else {
+		res.json(error.invalidParams);
+	}
+}
+
+async function normalProblemHandler(httpInstance, val = {}) {
+	let {req, res} = httpInstance;
+	let {id, source, solution_id, raw} = val;
+	const browse_privilege = checkPrivilege(req);
+	if (!browse_privilege) {
+		if (global.contest_mode) {
+			res.json(error.contestMode);
+			return;
+		} else if (!await checkProblemAvailable(id)) {
+			res.json(error.errorMaker("problem not available!"));
+			return;
+		}
+	}
+	const parseData = [res, req, {problem_id: id,source,solution_id,raw,after_contest: true,uploader: await checkUploader(id)}];
+	if (browse_privilege) {
+		make_cache(...parseData);
+	} else {
+		const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
+		 where problem_id = ?)`, [id]);
+		if (_end_time.length > 0 && dayjs().isBefore(dayjs(_end_time[0].t * 1000))) {
+			res.json(error.problemInContest);
+		} else {
+			make_cache(...parseData);
+		}
+	}
+}
+
+async function labelHandler(httpInstance) {
+	let {req, res} = httpInstance;
+	let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
+	cache_query(`select label_name from ${vjudge}label_list`)
+		.then(rows => {
+			res.json({
+				status: "OK",
+				data: rows.map((val) => val.label_name)
+			});
+		});
+	maintainLabels(vjudge);
+}
+
 const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}, copyVal = {}) => {
 	let packed_problem = {};
 	if (rows.length !== 0) {
@@ -305,125 +387,25 @@ function queryValidate(val) {
 	return returnVal;
 }
 
+
+
 router.get("/:source/", async function (req, res) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
-	let {cid, tid, pid, id, sid} = queryValidate(req.query);
+	let {cid, tid, pid, id, sid: solution_id} = queryValidate(req.query);
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
-	[cid, tid, pid, id, sid] = judgeValidNumber([cid, tid, pid, id, sid]);
+	[cid, tid, pid, id, solution_id] = judgeValidNumber([cid, tid, pid, id, solution_id]);
 	if (~cid && ~pid) {
-		const [contest, result, limit_hostname] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-			"num = ?", [cid, pid]), cache_query("select limit_hostname from contest where contest_id = ?", [cid])]);
-		if (!checkPrivilege(req)) {
-			if (global.contest_mode) {
-				if (contest[0].cmod_visible === 0) {
-					res.json(error.contestMode);
-					return;
-				}
-			}
-		}
-		if (contest[0].private === 1 && !checkContestPrivilege(req, cid)) {
-			res.json(error.problemInContest);
-			return;
-		}
-		if (result.length > 0) {
-			const _langmask = await cache_query("SELECT langmask,end_time FROM contest WHERE contest_id = ?", [cid]);
-			let problem_id = result[0].problem_id;
-			let langmask = _langmask[0].langmask;
-			let end_time = _langmask[0].end_time;
-			make_cache(res, req, {
-				problem_id: problem_id,
-				source: source,
-				solution_id: sid,
-				raw: raw,
-				langmask: langmask,
-				after_contest: dayjs().isAfter(dayjs(end_time))
-			}, {limit_hostname: limit_hostname[0].limit_hostname});
-		} else {
-			res.json({
-				status: "error",
-				statement: "invalid parameter id"
-			});
-		}
+		contestProblemHandler({req,res},{source, solution_id, raw, cid, pid});
 	} else if (~tid && ~pid) {
-		if (!checkPrivilege(req) && global.contest_mode) {
-			res.json(error.contestMode);
-			return;
-		}
-		const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
-			"num = ?", [tid, pid]);
-		if (result.length > 0) {
-			let problem_id = result[0].problem_id;
-			make_cache(res, req, {
-				problem_id: problem_id,
-				source: source,
-				solution_id: sid,
-				raw: raw,
-				after_contest: true
-			});
-		} else {
-			res.json({
-				status: "error",
-				statement: "invalid parameter id"
-			});
-		}
+		TopicProblemHandler({req, res}, {tid, pid, source, solution_id, raw});
 	} else if (~id) {
-		const browse_privilege = checkPrivilege(req);
-		if (!browse_privilege) {
-			if (global.contest_mode) {
-				res.json(error.contestMode);
-				return;
-			}
-			else if(!await checkProblemAvailable(id)) {
-				res.json(error.errorMaker("problem not available!"));
-				return;
-			}
-		}
-		const parseData = [res, req, {
-			problem_id: id,
-			source: source,
-			solution_id: sid,
-			raw: raw,
-			after_contest: true,
-			uploader: await checkUploader(id)
-		}];
-		if (browse_privilege) {
-			make_cache(...parseData);
-		} else {
-			const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
-		 where problem_id = ?)`, [id]);
-
-			if (_end_time.length > 0) {
-				const end_time = dayjs(_end_time[0].t * 1000);
-				if (dayjs().isBefore(end_time)) {
-					res.json(error.problemInContest);
-				} else {
-					make_cache(...parseData);
-
-				}
-			} else {
-				make_cache(...parseData);
-			}
-		}
-
+		normalProblemHandler({req, res}, {id, source, solution_id, raw});
 	} else if (labels) {
-		let vjudge = req.query.vjudge !== undefined ? "vjudge_" : "";
-		cache_query(`select label_name from ${vjudge}label_list`)
-			.then(rows => {
-				let data = [];
-				for (let i of rows) {
-					data.push(i.label_name);
-				}
-				res.json({
-					status: "OK",
-					data: data
-				});
-			});
-		maintainLabels(vjudge);
+		labelHandler({req, res});
 	} else {
 		res.json(error.invalidParams);
 	}
-
 });
 
 router.post("/:source/:id", function (req, res) {
@@ -502,10 +484,14 @@ router.get("/:source/:id/:sid", async function (req, res) {
 	const _res = cache.get("source/id/" + source + id + "/" + sid);
 	if (_res === undefined) {
 		if (source.length === 0) {
-			await getSourceCode(req, res, await query("SELECT * FROM problem WHERE problem_id=?", [id])[0], {id, sid, source});
+			await getSourceCode(req, res, await query("SELECT * FROM problem WHERE problem_id=?", [id])[0], {
+				id,
+				sid,
+				source
+			});
 		} else {
 			await getSourceCode(req, res, await query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?",
-				[id, source])[0], {id,sid,source,prefix: "vjudge_"});
+				[id, source])[0], {id, sid, source, prefix: "vjudge_"});
 		}
 	} else {
 		res.json(_res);
