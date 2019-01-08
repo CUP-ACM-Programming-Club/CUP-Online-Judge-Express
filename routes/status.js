@@ -11,6 +11,7 @@ const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
 const auth = require("../middleware/auth");
+const [error] = require("../module/const_var");
 const admin_auth = require("../middleware/admin");
 const SECONDS = 1000;
 const MINUTES = 60 * SECONDS;
@@ -25,6 +26,39 @@ const LESS_OR_EQUAL = 2;
 const GREATER_OR_EQUAL = 3;
 const GREATER = 4;
 const LESSER = 5;
+
+const check_owner = (data, owner) => {
+	if (owner) {
+		return data;
+	} else {
+		return "----";
+	}
+};
+
+const infoHandler = async (sid, table_name, sendmsg) => {
+	const data = await cache_query(`select error from ${table_name} where solution_id=?`, [sid]);
+	if (data.length > 0) {
+		sendmsg.data["tr"] = escape(data[0].error);
+		query(`delete error from ${table_name} where solution_id=?`, [sid]);
+	}
+};
+
+function renameProperty(element, newProperty, oldProperty) {
+	element[newProperty] = element[oldProperty];
+	delete element[oldProperty];
+}
+
+function validateProblemId(req) {
+	if (isNaN(req.params.problem_id)) {
+		if (req.params.problem_id === "null" || !req.params.problem_id) {
+			return undefined;
+		} else {
+			return req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+		}
+	} else {
+		return parseInt(req.params.problem_id);
+	}
+}
 
 function generateSqlData(request_query) {
 	let where_sql = "",sql_arr = [];
@@ -100,7 +134,6 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _res;
 	let [where_sql, sql_arr] = generateSqlData(request_query);
 	let pre_sim = "", end_sim = "";
-
 	if (request_query.sim) {
 		if (request_query.user_id) {
 			let user_id_sql = "";
@@ -116,34 +149,22 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	}
 	let _end = false;
 	const browser_privilege = req.session.isadmin || req.session.source_browser;
-	if (TEST_MODE) {
-		console.log("where_sql", where_sql);
-		console.log("sql_arr", sql_arr);
-	}
 	if (browser_privilege) {
 		if (request_query.contest_id) {
 			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution
-								where 1=1
-								${where_sql}
-								union all 
+								from solution where 1=1 ${where_sql} union all 
 								select '' as fingerprint,'' as fingerprintRaw,solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
-								from vjudge_solution
-								where 1=1
-								${where_sql}
-								order by in_date) sol
+								from vjudge_solution where 1=1 ${where_sql} order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		} else {
 			sql_arr.push(limit);
 			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution
-								where 1=1
-								${where_sql}) sol
+								from solution where 1=1 ${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		}
@@ -154,46 +175,21 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		_end = _end[0].cnt;
 		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution
-								where problem_id > 0 
-								${where_sql}
-								union all 
+								from solution where problem_id > 0 ${where_sql} union all 
 								select '' as fingerprint,'' as fingerprintRaw,solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
-								from vjudge_solution
-								where problem_id > 0 
-								${where_sql}
-								order by in_date) sol
+								from vjudge_solution where problem_id > 0 ${where_sql} order by in_date) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc, sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	} else {
-		// sql_arr.push(...sql_arr);
 		sql_arr.push(limit);
-		/* _res = await cache_query(`select * from
-                                (select solution_id,share,pass_rate,problem_id,contest_id,num,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name
-                                from solution
-                                where problem_id > 0 and contest_id is null
-                                ${where_sql}
-                                union all select solution_id,0.00 as pass_rate,share,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name
-                                from vjudge_solution
-                                where problem_id > 0 and contest_id is null
-                                ${where_sql}
-                                order by in_date) sol
-                                left join sim on sim.s_id = sol.solution_id
-                                order by sol.in_date desc,sol.solution_id desc limit ?,20`, sql_arr);
-                                */
 		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,
-								if((share = 1
-           and not exists
-           (select * from contest where contest_id in
-           (select contest_id from contest_problem
-           where solution.problem_id = contest_problem.problem_id)
+								if((share = 1 and not exists (select * from contest where contest_id in
+           (select contest_id from contest_problem where solution.problem_id = contest_problem.problem_id)
           and end_time > NOW()) ),1,0) as share
 								,pass_rate,problem_id,ip,contest_id,num,user_id,time,
-								memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution
-								where problem_id > 0 and contest_id is null 
-								${where_sql}) sol
+								memory,in_date,result,language,code_length,judger, "local" as oj_name from solution
+								where problem_id > 0 and contest_id is null  ${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	}
@@ -203,63 +199,14 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		if (_user_info.length > 0) {
 			const nick = _user_info[0].nick.trim();
 			const avatar = Boolean(_user_info[0].avatar);
+			let element = Object.assign({nick, avatar}, val);
+			renameProperty(element, "sim_id", "sim_s_id");
+			renameProperty(element, "length", "code_length");
 			if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
-				result.push({
-					solution_id: val.solution_id,
-					user_id: val.user_id,
-					nick: nick,
-					ip: val.ip,
-					avatar: avatar,
-					sim: val.sim,
-					share: val.share,
-					sim_id: val.sim_s_id,
-					problem_id: val.problem_id,
-					contest_id: val.contest_id,
-					pass_rate: val.pass_rate,
-					num: val.num,
-					result: val.result,
-					oj_name: val.oj_name,
-					memory: val.memory,
-					time: val.time,
-					language: val.language,
-					length: val.code_length,
-					in_date: val.in_date,
-					judger: val.judger,
-					fingerprint: val.fingerprint,
-					fingerprintRaw: val.fingerprintRaw
-				});
+				result.push(element);
 			} else {
 				const owner = req.session.user_id === val.user_id;
-				const check_owner = (data) => {
-					if (owner) {
-						return data;
-					} else {
-						return "----";
-					}
-				};
-				result.push({
-					solution_id: val.solution_id,
-					user_id: val.user_id,
-					nick: nick,
-					avatar: avatar,
-					ip: val.ip,
-					problem_id: val.problem_id,
-					result: val.result,
-					pass_rate: val.pass_rate,
-					sim_id: val.sim_s_id,
-					sim: val.sim,
-					num: val.num,
-					contest_id: val.contest_id,
-					oj_name: val.oj_name,
-					memory: check_owner(val.memory),
-					time: check_owner(val.time),
-					language: val.language,
-					length: check_owner(val.code_length),
-					in_date: val.in_date,
-					judger: val.judger,
-					fingerprint: val.fingerprint,
-					fingerprintRaw: val.fingerprintRaw
-				});
+				result.push(Object.assign(element, {memory:check_owner(val.memory, owner),time:check_owner(val.time, owner),length: check_owner(val.code_length, owner)}));
 			}
 		}
 	}
@@ -526,15 +473,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async f
 	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
-	if (isNaN(req.params.problem_id)) {
-		if (req.params.problem_id === "null" || !req.params.problem_id) {
-			problem_id = undefined;
-		} else {
-			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-		}
-	} else {
-		problem_id = parseInt(req.params.problem_id);
-	}
+	problem_id = validateProblemId(req);
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
@@ -582,15 +521,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", as
 	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
-	if (isNaN(req.params.problem_id)) {
-		if (req.params.problem_id === "null" || !req.params.problem_id) {
-			problem_id = undefined;
-		} else {
-			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-		}
-	} else {
-		problem_id = parseInt(req.params.problem_id);
-	}
+	problem_id = validateProblemId(req);
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
@@ -633,6 +564,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 	}
 });
 
+
 router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
@@ -641,15 +573,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
 		return next();
 	}
-	if (isNaN(req.params.problem_id)) {
-		if (req.params.problem_id === "null" || !req.params.problem_id) {
-			problem_id = undefined;
-		} else {
-			problem_id = req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-		}
-	} else {
-		problem_id = parseInt(req.params.problem_id);
-	}
+	problem_id = validateProblemId(req);
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
@@ -680,21 +604,11 @@ router.get("/solution", async function (req, res) {
 	if (sid) {
 		const _result = await query(`SELECT user_id,
                                             language,
-                                            if((share = 1
-                                              or solution_id in
-                                                 (select solution_id from tutorial where solution.solution_id = ?))
-                                                 and not exists
-                                                (select *
-                                                 from contest
-                                                 where contest_id in
-                                                       (select contest_id
-                                                        from contest_problem
-                                                        where solution.problem_id = contest_problem.problem_id)
-                                                   and end_time > NOW()), 1, 0) as share,
-                                            time,
-                                            memory,
-                                            code_length
-                                     from solution
+                                            if((share = 1 or solution_id in (select solution_id from
+                                             tutorial where solution.solution_id = ?)) and not exists
+                                             (select * from contest where contest_id in (select contest_id
+                                             from contest_problem where solution.problem_id = contest_problem.problem_id)
+                                             and end_time > NOW()), 1, 0) as share,time,memory,code_length from solution
                                      WHERE solution_id = ?`, [sid, sid]);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
 			res.json({
@@ -708,16 +622,10 @@ router.get("/solution", async function (req, res) {
 				}
 			});
 		} else {
-			res.json({
-				status: "error",
-				statement: "error sid / not privilege"
-			});
+			res.json(error.errorMaker("error sid / not privilege"));
 		}
 	} else {
-		res.json({
-			status: "error",
-			statement: "invalid parameter"
-		});
+		res.json(error.invalidParams);
 	}
 });
 
@@ -753,23 +661,11 @@ router.get("/:sid/:tr", async function (req, res) {
 		};
 		if (test_run.length > 0 && parseInt(dataPack["result"]) > 3) {
 			const result_flag = parseInt(dataPack["result"]);
-			const infoHandler = async (sid, table_name) => {
-				const data = await cache_query(`select error from ${table_name} where solution_id=?`, [sid]);
-				if (data.length > 0) {
-					sendmsg.data["tr"] = escape(data[0].error);
-					query(`delete error from ${table_name} where solution_id=?`, [sid]);
-				}
-			};
-			await infoHandler(sid, result_flag === 11 ? "compileinfo" : "runtimeinfo");
+			await infoHandler(sid, result_flag === 11 ? "compileinfo" : "runtimeinfo", sendmsg);
 		}
-		res.header("Content-Type", "application/json");
 		res.json(sendmsg);
 	}).catch((val) => {
-		res.header("Content-Type", "application/json");
-		res.json({
-			status: "error",
-			statement: val
-		});
+		res.json(error.errorMaker(val));
 	});
 });
 
