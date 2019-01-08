@@ -50,7 +50,7 @@ class dockerJudger extends eventEmitter {
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
-		if(fs.existsSync("./docker/index")) {
+		if(fs.existsSync("./module/docker/index.js")) {
 			this.Sandbox = require("./docker/index");
 			this.submit = this.Sandbox.createSubmit();
 		}

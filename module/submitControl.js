@@ -149,11 +149,13 @@ async function makePrependAndAppendCode(problem_id, source, language) {
 	if (data.length === 0) {
 		return new_source;
 	}
-
+	let prepend_added = false, append_added = false;
 	for (let i of data) {
-		if (parseInt(i.prepend) === 1) {
+		if (parseInt(i.prepend) === 1 && prepend_added === false) {
 			new_source = i.code + "\n" + new_source;
-		} else {
+			prepend_added = true;
+		} else if(append_added === false) {
+			append_added = true;
 			new_source += "\n" + i.code;
 		}
 	}
