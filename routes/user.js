@@ -3,7 +3,7 @@ const router = express.Router();
 const query = require("../module/mysql_cache");
 const auth = require("../middleware/auth");
 const const_variable = require("../module/const_name");
-
+const [error] = require("../module/const_var");
 router.get("/:user_id", async (req, res) => {
 	const user_id = req.params.user_id;
 	let sqlQueue = [];
@@ -71,4 +71,21 @@ group by browser_name,browser_version`, [user_id]));
 		isadmin: req.session.isadmin
 	});
 });
+
+router.get("/nick/:nick", async (req, res) => {
+	const nick = req.params.nick;
+	const data = await query("select user_id from users where nick = ?", [nick]);
+	console.log("nick", nick);
+	console.log(data);
+	if (data && data.length > 0) {
+		res.json({
+			status: "OK",
+			nick,
+			data
+		});
+	} else {
+		res.json(error.errorMaker("No such user!"));
+	}
+});
+
 module.exports = ["/user", auth, router];
