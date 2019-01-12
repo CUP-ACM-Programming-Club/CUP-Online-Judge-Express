@@ -52,8 +52,14 @@ const check = async (req, res, cid) => {
 			return contest;
 		}
 		else {
-			res.json(error.noprivilege);
-			return false;
+			await require("../module/login_action")(req, req.session.user_id);
+			if(req.session.contest[`c${cid}`]) {
+				return contest;
+			}
+			else {
+				res.json(error.noprivilege);
+				return false;
+			}
 		}
 	}
 	else {
