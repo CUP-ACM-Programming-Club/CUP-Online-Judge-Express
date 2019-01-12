@@ -27,16 +27,15 @@ const check = async (req, res, cid) => {
 	if (privilege) {
 		return contest;
 	}
-	if(global.contest_mode) {
-		if(!privilege) {
-			if(parseInt(contest[0].cmod_visible) === 0) {
+	if (global.contest_mode) {
+		if (!privilege) {
+			if (parseInt(contest[0].cmod_visible) === 0) {
 				res.json(error.contestMode);
 				return false;
 			}
 		}
-	}
-	else {
-		if(parseInt(contest[0].cmod_visible) === 1) {
+	} else {
+		if (parseInt(contest[0].cmod_visible) === 1) {
 			res.json(error.contestMode);
 			return false;
 		}
@@ -46,23 +45,19 @@ const check = async (req, res, cid) => {
 	if (start_time.isAfter(now)) {
 		res.json(error.contestNotStart);
 		return false;
-	}
-	else if (parseInt(contest[0].private) === 1) {
-		if(req.session.contest[`c${cid}`]) {
+	} else if (parseInt(contest[0].private) === 1) {
+		if (req.session.contest[`c${cid}`]) {
 			return contest;
-		}
-		else {
+		} else {
 			await require("../module/login_action")(req, req.session.user_id);
-			if(req.session.contest[`c${cid}`]) {
+			if (req.session.contest[`c${cid}`]) {
 				return contest;
-			}
-			else {
+			} else {
 				res.json(error.noprivilege);
 				return false;
 			}
 		}
-	}
-	else {
+	} else {
 		return contest;
 	}
 };
@@ -212,7 +207,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 				data: contest_general_detail,
 				info: contest_detail,
 				admin: browse_privilege,
-				limit:limit_data[0].limit_hostname,
+				limit: limit_data[0].limit_hostname,
 				contest_mode: global.contest_mode
 			});
 		}
@@ -251,7 +246,7 @@ union all SELECT
 			,
 			cache_query("select count(1)total_problem,contest_id from contest_problem where contest_id = ?", [cid])
 		])
-        ;
+		;
 		res.json({
 			status: "OK",
 			data: contest_statistics_detail,
@@ -277,16 +272,11 @@ router.post("/password/:cid", async (req, res) => {
 					status: "OK"
 				});
 				query("select * from privilege where user_id = ? and rightstr = ?", [req.session.user_id, `c${cid}`])
-					.then(rows => {
-						if (rows.length === 0) {
-							query("insert into privilege(user_id,rightstr)values(?,?)", [req.session.user_id, `c${cid}`]);
-						}
-					});
+					.then(rows => (rows.length === 0) ?
+						query("insert into privilege(user_id,rightstr)values(?,?)", [req.session.user_id, `c${cid}`]) : false
+					);
 			} else {
-				res.json({
-					status: "error",
-					statement: "Wrong password"
-				});
+				res.json(error.errorMaker("Wrong password"));
 			}
 		}
 	} else {
