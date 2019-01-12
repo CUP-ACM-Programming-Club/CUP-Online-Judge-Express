@@ -89,6 +89,15 @@ error.errorMaker = function(statement) {
 	};
 };
 
+error.base = {
+	status: "error"
+};
+
+error.attributeMaker = function(source) {
+	let target = Object.assign({}, error.base);
+	return Object.assign(target, source);
+}
+
 ok.logined = {
 	status: "OK",
 	statment: "logined"

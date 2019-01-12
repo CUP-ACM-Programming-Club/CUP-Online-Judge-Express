@@ -117,6 +117,9 @@ async function contestProblemHandler(httpInstance, val = {}) {
 		return;
 	}
 	if (result.length > 0) {
+		if(result[0].oj_name && result[0].oj_name.length > 0) {
+			res.json(error.attributeMaker({redirect: `${result[0].oj_name.toLowerCase()}submitpage.php?cid=${cid}&pid=${pid}`}));
+		}
 		let {langmask, end_time} = contest[0];
 		let problem_id = result[0].problem_id;
 		make_cache(res, req, {
