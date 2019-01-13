@@ -40,6 +40,8 @@ let onlineUser = {};
  * @type {{Socket}} 记录在线用户的Socket连接
  */
 let user_socket = {};
+
+let socketSet = {};
 /**
  *
  * @type {{Socket}} 记录管理员用户的Socket连接
@@ -183,7 +185,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
 			for (let j in userArr[i]) {
-				if(userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
+				if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
 					continue;
 				}
 				if (!privilege || userArr[i][j].privilege) {
@@ -193,7 +195,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
-			if(userArr[i].url && userArr[i].url.indexOf("monitor") !== -1) {
+			if (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1) {
 				continue;
 			}
 			if (!privilege || userArr[i].privilege) {
@@ -391,6 +393,8 @@ io.use((socket, next) => {
 			socket.status = true;
 		}
 	}
+	socket.currentTimeStamp = (new Date() - 0);
+	socketSet[socket.currentTimeStamp] = socket;
 	next();
 });
 /**
@@ -526,7 +530,15 @@ io.on("connection", async function (socket) {
 	 * 全局推送功能
 	 */
 	socket.on("msg", function (data) {
-		socket.broadcast.emit("msg", data);
+		if (data.to) {
+			for (let soc of socketSet) {
+				if (soc.url.indexOf(data.to) === 0) {
+					soc.emit("msg", data);
+				}
+			}
+		} else {
+			socket.broadcast.emit("msg", data);
+		}
 		socket.emit("msg", data);
 	});
 	/**
@@ -562,6 +574,7 @@ io.on("connection", async function (socket) {
 			if (whiteboard.has(socket)) {
 				whiteboard.delete(socket);
 			}
+			delete socketSet[socket.currentTimeStamp];
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
 				pos.url.splice(url_pos, 1);
