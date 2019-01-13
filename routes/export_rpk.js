@@ -45,7 +45,7 @@ const readFile = async (file_list) => {
 	try {
 		return Promise.all(file_list.map(async i => {
 			if (typeof i === "string" && i.length > 0) {
-				return {name: path.basename(i),content: (await fs.readFileAsync(i)).toString("base64")};
+				return {name: path.basename(i), content: (await fs.readFileAsync(i)).toString("base64")};
 			}
 			return "";
 		}));
@@ -54,6 +54,13 @@ const readFile = async (file_list) => {
 		return [];
 	}
 };
+
+async function prependAppendCodePacker(prefix, problem_id) {
+	return (await query("select * from prefile where problem_id = ?", [problem_id]))
+		.map(i => {
+			return {name: `${prefix}.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64")};
+		});
+}
 
 const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
 	const problem_details = {
@@ -74,23 +81,26 @@ const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
 		spj: "",
 		solution: [],
 	};
-
 	const dirFileList = await readDir(problem_dir);
 	[problem_details.input_files, problem_details.output_files, problem_details.prepend, problem_details.append]
 		= await Promise.all([readFile(dirFileList.input), readFile(dirFileList.output), readFile(dirFileList.prepend), readFile(dirFileList.append)]);
 	problem_details.spj = (await readFile([dirFileList.spj]))[0];
-	const prepend_file_database = (await query("select * from prefile where problem_id = ?", [problem_id]))
-		.map(i => {
-			return {name: `prepend.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64")};
-		});
+	const [prepend_file_database, append_file_database] = await Promise.all([prependAppendCodePacker("prepend", problem_id), prependAppendCodePacker("append", problem_id)]);
 	problem_details.prepend.push(...prepend_file_database);
-	const append_file_database = (await query("select * from prefile where problem_id = ?", [problem_id]))
-		.map(i => {
-			return {name: `apend.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64")};
-		});
 	problem_details.append.push(...append_file_database);
 	return problem_details;
 };
+
+function packProblemObject(_solution, problem_details) {
+	if (_solution.length > 0) {
+		_solution = _solution[0];
+		problem_details.solution.push({
+			code: _solution.source,
+			language: _solution.language,
+			name: `solution.${suffix[_solution.language]}`
+		});
+	}
+}
 
 const send_file = (req, res, data, filename) => {
 	zlib.gzip(JSON.stringify(data), (err, result) => {
@@ -123,14 +133,7 @@ const pack_file = async (req, res, opt = {}) => {
 select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
 sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 			const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
-			if (_solution.length > 0) {
-				_solution = _solution[0];
-				problem_details.solution.push({
-					code: _solution.source,
-					language: _solution.language,
-					name: `solution.${suffix[_solution.language]}`
-				});
-			}
+			packProblemObject(_solution, problem_details);
 			send_file(req, res, [problem_details], opt.problem_id);
 		} else if (typeof opt.contest_id !== "undefined" && !isNaN(opt.contest_id)) {
 			const contest_id = parseInt(opt.contest_id);
@@ -139,11 +142,8 @@ sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 				res.json(error_cb);
 				return;
 			}
-			let result = [];
-			let len = contest_detail.length;
-			for (let i of contest_detail) {
-				await packHandler({req, res}, {i, contest_id, result, len});
-			}
+			let result = [],len = contest_detail.length;
+			await Promise.all(contest_detail.map(i => packHandler({req, res}, {i, contest_id, result, len})));
 			send_file(req, res, result, `Contest ${contest_id}`);
 		}
 	}
@@ -163,14 +163,7 @@ select source_code_user.source,solution.problem_id,time,language from solution l
 sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 
 	const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
-	if (_solution.length > 0) {
-		_solution = _solution[0];
-		problem_details.solution.push({
-			code: _solution.source,
-			language: _solution.language,
-			name: `solution.${suffix[_solution.language]}`
-		});
-	}
+	packProblemObject(_solution, problem_details);
 	result.push(problem_details);
 }
 

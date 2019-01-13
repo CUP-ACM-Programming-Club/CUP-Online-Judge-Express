@@ -14,6 +14,7 @@ md.use(mk);
 md.use(mh);
 const cache = require("../module/cachePool");
 const router = express.Router();
+const log = console.log;
 const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const query = require("../module/mysql_query");
@@ -54,11 +55,15 @@ const judgeValidNumber = (num) => {
 };
 
 const checkUploader = async (problem_id) => {
-	const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
-	if (_uploader && _uploader.length > 0) {
-		return _uploader[0].user_id;
-	} else {
-		return "Administrator";
+	try {
+		const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
+		if (_uploader && _uploader.length > 0) {
+			return _uploader[0].user_id;
+		} else {
+			return "Administrator";
+		}
+	} catch (e) {
+		log(e);
 	}
 };
 
@@ -98,8 +103,13 @@ WHERE NOT EXISTS (
 				}
 			})();
 			return true;
-		});
+		}).catch(e => log(e));
 };
+
+async function problemCallbackHandler(opt, arr, val) {
+	const {req, res, copyVal} = val;
+	cache_query(opt.sql, arr).then((rows) => problem_callback(rows, req, res, opt, copyVal)).catch(e => log(e));
+}
 
 async function contestProblemHandler(httpInstance, val = {}) {
 	let {req, res} = httpInstance;
@@ -117,7 +127,7 @@ async function contestProblemHandler(httpInstance, val = {}) {
 		return;
 	}
 	if (result.length > 0) {
-		if(result[0].oj_name && result[0].oj_name.length > 0) {
+		if (result[0].oj_name && result[0].oj_name.length > 0) {
 			res.json(error.attributeMaker({redirect: `${result[0].oj_name.toLowerCase()}submitpage.php?cid=${cid}&pid=${pid}`}));
 			return;
 		}
@@ -191,7 +201,7 @@ async function labelHandler(httpInstance) {
 				status: "OK",
 				data: rows.map((val) => val.label_name)
 			})
-		);
+		).catch(e => log(e));
 	maintainLabels(vjudge);
 }
 
@@ -257,7 +267,7 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 						browse_code: req.session.source_browser,
 						editor: req.session.editor || false
 					}, copyVal));
-				});
+				}).catch(e => log(e));
 		} else {
 			res.json(Object.assign({
 				problem: packed_problem,
@@ -339,21 +349,21 @@ const make_cache = async (res, req, opt = {
 			opt.sql = `select a.*,privilege.user_id as creator
 from (SELECT * FROM problem WHERE problem_id = ?)a
        left join privilege on privilege.rightstr = CONCAT('p', '?')`;
-			cache_query(opt.sql, [opt.problem_id, opt.problem_id]).then((rows) => problem_callback(rows, req, res, opt, copyVal));
+			problemCallbackHandler(opt, [opt.problem_id, opt.problem_id], {req, res, copyVal});
 		} else {
 			opt.sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
-			cache_query(opt.sql, [opt.problem_id, opt.source]).then((rows) => problem_callback(rows, req, res, opt, copyVal));
+			problemCallbackHandler(opt, [opt.problem_id, opt.source], {req, res, copyVal});
 		}
 	} else {
 		if (opt.source.length === 0) {
 			opt.sql = "SELECT * FROM problem WHERE problem_id = ?";
-			cache_query(opt.sql, [opt.problem_id]).then(rows => problem_callback(rows, req, res, opt, copyVal));
+			problemCallbackHandler(opt, [opt.problem_id], {req, res, copyVal});
 		} else {
 			opt.sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
 			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
 			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
 			OR private = 1))`;
-			cache_query(opt.sql, [opt.problem_id, opt.source]).then(rows => problem_callback(rows, req, res, opt, copyVal));
+			problemCallbackHandler(opt, [opt.problem_id, opt.source], {req, res, copyVal});
 		}
 	}
 };
@@ -433,6 +443,7 @@ router.post("/:source/:id", function (req, res) {
 				sqlArr.push(problem_id, from);
 			}
 			query(sql, sqlArr)
+				.then()
 				.catch(err => {
 					if (ENVIRONMENT === "test") {
 						console.error(`${path.basename(__filename)} line 414:`);
