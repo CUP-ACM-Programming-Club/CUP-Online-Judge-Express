@@ -17,5 +17,8 @@
   "problem_upload_dest": {
     "dir": "/path/to/upload"
   },
+  "website": {
+  "dir": "/home/"
+  },
   "session_secret": "YourSecretKeytoSession"
 }
