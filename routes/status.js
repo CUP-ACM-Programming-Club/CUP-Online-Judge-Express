@@ -253,7 +253,7 @@ function generateSqlData(request_query) {
 			const ele = request_query[i];
 			if (ele.length) {
 				for (let val of ele) {
-					if (!val) {
+					if (typeof val === "undefined" || val === null) {
 						continue;
 					}
 					if (typeof val === "string" || typeof val === "number") {

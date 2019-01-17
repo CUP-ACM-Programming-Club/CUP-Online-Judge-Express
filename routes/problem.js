@@ -4,6 +4,24 @@ const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 let cachePack = {};
+const website_dir = require("../config.json").website.dir;
+const fs = require("fs");
+const bluebird = require("bluebird");
+const base64Img = bluebird.promisifyAll(require("base64-img"));
+function mkdirs(dirname, callback) {
+	fs.exists(dirname, function (exists) {
+		if (exists) {
+			callback();
+		} else {
+			mkdirs(path.dirname(dirname), function () {
+				fs.mkdir(dirname, callback);
+			});
+		}
+	});
+}
+
+const mkdirAsync = require("bluebird").promisify(mkdirs);
+
 const md = require("markdown-it")({
 	html: true,
 	breaks: true
@@ -408,6 +426,29 @@ router.get("/:source/", async function (req, res) {
 	}
 });
 
+async function storePhotoToDir(problem_id, key, data, type) {
+	const picPath = path.join(website_dir, "images", problem_id.toString(), type);
+	await mkdirAsync(picPath);
+	try {
+		base64Img.imgAsync(data, picPath, key);
+	}
+	catch(e) {
+		console.log(e);
+	}
+}
+
+function storePhotoBase(problem_id, name, iterableData) {
+	for (let i in iterableData) {
+		storePhotoToDir(problem_id, i, iterableData[i], name);
+	}
+}
+
+function storePhoto(problem_id, photo = {description: {}, input: {}, output: {}}) {
+	for (let i in photo) {
+		storePhotoBase(problem_id, i, photo[i]);
+	}
+}
+
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
 	const from = req.params.source || "";
@@ -430,6 +471,8 @@ router.post("/:source/:id", function (req, res) {
 				label: "",
 				spj: 0
 			}, req.body.json);
+			console.log(req.body.json);
+			storePhoto(problem_id, json.imageData);
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
