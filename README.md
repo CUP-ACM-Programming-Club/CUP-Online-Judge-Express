@@ -1,7 +1,7 @@
 # CUP-Online-Judge-Express
 [![Build Status](https://travis-ci.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.svg?branch=master)](https://travis-ci.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express)
 [![](https://img.shields.io/github/license/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.svg)](https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express/blob/master/LICENSE)
-[![](https://codebeat.co/badges/5dd7ac11-3c39-4815-8aee-aa9dbb947d84)](https://codebeat.co/projects/github-com-cup-acm-programming-club-cup-online-judge-express-master)
+[![codebeat badge](https://codebeat.co/badges/bf69c0eb-2bdf-4fbe-a6f0-2bf2a98a597a)](https://codebeat.co/projects/github-com-cup-acm-programming-club-cup-online-judge-express-master-7e8760db-7670-4c22-9862-1262dddcb4ec)
 [![](https://img.shields.io/badge/platform-Linux-red.svg)]()
 ![](https://img.shields.io/badge/language-JavaScript-orange.svg)
 
