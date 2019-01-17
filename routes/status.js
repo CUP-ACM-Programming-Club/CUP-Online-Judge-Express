@@ -412,7 +412,7 @@ async function getGraphData(req, res, request_query = {}) {
 			const result = await cache_query(graphDataSql[5]);
 			res.json({
 				result: result,
-				label: graphLabel[5]
+				label: graphLabel[0]
 			});
 		}
 	} catch (e) {
