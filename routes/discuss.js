@@ -184,7 +184,8 @@ router.post("/update/main/:id", (req, res) => {
 			.then(() => {
 				res.json(ok.ok);
 			})
-			.catch(() => {
+			.catch((e) => {
+				console.log(e);
 				res.json({
 					status: "error",
 					statement: "error happend in modify methods.Please contact admin"

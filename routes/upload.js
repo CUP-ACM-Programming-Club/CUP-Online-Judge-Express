@@ -49,7 +49,7 @@ const convertLanguage = (language_name) => {
 	}
 	return [19];
 };
-const make_problem = (problem_id, problems = {}, req) => {
+const make_problem = async (problem_id, problems = {}, req) => {
 	const save_problem = Object.assign({
 		title: "",
 		description: "",
@@ -69,8 +69,8 @@ const make_problem = (problem_id, problems = {}, req) => {
 		submit: 0,
 		solved: 0
 	}, problems);
-	return new Promise((resolve, reject) => {
-		query(`INSERT INTO problem (problem_id,title,description,input,output,
+	try {
+		await query(`INSERT INTO problem (problem_id,title,description,input,output,
 		sample_input,sample_output,spj,hint,source,label,in_date,time_limit,memory_limit,
 		defunct,accepted,submit,solved)
 		VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?,?)
@@ -78,43 +78,30 @@ const make_problem = (problem_id, problems = {}, req) => {
 			save_problem.output, save_problem.sample_input, save_problem.sample_output,
 			Number(Boolean(save_problem.special_judge && save_problem.special_judge.length > 0)),
 			save_problem.hint, save_problem.source, save_problem.label.length > 0 ? save_problem.label.join(" ") : "", save_problem.time,
-			save_problem.memory, save_problem.defunct, 0, 0, 0])
+			save_problem.memory, save_problem.defunct, 0, 0, 0]);
+		await query("DELETE FROM privilege where rightstr = ?", [`p${problem_id}`]);
+		await query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
 
-			.then(rows => {
-				query("DELETE FROM privilege where rightstr = ?", [`p${problem_id}`])
-					.then(() => {
-						query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
-					});
-				resolve(rows);
-			})
-			.catch(err => {
-				reject(err);
-			});
-		resolve();
-	});
+	}
+	catch (e) {
+		console.log(e);
+	}
 };
 
 const writeFiles = async (_path, files) => {
-	for (let i of files) {
-		if (!i || !i.name || !i.content) {
-			continue;
+	try {
+		for (let i of files) {
+			if (!i || !i.name || !i.content) {
+				continue;
+			}
+			const name = i.name;
+			const data = base64ToString(i.content);
+			await fsPromise.writeFileAsync(path.join(_path, name), data);
+			await fsPromise.chownAsync(path.join(_path, name), 48, 48);
 		}
-		const name = i.name;
-		const data = base64ToString(i.content);
-		await new Promise((resolve, reject) => {
-			fs.writeFile(path.join(_path, name), data, function (err) {
-				if (err) {
-					reject(err);
-				} else {
-					fs.chown(path.join(_path, name), 48, 48, function (err) {
-						if (err) {
-							throw err;
-						}
-					});
-					resolve();
-				}
-			});
-		});
+	}
+	catch(e) {
+		console.log(e);
 	}
 };
 
@@ -130,39 +117,12 @@ const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 		if (append_code !== "") {
 			append_code = base64ToString(append_code.content);
 		}
-		await new Promise((resolve, reject) => {
-			query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
-		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name)[0], req.session.user_id, content.length])
-				.then(rows => {
-					let flag = 0;
-					let feedback = [];
-					const check = (row) => {
-						if (row) {
-							feedback.push(row);
-						}
-						if (++flag > 1) resolve();
-					};
-					const solution_id = rows.insertId;
-					query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${prepend_code + content + append_code}')`
-						, [solution_id])
-						.then(rows => {
-							check(rows);
-						})
-						.catch(err => {
-							reject(err);
-						});
-					query(`INSERT INTO source_code_user(solution_id,source)VALUES(?,'${content}')`, [solution_id])
-						.then(rows => {
-							check(rows);
-						})
-						.catch(err => {
-							reject(err);
-						});
-				})
-				.catch(err => {
-					reject(err);
-				});
-		});
+		const rows = await query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
+		VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, convertLanguage(i.name)[0], req.session.user_id, content.length]);
+		const solution_id = rows.insertId;
+		query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${prepend_code + content + append_code}')`
+			, [solution_id]);
+		query(`INSERT INTO source_code_user(solution_id,source)VALUES(?,'${content}')`, [solution_id]);
 	}
 };
 
@@ -176,22 +136,10 @@ const make_files = async (req, pid, problems = {}) => {
 	// const sample_output = problems.sample_output;
 	const solutionFiles = problems.solution;
 	const save_path = path.join("/home/judge/data", pid.toString());
-	await new Promise(async (resolve, reject) => {
-		if (fs.existsSync(save_path)) {
-			await new Promise(resolve => {
-				rimraf(save_path, () => {
-					resolve();
-				});
-			});
-		}
-		fs.mkdir(save_path, 0o755, function (err) {
-			if (err) {
-				reject(err);
-			} else {
-				resolve();
-			}
-		});
-	});
+	if (fs.existsSync(save_path)) {
+		await Promise.promisify(rimraf)(save_path);
+	}
+	await fsPromise.mkdirAsync(save_path, 0o755);
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
 	await writeFiles(save_path, special_judge);
@@ -221,26 +169,14 @@ const make_files = async (req, pid, problems = {}) => {
 	}
 	// await writeFiles(save_path, prependFiles);
 	// await writeFiles(save_path, appendFiles);
-	await new Promise((resolve, reject) => {
-		fs.chown(save_path, 48, 48, function (err) {
-			if (err) {
-				reject(err);
-			} else {
-				resolve();
-			}
-		});
-	});
+	await fsPromise.chownAsync(save_path, 48, 48);
 	await submitProblem(req, pid, solutionFiles, prependFiles, appendFiles);
 };
 
 const make_file = async (req, res, file_path, pid) => {
 	const fpath = file_path || req.file.path;
 	const data = await fsPromise.readFileAsync(fpath);
-	const unzip_data = await new Promise((resolve) => {
-		zlib.gunzip(data, (err, data) => {
-			resolve(data.toString());
-		});
-	});
+	const unzip_data = (await Promise.promisify(zlib.gunzip)(data)).toString();
 	const problems = JSON.parse(unzip_data);
 	let max_pid;
 
@@ -295,14 +231,7 @@ if (upload !== false) {
 
 router.get("/", async (req, res) => {
 	const problem_dir = "/home/upload_problems";
-	const dir_list = await new Promise((resolve, reject) => {
-		fs.readdir(problem_dir, (err, data) => {
-			if (err) {
-				reject();
-			}
-			resolve(data);
-		});
-	});
+	const dir_list = await fsPromise.readdirAsync(problem_dir);
 	let file_list = [];
 	dir_list.forEach((el) => {
 		if (el.match(/\.rpk/)) {
@@ -317,11 +246,7 @@ router.get("/", async (req, res) => {
 	for (let el of file_list) {
 		const filename = path.join(problem_dir, el);
 		const problem_list = await make_file(req, res, filename, start_id++);
-		await new Promise(resolve => {
-			fs.unlink(filename, () => {
-				resolve();
-			});
-		});
+		await fsPromise.unlinkAsync(filename);
 		problem_lists.push(problem_list);
 	}
 	res.json({
