@@ -71,6 +71,19 @@ router.post("/", function (req, res, next) {
 });
 */
 
+async function storeNewTypePassword(res, json, user_id, newpass) {
+	if(newpass) {
+		return;
+	}
+	try {
+		await query("update users set newpassword=? where user_id=?",
+			[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id]);
+	} catch (e) {
+		res.json(error.database);
+		log.fatal(e);
+	}
+}
+
 
 router.post("/", async function (req, res) {
 	let receive = req.body.msg;
@@ -82,6 +95,7 @@ router.post("/", async function (req, res) {
 		receive = Buffer.from(receive, "base64").toString();
 		receive = Buffer.from(receive, "base64").toString();
 	} catch (e) {
+		console.log(e);
 		log.fatal(e);
 		return;
 	}
@@ -97,33 +111,25 @@ router.post("/", async function (req, res) {
 		Error message:${e.message}`);
 	}
 	const json = receive;
-	const user_id = json["user_id"] || "";
-	const password = json["password"] || "";
+	const user_id = json["user_id"] || "", password = json["password"] || "";
 	if (user_id !== "" && password !== "") {
-		await query("select password,newpassword from users where user_id=?", [user_id]).then(async (val) => {
-			let ans;
-			let newpass;
-			if (val.length && val.length > 0) {
-				ans = val[0].password;
-				newpass = val[0].newpassword;
-				if (checkPassword(ans, password, null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
-					if (!newpass) {
-						query("update users set newpassword=? where user_id=?",
-							[crypto.encryptAES(reverse(json["password"]) + salt, reverse(salt)), user_id])
-							.catch((e) => {
-								res.json(error.database);
-								log.fatal(e);
-							});
-					}
-					await login_action(req, user_id);
-					res.json({
-						status: "OK"
-					});
-				} else {
-					res.json(error.invalidUser);
-				}
+		const val = await query("select password,newpassword from users where user_id=?", [user_id]);
+		let ans;
+		let newpass;
+		if (val.length && val.length > 0) {
+			ans = val[0].password;
+			newpass = val[0].newpassword;
+			if (checkPassword(ans, password, null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
+				await storeNewTypePassword(res, json, user_id, newpass);
+				await login_action(req, user_id);
+				res.json(ok.ok);
+			} else {
+				res.json(error.invalidUser);
 			}
-		});
+		}
+	}
+	else {
+		res.json(error.errorMaker("You should enter your user_id and password"));
 	}
 });
 

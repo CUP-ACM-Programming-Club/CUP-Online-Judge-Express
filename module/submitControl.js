@@ -166,6 +166,36 @@ function checkLangmask(language, langmask = LANGMASK) {
 	return Boolean((~langmask) & (1 << language));
 }
 
+async function checkContestValidate(req, originalContestID, originalPID, language) {
+	if (isNaN(originalContestID) || isNaN(originalPID)) {
+		return error.errorMaker("Invalid contest_id or pid");
+	}
+	const positiveContestID = Math.abs(originalContestID);
+	let limit_address = await limitAddressForContest(req, positiveContestID);
+	if (typeof limit_address === "string") {
+		return error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
+	}
+	let limit_classroom = await limitClassroomAccess(req, positiveContestID);
+	if (!limit_classroom) {
+		return error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
+	}
+	let problem_id = await contestIncludeProblem(positiveContestID, originalPID);
+	if (problem_id === false) {
+		return error.errorMaker("problem is not in contest");
+	}
+	if (!await checkContestPrivilege(req, positiveContestID)) {
+		return error.errorMaker("You don't have privilege to access this contest problem");
+	}
+	if (!await contestIsStart(positiveContestID)) {
+		return error.errorMaker("Contest is not start");
+	}
+	const contest_langmask = await getLangmaskForContest(positiveContestID);
+	if (!checkLangmask(language, contest_langmask)) {
+		return error.errorMaker("Your submission's language is invalid");
+	}
+	return true;
+}
+
 
 module.exports = async function (req, data, cookie) {
 	if (!req.session || !req.session.user_id) {
@@ -227,13 +257,7 @@ module.exports = async function (req, data, cookie) {
 		}
 
 		const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
-		const source_code_user = deepCopy(data.source);
-		const IP = getIP(req);
-		const judger = "待分配";
-		const fingerprint = data.fingerprint;
-		const fingerprintRaw = data.fingerprintRaw;
-		const code_length = source_code_user.length;
-		const share = Boolean(data.share);
+		const [source_code_user, IP,judger,fingerprint,fingerprintRaw,code_length,share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw, source_code_user.length,Boolean(data.share)];
 		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
@@ -255,31 +279,10 @@ module.exports = async function (req, data, cookie) {
 		const originalContestID = parseInt(data.cid);
 		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
-		if (isNaN(originalContestID) || isNaN(originalPID)) {
-			return error.errorMaker("Invalid contest_id or pid");
-		}
 		const positiveContestID = Math.abs(originalContestID);
-		let limit_address = await limitAddressForContest(req, positiveContestID);
-		if (typeof limit_address === "string") {
-			return error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
-		}
-		let limit_classroom = await limitClassroomAccess(req, positiveContestID);
-		if (!limit_classroom) {
-			return error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
-		}
-		let problem_id = await contestIncludeProblem(positiveContestID, originalPID);
-		if (problem_id === false) {
-			return error.errorMaker("problem is not in contest");
-		}
-		if (!await checkContestPrivilege(req, positiveContestID)) {
-			return error.errorMaker("You don't have privilege to access this contest problem");
-		}
-		if (!await contestIsStart(positiveContestID)) {
-			return error.errorMaker("Contest is not start");
-		}
-		const contest_langmask = await getLangmaskForContest(positiveContestID);
-		if (!checkLangmask(language, contest_langmask)) {
-			return error.errorMaker("Your submission's language is invalid");
+		const validate = await checkContestValidate(req, originalContestID, originalPID, language);
+		if(validate !== true) {
+			return validate;
 		}
 		const source_code = await makePrependAndAppendCode(problem_id, data.source, language);
 		const source_code_user = deepCopy(data.source);
