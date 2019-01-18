@@ -81,6 +81,7 @@ const make_problem = async (problem_id, problems = {}, req) => {
 			save_problem.memory, save_problem.defunct, 0, 0, 0]);
 		await query("DELETE FROM privilege where rightstr = ?", [`p${problem_id}`]);
 		await query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
+		req.session.problem_maker[`p${problem_id}`] = true;
 
 	}
 	catch (e) {
@@ -208,10 +209,7 @@ const createProblemModule = (req, res) => {
 		})
 		.catch((err) => {
 			console.log(err);
-			res.json({
-				status: "ERROR",
-				statement: "upload file error"
-			});
+			res.json(error.errorMaker("upload file error"));
 		});
 };
 
