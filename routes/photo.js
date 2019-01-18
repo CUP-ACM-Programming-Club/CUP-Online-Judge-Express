@@ -9,6 +9,7 @@ const bluebird = require("bluebird");
 const base64Img = bluebird.promisifyAll(require("base64-img"));
 const fs = bluebird.promisifyAll(require("fs"));
 const isImage = require("is-image");
+const {mkdirAsync} = require("../module/file/mkdir");
 
 function validateProblemId(req) {
 	const problem_id = req.params.problem_id;
@@ -25,6 +26,7 @@ function getPhotoDir(problem_id, key) {
 
 async function readPhoto(problem_id, key) {
 	const dirPath = getPhotoDir(problem_id, key);
+	await mkdirAsync(dirPath);
 	const photoList = await readPhotoDir(problem_id, key);
 	return await Promise.all(photoList.map(async el => {
 		return {

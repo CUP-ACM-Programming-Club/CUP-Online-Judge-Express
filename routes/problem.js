@@ -5,22 +5,9 @@ const dayjs = require("dayjs");
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 let cachePack = {};
 const website_dir = require("../config.json").website.dir;
-const fs = require("fs");
 const bluebird = require("bluebird");
 const base64Img = bluebird.promisifyAll(require("base64-img"));
-function mkdirs(dirname, callback) {
-	fs.exists(dirname, function (exists) {
-		if (exists) {
-			callback();
-		} else {
-			mkdirs(path.dirname(dirname), function () {
-				fs.mkdir(dirname, callback);
-			});
-		}
-	});
-}
-
-const mkdirAsync = require("bluebird").promisify(mkdirs);
+const {mkdirAsync} = require("../module/file/mkdir");
 
 const md = require("markdown-it")({
 	html: true,

@@ -182,16 +182,10 @@ module.exports = async function (req, data, cookie) {
 		Object.assign(req, obj);
 	}
 	if(!data) {
-		return {
-			status: "error",
-			statement: "submission invalid!"
-		};
+		return error.errorMaker("submission invalid!");
 	}
 	else if(data.source && data.source.length > 64 * 1024) {
-		return {
-			status: "error",
-			statement: "Your code is too long!"
-		};
+		return error.errorMaker("Your code is too long!");
 	}
 	let submission_type = 0;
 	if (data.type === "problem") {
@@ -202,52 +196,34 @@ module.exports = async function (req, data, cookie) {
 		submission_type = TOPIC_SUBMISSION;
 	}
 	if (submission_type === 0) {
-		return {
-			status: "error",
-			statement: "submission type is not valid"
-		};
+		return error.errorMaker("submission type is not valid");
 	}
 
 	if (submission_type === NORMAL_SUBMISSION) {
 		const originalProblemId = parseInt(data.id);
 		const language = parseInt(data.language);
 		if (isNaN(originalProblemId)) {
-			return {
-				status: "error",
-				statement: "Problem ID is not valid"
-			};
+			return error.errorMaker("Problem ID is not valid");
 		}
 		const positiveProblemId = Math.abs(originalProblemId);
 		if (!checkLangmask(language)) {
-			return {
-				status: "error",
-				statement: "Your language is not valid"
-			};
+			return error.errorMaker("Your language is not valid");
 		}
 		const problemPublicStatus = await problemPublic(positiveProblemId);
 		switch (problemPublicStatus) {
 		case NOTEXIST:
-			return {
-				status: "error",
-				statement: "problem is not exist"
-			};
+			return error.errorMaker("problem is not exist");
 		case PUBLIC:
 			break;
 		case PRIVATE:
 			if (req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`]) {
 				break;
 			} else {
-				return {
-					status: "error",
-					statement: "You don't have privilege to access this problem"
-				};
+				return error.errorMaker("You don't have privilege to access this problem");
 			}
 		}
 		if (await problemInFutureOrCurrentContest(positiveProblemId) && !(req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`])) {
-			return {
-				status: "error",
-				statement: "problem is in current or future contest."
-			};
+			return error.errorMaker("problem is in current or future contest.");
 		}
 
 		const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
@@ -280,51 +256,30 @@ module.exports = async function (req, data, cookie) {
 		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
 		if (isNaN(originalContestID) || isNaN(originalPID)) {
-			return {
-				status: "error",
-				statement: "Invalid contest_id or pid"
-			};
+			return error.errorMaker("Invalid contest_id or pid");
 		}
 		const positiveContestID = Math.abs(originalContestID);
 		let limit_address = await limitAddressForContest(req, positiveContestID);
 		if (typeof limit_address === "string") {
-			return {
-				status: "error",
-				statement: "根据管理员设置的策略，请从" + limit_address + "访问本页提交"
-			};
+			return error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
 		}
 		let limit_classroom = await limitClassroomAccess(req, positiveContestID);
 		if (!limit_classroom) {
-			return {
-				status: "error",
-				statement: "根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。"
-			};
+			return error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
 		}
 		let problem_id = await contestIncludeProblem(positiveContestID, originalPID);
 		if (problem_id === false) {
-			return {
-				status: "error",
-				statement: "problem is not in contest"
-			};
+			return error.errorMaker("problem is not in contest");
 		}
 		if (!await checkContestPrivilege(req, positiveContestID)) {
-			return {
-				status: "error",
-				statement: "You don't have privilege to access this contest problem"
-			};
+			return error.errorMaker("You don't have privilege to access this contest problem");
 		}
 		if (!await contestIsStart(positiveContestID)) {
-			return {
-				status: "error",
-				statement: "Contest is not start"
-			};
+			return error.errorMaker("Contest is not start");
 		}
 		const contest_langmask = await getLangmaskForContest(positiveContestID);
 		if (!checkLangmask(language, contest_langmask)) {
-			return {
-				status: "error",
-				statement: "Your submission's language is invalid"
-			};
+			return error.errorMaker("Your submission's language is invalid");
 		}
 		const source_code = await makePrependAndAppendCode(problem_id, data.source, language);
 		const source_code_user = deepCopy(data.source);
@@ -359,31 +314,19 @@ module.exports = async function (req, data, cookie) {
 		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
 		if (isNaN(originalTopicID) || isNaN(originalPID)) {
-			return {
-				status: "error",
-				statement: "Invalid topic_id or pid"
-			};
+			return error.errorMaker("Invalid topic_id or pid");
 		}
 		const positiveTopicID = Math.abs(originalTopicID);
 		let problem_id = await TopicIncludeProblem(positiveTopicID, originalPID);
 		if (problem_id === false) {
-			return {
-				status: "error",
-				statement: "problem is not in topic"
-			};
+			return error.errorMaker("problem is not in topic");
 		}
 		if (!await checkTopicPrivilege(req, positiveTopicID)) {
-			return {
-				status: "error",
-				statement: "You don't have privilege to access this topic"
-			};
+			return error.errorMaker("You don't have privilege to access this topic");
 		}
 		const topic_langmask = await getLangmaskForTopic(positiveTopicID);
 		if (!checkLangmask(language, topic_langmask)) {
-			return {
-				status: "error",
-				statement: "Your submission's language is invalid"
-			};
+			return error.errorMaker("Your submission's language is invalid");
 		}
 
 		const source_code = await makePrependAndAppendCode(problem_id, data.source, language);
