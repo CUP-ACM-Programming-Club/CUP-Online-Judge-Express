@@ -257,7 +257,8 @@ module.exports = async function (req, data, cookie) {
 		}
 
 		const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
-		const [source_code_user, IP,judger,fingerprint,fingerprintRaw,code_length,share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw, source_code_user.length,Boolean(data.share)];
+		const [source_code_user, IP,judger,fingerprint,fingerprintRaw,share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw,Boolean(data.share)];
+		const code_length = source_code_user.length;
 		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
