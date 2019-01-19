@@ -1,4 +1,4 @@
-const [error] = require("../const_var");
+const [error, ok] = require("../const_var");
 const query = require("../../module/mysql_cache");
 module.exports = async (req, res, result) => {
 	if(isNaN(result)) {
