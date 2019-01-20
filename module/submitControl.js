@@ -39,6 +39,16 @@ async function getLangmaskForContest(contest_id) {
 	return data[0].langmask;
 }
 
+async function getContestProblemID(contest_id, num) {
+	const data = await cache_query(`select problem_id from contest_problem where contest_id = ? and num = ?`,[contest_id, num]);
+	if(data && data.length) {
+		return parseInt(data[0].problem_id);
+	}
+	else {
+		return false;
+	}
+}
+
 async function getLangmaskForTopic(topic_id) {
 	const data = await cache_query(`select langmask fron special_subject 
     where topic_id = ?`, [topic_id]);
@@ -179,8 +189,7 @@ async function checkContestValidate(req, originalContestID, originalPID, languag
 	if (!limit_classroom) {
 		return error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
 	}
-	let problem_id = await contestIncludeProblem(positiveContestID, originalPID);
-	if (problem_id === false) {
+	if ((await contestIncludeProblem(positiveContestID, originalPID)) === false) {
 		return error.errorMaker("problem is not in contest");
 	}
 	if (!await checkContestPrivilege(req, positiveContestID)) {
@@ -281,6 +290,12 @@ module.exports = async function (req, data, cookie) {
 		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
 		const positiveContestID = Math.abs(originalContestID);
+		const problem_id = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
+		if(problem_id === false) {
+			res.json(error.errorMaker("Problem does not exists"));
+			return;
+		}
+		data.id = problem_id;
 		const validate = await checkContestValidate(req, originalContestID, originalPID, language);
 		if(validate !== true) {
 			return validate;
