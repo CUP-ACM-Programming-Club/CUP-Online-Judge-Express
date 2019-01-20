@@ -179,7 +179,7 @@ router.post("/update/main/:id", (req, res) => {
 		const article_id = parseInt(req.params.id);
 		const content = req.body.content;
 		const title = req.body.title;
-		query("update article set title = ? , content = ?,edit_time = NOW() where article_id = ? and user_id = ?",
+		query("update article set title = ? , content = ?,edit_time = NOW(),last_post = NOW() where article_id = ? and user_id = ?",
 			[title, content, article_id, req.session.user_id])
 			.then(() => {
 				res.json(ok.ok);

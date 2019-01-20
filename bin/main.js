@@ -3,7 +3,8 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 const config = global.config = require("../config.json");
 const app = require("../app");
-
+const easyMonitor = require("easy-monitor");
+easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
