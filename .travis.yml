@@ -2,7 +2,7 @@ language: node_js
 sudo: required
 env:
   global:
-    - CODECOV_TOKEN: a55667d0-f8ac-4c68-9bb4-6685e475012d
+    - CODECOV_TOKEN: 3978fb10-ab94-4c8f-a101-7d115c4fc4e7
 cache:
   directories:
     - node_modules
