@@ -63,4 +63,7 @@ const query = function (sql_query, sqlArr, callback) {
 	}
 	//connection.end();
 };
+
+query.pool = pool;
+
 module.exports = query;

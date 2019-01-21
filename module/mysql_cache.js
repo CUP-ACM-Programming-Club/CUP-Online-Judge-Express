@@ -6,7 +6,7 @@ function deepCopy(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
 
-module.exports = async function cache_query(sql, sqlArr = [], opt = {copy: 0}) {
+const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 	let identified = sql.toString() + JSON.stringify(sqlArr.toString());
 	let now = dayjs();
 	if (cache_pool[identified]) {
@@ -38,3 +38,7 @@ module.exports = async function cache_query(sql, sqlArr = [], opt = {copy: 0}) {
 		return cache_pool[identified].data;
 	}
 };
+
+cache_query.pool = query.pool;
+
+module.exports = cache_query;
