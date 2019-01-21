@@ -16,7 +16,7 @@ before_install:
   - sudo mysql -u root --default-character-set=utf8 -pnew_password < ./script/structure.sql
 script:
   - npm test
-  - istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && codecov
+  - istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --recursive && codecov
 services:
   - mysql
   - redis-server
