@@ -424,10 +424,22 @@ router.get("/", async function (req, res, next) {
 	await get_status(req, res, next);
 });
 
+function validateUserId(req) {
+	if(req.params.user_id === "null") {
+		return undefined;
+	}
+	else if(req.params.user_id === "my"){
+		return req.session.user_id;
+	}
+	else {
+		return req.params.user_id;
+	}
+}
+
 
 router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req, res, next) {
 	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
-	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const user_id = validateUserId(req);
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
