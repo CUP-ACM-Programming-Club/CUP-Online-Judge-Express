@@ -795,7 +795,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
+INSERT INTO `users` (user_id) VALUES ('admin');
 --
 -- Table structure for table `users_account`
 --

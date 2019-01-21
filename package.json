@@ -72,5 +72,10 @@
     "restart": "pm2 stop pm2.json && pm2 start pm2.json",
     "local": "NODE_ENV=local node --max-old-space-size=5000 ./bin/main.js"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^5.2.0",
+    "supertest": "^3.4.1"
+  }
 }

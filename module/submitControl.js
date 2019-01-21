@@ -5,6 +5,8 @@ const dayjs = require("dayjs");
 const client = require("./redis");
 const detectClassroom = require("./detect_classroom");
 const getIP = require("./getIP");
+const [error] = require("../module/const_var");
+
 
 const NORMAL_SUBMISSION = 1;
 const CONTEST_SUBMISSION = 2;
@@ -25,6 +27,7 @@ and end_time > NOW()`, [problem_id]);
 	return (data && data.length > 0);
 }
 
+
 async function contestIsStart(contest_id) {
 	const data = await cache_query("select start_time,end_time from contest where contest_id = ?", [contest_id]);
 	const start_time = dayjs(data[0].start_time);
@@ -39,18 +42,9 @@ async function getLangmaskForContest(contest_id) {
 	return data[0].langmask;
 }
 
-async function getContestProblemID(contest_id, num) {
-	const data = await cache_query(`select problem_id from contest_problem where contest_id = ? and num = ?`,[contest_id, num]);
-	if(data && data.length) {
-		return parseInt(data[0].problem_id);
-	}
-	else {
-		return false;
-	}
-}
 
 async function getLangmaskForTopic(topic_id) {
-	const data = await cache_query(`select langmask fron special_subject 
+	const data = await cache_query(`select langmask from special_subject 
     where topic_id = ?`, [topic_id]);
 	return data[0].langmask;
 }
@@ -290,10 +284,9 @@ module.exports = async function (req, data, cookie) {
 		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
 		const positiveContestID = Math.abs(originalContestID);
-		const problem_id = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
+		let problem_id = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
 		if(problem_id === false) {
-			res.json(error.errorMaker("Problem does not exists"));
-			return;
+			return error.errorMaker("Problem does not exists");
 		}
 		data.id = problem_id;
 		const validate = await checkContestValidate(req, originalContestID, originalPID, language);

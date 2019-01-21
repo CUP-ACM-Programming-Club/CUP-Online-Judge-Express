@@ -10,15 +10,19 @@ module.exports = async (req, res, next) => {
 		}
 		return next();
 	}
+	else if (process.env.NODE_ENV === "test") {
+		if(!req.session.auth) {
+			req.session.auth = true;
+			req.session.isadmin = true;
+			req.session.user_id = "admin";
+		}
+		return next();
+	}
 	if (!req.session.auth) {
 		const original_cookie = req.cookies;
 		//req.cookies is an object
 		const token = original_cookie["token"];
 		const user_id = original_cookie["user_id"];
-		if(user_id === "2017011714") {
-			req.session.destroy();
-			return;
-		}
 		//get token and user_id from cookie
 		if (typeof user_id === "string") {//whether user_id is string or not,maybe it is an undefined variable
 			//const original_token = await memcache.get(user_id + "token");
