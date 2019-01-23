@@ -85,8 +85,8 @@ router.get("/:cid", async (req, res) => {
         on sim.s_id = solution.solution_id
         union all 
         select users.user_id,users.nick,users.avatar,vsol.result,vsol.num,vsol.in_date,'' as fingerprint,'' as fingerprintRaw,
-        null as sim,
-        vsol.ip
+        vsol.ip,
+        null as sim
         from
         (select * from 
         vjudge_solution where vjudge_solution.contest_id=? 
