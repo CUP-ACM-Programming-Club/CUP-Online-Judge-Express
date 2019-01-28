@@ -13,6 +13,9 @@ describe("login action test", function(){
         expect(req.session.contest).to.be.a("object").that.is.deep.equal({});
         expect(req.session.contest_maker).to.be.a("object").that.is.deep.equal({});
         expect(req.session.problem_maker).to.be.a("object").that.is.deep.equal({});
-        require("../../module/mysql_query").pool.end();
     });
+
+    after(function(){
+        require("../../module/mysql_query").pool.end();
+    })
 });
