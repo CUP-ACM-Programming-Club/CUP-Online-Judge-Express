@@ -42,8 +42,11 @@ module.exports = query;
 const mysql = require("mysql2");
 const config = require("../config.json");
 //const connection = mysql.createConnection(config["mysql"]);
-const pool = mysql.createPool(config["mysql"]);
+let pool = mysql.createPool(config["mysql"]);
 const query = function (sql_query, sqlArr, callback) {
+	if(!pool || pool._closed) {
+		query.pool = pool = mysql.createPool(config["mysql"]);
+	}
 	if (typeof callback === "function") {
 		pool.query(sql_query, sqlArr, function (err, results, fields) {
 			callback(results, fields);
