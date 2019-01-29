@@ -13,15 +13,6 @@ module.exports = async (req, user_id) => {
 		if (i.rightstr === "administrator") {
 			req.session.isadmin = true;
 		}
-		else if (i.rightstr.indexOf("c") === 0) {
-			req.session.contest[i.rightstr] = true;
-		}
-		else if (i.rightstr.indexOf("m") === 0) {
-			req.session.contest_maker[i.rightstr] = true;
-		}
-		else if (i.rightstr.indexOf("p") === 0) {
-			req.session.problem_maker[i.rightstr] = true;
-		}
 		else if (i.rightstr.indexOf("editor") === 0) {
 			req.session.editor = true;
 		}
@@ -30,6 +21,15 @@ module.exports = async (req, user_id) => {
 		}
 		else if (i.rightstr.indexOf("source_browser") === 0) {
 			req.session.source_browser = true;
+		}
+		else if (i.rightstr.indexOf("c") === 0) {
+			req.session.contest[i.rightstr] = true;
+		}
+		else if (i.rightstr.indexOf("m") === 0) {
+			req.session.contest_maker[i.rightstr] = true;
+		}
+		else if (i.rightstr.indexOf("p") === 0) {
+			req.session.problem_maker[i.rightstr] = true;
 		}
 	}
 };
