@@ -69,4 +69,11 @@ const query = function (sql_query, sqlArr, callback) {
 
 query.pool = pool;
 
+const _end = query.pool.end;
+query.pool.end = function() {
+	if(!this._closed) {
+		_end.apply(this, arguments);
+	}
+};
+
 module.exports = query;

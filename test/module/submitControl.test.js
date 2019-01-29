@@ -52,6 +52,7 @@ describe("test submit controller", function () {
            .map(el => query(`delete from ${el}`));
         await Promise.all(PromisifyQuery);
         query.pool.end();
+        require("../../module/mysql_query").pool.end();
         require("../../module/redis").quit();
     })
 });

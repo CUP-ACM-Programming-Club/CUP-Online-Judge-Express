@@ -45,4 +45,11 @@ const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 
 cache_query.pool = query.pool;
 
+const _end = query.pool.end;
+query.pool.end = function() {
+	if(!this._closed) {
+		_end.apply(this, arguments);
+	}
+};
+
 module.exports = cache_query;
