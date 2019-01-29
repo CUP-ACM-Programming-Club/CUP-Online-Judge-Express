@@ -6,6 +6,10 @@ function deepCopy(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
 
+function modifySql(sql) {
+	return sql.includes("update") || sql.includes("insert") || sql.includes("delete");
+}
+
 const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 	let identified = sql.toString() + JSON.stringify(sqlArr.toString());
 	let now = dayjs();
@@ -28,7 +32,7 @@ const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 	}
 	else {
 		const lowerCaseSql = sql.toLowerCase();
-		if (lowerCaseSql.indexOf("update") !== -1 || lowerCaseSql.indexOf("insert") !== -1) {
+		if (modifySql(lowerCaseSql)) {
 			return await query(sql, sqlArr);
 		}
 		cache_pool[identified] = {
