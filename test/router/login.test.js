@@ -15,8 +15,8 @@ describe("test login router", function(){
     require("../../module/init/express_loader")(server);
     const query = require("../../module/mysql_cache");
     before(function(){
-        query("insert into users (user_id,password,newpassword) values(?,?,?)",
-            ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1", "U2FsdGVkX185LCgXLQMbhFk4h9duugaKeTkpvYzvlSgjt+0dkoPHt90Ow8y66tZA"]);
+        query("insert into users (user_id,password) values(?,?)",
+            ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"]);
     });
 
     it('should return status JSON', function (done) {
@@ -81,6 +81,24 @@ describe("test login router", function(){
                 expect(res.body).to.deep.equal(ok.ok);
                 done();
             });
+    });
+
+    it('should add newpassword return ok', function (done) {
+        let data = {
+            user_id:"test",
+            pasword:"123456"
+        };
+        request(server)
+            .post("/login/newpassword")
+            .send(data)
+            .expect(200)
+            .end(function(err, res){
+                if(err){
+                    done(err);
+                }
+                expect(res.body).to.deep.equal(ok.ok);
+                done();
+            })
     });
 
     it('should return invalidJSON', function (done) {
