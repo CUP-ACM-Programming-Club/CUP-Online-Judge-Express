@@ -24,7 +24,7 @@ const reverse = (val) => {
 router.get("/", function (req, res) {
 	res.json({
 		status: "OK",
-		logined: req.session && req.session.auth
+		logined: Boolean(req.session && req.session.auth)
 	});
 });
 

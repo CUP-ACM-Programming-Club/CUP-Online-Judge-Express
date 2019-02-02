@@ -14,6 +14,7 @@ let memcache_obj = {
 				}
 			});
 		});
-	}
+	},
+	instance: memcached
 };
 module.exports = memcache_obj;

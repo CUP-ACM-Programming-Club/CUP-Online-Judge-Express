@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
 const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
-const config = global.config = require("../config.json");
+require("../module/init/build_env")();
+const config = global.config;
 const app = require("../app");
 const easyMonitor = require("easy-monitor");
 easyMonitor("CUP Online Judge Express");

@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-const ENVIRONMENT = process.env.NODE_ENV;
+const ENVIRONMENT = process.env.NODE_ENV || "prod";
 const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
 const express = require("express");
 const router = express.Router();
