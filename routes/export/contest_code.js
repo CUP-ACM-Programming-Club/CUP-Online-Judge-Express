@@ -56,7 +56,7 @@ function send_file(res, data, contest_id) {
 		res.write("------------------------------------------------------\n\r");
 		res.write("AC代码:\n\r");
 		res.write(rows.source);
-		res.write("------------------------------------------------------\n\r\n\r");
+		res.write("\n\r------------------------------------------------------\n\r\n\r");
 	}
 	res.end();
 }
