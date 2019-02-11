@@ -75,8 +75,6 @@ group by browser_name,browser_version`, [user_id]));
 router.get("/nick/:nick", async (req, res) => {
 	const nick = req.params.nick;
 	const data = await query("select user_id from users where nick = ?", [nick]);
-	console.log("nick", nick);
-	console.log(data);
 	if (data && data.length > 0) {
 		res.json({
 			status: "OK",
