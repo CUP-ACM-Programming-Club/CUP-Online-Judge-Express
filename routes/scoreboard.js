@@ -13,6 +13,10 @@ const check = async (req, res, cid) => {
 		return false;
 	}
 	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+	if(contest && contest.length === 0) {
+		res.json(error.errorMaker("no such contest"));
+		return false;
+	}
 	const start_time = dayjs(contest[0].start_time);
 	const now = dayjs();
 	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
@@ -53,15 +57,9 @@ const check = async (req, res, cid) => {
 router.get("/:cid", (req, res, next) => {
 	const cid = isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (cid === -1) {
-		res.json({
-			status: "error",
-			statement: "contest_id is not a number"
-		});
+		res.json(error.errorMaker("contest_id is not a number"));
 	} else if (cid < 1000) {
-		res.json({
-			status: "error",
-			statement: "contest_id invalid"
-		});
+		res.json(error.errorMaker("contest_id invalid"));
 	} else {
 		next();
 	}
@@ -102,11 +100,9 @@ left join users on users.user_id = t.user_id`;
 	const _start_time = query(sql3, [cid]);
 	const _user = query(sql4, ["c" + cid]);
 	Promise.all([_data, _total, _start_time, _user]).then((result) => {
-		if (result[1][0].total_problem === 0) {
-			res.json({
-				status: "error",
-				statement: "no such contest"
-			});
+		console.log(result[2]);
+		if (result[2].length === 0) {
+			res.json(error.errorMaker("no such contest"));
 		} else {
 			res.json({
 				status: "OK",
