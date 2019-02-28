@@ -1,23 +1,48 @@
 const express = require("express");
-//const query = require("../module/mysql_query");
 const dayjs = require("dayjs");
 const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
+const [error] = require("../module/const_var");
 const router = express.Router();
 const auth = require("../middleware/auth");
 
 const page_cnt = 50;
+
+function generateMemberSql(opt = {}) {
+	if(typeof opt !== "object") {
+		return "";
+	}
+	else if(opt.acm_member === true) {
+		return " user_id in (select user_id from acm_member where level = 1) and";
+	}
+	else if(opt.retired_member === true) {
+		return " user_id in (select user_id from acm_member where level = 2) and";
+	}
+	else {
+		return "";
+	}
+}
+
+function parseQuery(req) {
+	return {
+		page: req.query.page || 0,
+		search: req.query.search || "",
+		time_stamp: req.query.time_stamp,
+		vjudge: req.query.vjudge || false
+	};
+}
+
 const get_ranklist = async (req, res, opt = {}) => {
 	let page = opt.page * 50;
 	let result;
 	if (!opt.search && !opt.time_stamp) {
 		if (opt.vjudge) {
 			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar FROM users where
-			 ${opt.acm_member ? " user_id in (select user_id from acm_member) " : ""} school != 'your_own_school' ORDER BY vjudge_accept
+			 ${generateMemberSql(opt)} school != 'your_own_school' ORDER BY vjudge_accept
 			 DESC,vjudge_submit DESC,reg_time LIMIT ?,?`, [page, page_cnt]);
 		} else {
 			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar FROM users where
-			${opt.acm_member ? " user_id in (select user_id from acm_member) and" : ""} school != 'your_own_school' ORDER BY solved 
+			${generateMemberSql(opt)} school != 'your_own_school' ORDER BY solved 
 				DESC,submit,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
 	} else if (!opt.search) {
@@ -101,10 +126,7 @@ const get_ranklist = async (req, res, opt = {}) => {
 			[search_name, search_name, page, page_cnt]);
 		}
 	} else {
-		res.json({
-			status: "error",
-			statement: "invalid parameter"
-		});
+		res.json(error.errorMaker("invalid parameter"));
 		return;
 	}
 	res.json({
@@ -114,49 +136,29 @@ const get_ranklist = async (req, res, opt = {}) => {
 };
 
 router.get("/", async function (req, res) {
-	let page = req.query.page || 0;
-	let search = req.query.search || "";
-	let time_stamp = req.query.time_stamp;
-	let vjudge = req.query.vjudge || false;
-	await get_ranklist(req, res, {
-		page: page,
-		search: search,
-		time_stamp: time_stamp,
-		vjudge: vjudge
-	});
+	await get_ranklist(req, res, parseQuery(req));
 });
 
 router.get("/acmmember", async function (req, res) {
-	let page = req.query.page || 0;
-	let search = req.query.search || "";
-	let time_stamp = req.query.time_stamp;
-	let vjudge = req.query.vjudge || false;
-	await get_ranklist(req, res, {
-		page: page,
-		search: search,
-		time_stamp: time_stamp,
-		vjudge: vjudge,
-		acm_member: true
-	});
+	await get_ranklist(req, res, Object.assign(parseQuery(req),{acm_member: true}));
+});
+
+router.get("/oldmember", async function (req, res) {
+	await get_ranklist(req, res, Object.assign(parseQuery(req),{retired_member: true}));
 });
 
 router.get("/user", async function (req, res) {
-	let result = await cache_query("SELECT count(1) as tot_user FROM users where school != 'your_own_school'")
-		.catch(() => {
-			//console.log(errs);
-			res.json({
-				status: "error",
-				statement: "database error"
-			});
-		});
-	const tot_user = result[0].tot_user;
-	result = await cache_query("SELECT count(1) as acm_user FROM acm_member");
-	const acm_user = result[0].acm_user;
-	result = {
-		tot_user: tot_user,
-		acm_user: acm_user
-	};
-	res.json([result]);
+	try {
+		let [result1, result2] = await Promise.all([cache_query("SELECT count(1) as tot_user FROM users where school != 'your_own_school'"),cache_query("SELECT count(1) as acm_user FROM acm_member")]);
+		res.json([{
+			tot_user: result1[0].tot_user,
+			acm_user: result2[0].acm_user
+		}]);
+	}
+	catch(e) {
+		res.json(error.database);
+		console.log(e);
+	}
 });
 
 module.exports = ["/ranklist", auth, router];
