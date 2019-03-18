@@ -13,6 +13,16 @@ const timediff = require("timediff");
 const auth = require("../middleware/auth");
 const [error] = require("../module/const_var");
 const admin_auth = require("../middleware/admin");
+
+router.use("/result", require("./status/submit_result"));
+router.use("/device", require("./status/device"));
+router.use("/sim", require("./status/sim"));
+router.use("/runtimeerror", require("./status/runtime_error"));
+router.use("/submit_hour", require("./status/submit_hour"));
+router.use("/ban_submission", admin_auth, require("./status/ban_submission"));
+router.use("/rejudge", admin_auth, require("./status/rejudge"));
+router.use(...require("./status/ip"));
+
 const SECONDS = 1000;
 const MINUTES = 60 * SECONDS;
 const HOURS = 60 * MINUTES;
@@ -643,13 +653,5 @@ router.get("/:sid/:tr", async function (req, res) {
 	});
 });
 
-router.use("/result", require("./status/submit_result"));
-router.use("/device", require("./status/device"));
-router.use("/sim", require("./status/sim"));
-router.use("/runtimeerror", require("./status/runtime_error"));
-router.use("/submit_hour", require("./status/submit_hour"));
-router.use("/ban_submission", admin_auth, require("./status/ban_submission"));
-router.use("/rejudge", admin_auth, require("./status/rejudge"));
-router.use(...require("./status/ip"));
 
 module.exports = ["/status", auth, router];
