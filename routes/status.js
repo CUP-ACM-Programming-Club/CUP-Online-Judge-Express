@@ -22,6 +22,7 @@ router.use("/submit_hour", require("./status/submit_hour"));
 router.use("/ban_submission", admin_auth, require("./status/ban_submission"));
 router.use("/rejudge", admin_auth, require("./status/rejudge"));
 router.use(...require("./status/ip"));
+router.use(...require("./status/problem"));
 
 const SECONDS = 1000;
 const MINUTES = 60 * SECONDS;
