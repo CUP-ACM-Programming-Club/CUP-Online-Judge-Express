@@ -6,6 +6,7 @@ const client = require("./redis");
 const detectClassroom = require("./detect_classroom");
 const getIP = require("./getIP");
 const [error] = require("../module/const_var");
+const crypto = require("crypto");
 
 
 const NORMAL_SUBMISSION = 1;
@@ -18,6 +19,11 @@ const LANGMASK = const_variable.langmask;
 
 function deepCopy(obj) {
 	return JSON.parse(JSON.stringify(obj));
+}
+
+function createCodeHash(source_code) {
+	const hash = crypto.createHash("md5");
+	return hash.update(source_code).digest("hex");
 }
 
 async function problemInFutureOrCurrentContest(problem_id) {
@@ -265,8 +271,8 @@ module.exports = async function (req, data, cookie) {
 		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source)
-		values(?,?)`, [solution_id, source_code_user]),
+		let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
+		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
 		query(`insert into source_code(solution_id, source)
 		values(?,?)`, [solution_id, source_code])
 		];
@@ -306,8 +312,8 @@ module.exports = async function (req, data, cookie) {
 		const result = await query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
 	    values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
 		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source)
-		values(?,?)`, [solution_id, source_code_user]),
+		let promiseArray = [query(`insert into source_code_user(solution_id,source, hash)
+		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
 		query(`insert into source_code(solution_id, source)
 		values(?,?)`, [solution_id, source_code])
 		];
@@ -355,8 +361,8 @@ module.exports = async function (req, data, cookie) {
 		values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
 
 		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source)
-		values(?,?)`, [solution_id, source_code_user]),
+		let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
+		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
 		query(`insert into source_code(solution_id, source)
 		values(?,?)`, [solution_id, source_code])
 		];

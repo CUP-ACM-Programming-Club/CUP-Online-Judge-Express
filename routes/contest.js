@@ -266,7 +266,7 @@ router.post("/password/:cid", async (req, res) => {
 		} else {
 			const password = contest_detail[0].password;
 			const user_password = req.body.password;
-			if (password.toString() === user_password.toString()) {
+			if (password && password.length > 0 && password.toString() === user_password.toString()) {
 				req.session.contest[`c${cid}`] = true;
 				res.json({
 					status: "OK"
