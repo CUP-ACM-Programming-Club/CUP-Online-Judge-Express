@@ -665,6 +665,7 @@ DROP TABLE IF EXISTS `source_code_user`;
 CREATE TABLE `source_code_user` (
   `solution_id` int(11) NOT NULL,
   `source` text NOT NULL,
+  `hash`        varchar(64) null,
   PRIMARY KEY (`solution_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
