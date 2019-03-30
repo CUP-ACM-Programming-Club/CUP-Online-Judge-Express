@@ -5,6 +5,7 @@
 [![codecov](https://codecov.io/gh/CUP-ACM-Programming-Club/CUP-Online-Judge-Express/branch/master/graph/badge.svg)](https://codecov.io/gh/CUP-ACM-Programming-Club/CUP-Online-Judge-Express)
 [![](https://img.shields.io/badge/platform-Linux-red.svg)]()
 ![](https://img.shields.io/badge/language-JavaScript-orange.svg)
+<a href="https://996.icu"><img src="https://img.shields.io/badge/link-996.icu-red.svg"></a>
 
 CUP Online Judge后端模块
 
