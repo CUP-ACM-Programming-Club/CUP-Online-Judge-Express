@@ -4,6 +4,8 @@ const query = require("../module/mysql_cache");
 const auth = require("../middleware/auth");
 const const_variable = require("../module/const_name");
 const [error] = require("../module/const_var");
+
+router.use(...require("./user/recent_register"));
 router.get("/:user_id", async (req, res) => {
 	const user_id = req.params.user_id;
 	let sqlQueue = [];
