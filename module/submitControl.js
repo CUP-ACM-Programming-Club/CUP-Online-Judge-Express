@@ -226,6 +226,9 @@ module.exports = async function (req, data, cookie) {
 	else if(data.source && data.source.length > 64 * 1024) {
 		return error.errorMaker("Your code is too long!");
 	}
+	else if(data.input_text && data.input_text.length && data.input_text.length > 1000) {
+		return error.errorMaker("Your custom input length cannot exceed 1000!");
+	}
 	let submission_type = 0;
 	if (data.type === "problem") {
 		submission_type = NORMAL_SUBMISSION;

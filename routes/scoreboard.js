@@ -5,7 +5,7 @@ const query = require("../module/mysql_cache");
 const dayjs = require("dayjs");
 const cache_query = query;
 const auth = require("../middleware/auth");
-const [error] = require("../module/const_var");
+const [error, ok] = require("../module/const_var");
 
 const check = async (req, res, cid) => {
 	if (cid < 1000) {
@@ -65,55 +65,124 @@ router.get("/:cid", (req, res, next) => {
 	}
 });
 
+async function submitHandler(cid) {
+	const sql = `SELECT users.user_id,
+       users.nick,
+       users.avatar,
+       solution.result,
+       solution.num,
+       solution.in_date,
+       solution.fingerprint,
+       solution.fingerprintRaw,
+       solution.ip,
+       sim.sim,
+       solution.code_length,
+       solution.solution_id
+FROM (select *
+      from solution
+      where solution.contest_id = ?
+        and num >= 0
+        and problem_id > 0) solution
+         left join users
+                   on users.user_id = solution.user_id
+         left join sim
+                   on sim.s_id = solution.solution_id
+union all
+select users.user_id,
+       users.nick,
+       users.avatar,
+       vsol.result,
+       vsol.num,
+       vsol.in_date,
+       ''   as fingerprint,
+       ''   as fingerprintRaw,
+       vsol.ip,
+       null as sim,
+       vsol.code_length,
+       vsol.solution_id
+from (select *
+      from vjudge_solution
+      where vjudge_solution.contest_id = ?
+        and num >= 0
+        and problem_id > 0) vsol
+         left join users on users.user_id = vsol.user_id
+ORDER BY user_id, in_date`;
+	return await query(sql, [cid, cid]);
+}
+
+async function scoreboardHandler(cid) {
+
+	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
+	const sql3 = "select start_time,title from contest where contest_id = ?";
+	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
+left join users on users.user_id = t.user_id`;
+	const _data = submitHandler(cid);
+	const _total = query(sql2, [cid]);
+	const _start_time = query(sql3, [cid]);
+	const _user = query(sql4, ["c" + cid]);
+	const result = await Promise.all([_data, _total, _start_time, _user]);
+	if (result[2].length === 0) {
+		return error.errorMaker("no such contest");
+	} else {
+		return {
+			status: "OK",
+			data: result[0],
+			total: result[1][0].total_problem,
+			start_time: result[2][0].start_time,
+			title: result[2][0].title,
+			users: result[3]
+		};
+	}
+}
+
+async function lineBreakHandler(cid) {
+	const sql = `select code_stat.solution_id,
+       code_stat.line,
+       user.user_id
+from (select solution_id,
+             length(source) - length(replace(source, '\\n', '')) as line,
+             source
+      from source_code_user
+      where solution_id in
+            (select solution_id
+             from solution
+             where contest_id = ?
+               and num >= 0
+               and problem_id > 0)) code_stat
+         left join
+         (select user_id, solution_id from solution where contest_id = ?) user
+         on user.solution_id = code_stat.solution_id`;
+	return await cache_query(sql, [cid, cid]);
+}
+
 router.get("/:cid", async (req, res) => {
 	const cid = parseInt(req.params.cid);
 	if (!await check(req, res, cid)) {
 		return;
 	}
-	const sql = `SELECT
-        users.user_id,users.nick,users.avatar,solution.result,solution.num,
-        solution.in_date,solution.fingerprint,solution.fingerprintRaw,solution.ip,
-        sim.sim
-        FROM
-        (select * from solution where solution.contest_id=? 
-        and num>=0 and problem_id>0) solution
-        left join users
-        on users.user_id=solution.user_id 
-        left join sim
-        on sim.s_id = solution.solution_id
-        union all 
-        select users.user_id,users.nick,users.avatar,vsol.result,vsol.num,vsol.in_date,'' as fingerprint,'' as fingerprintRaw,
-        vsol.ip,
-        null as sim
-        from
-        (select * from 
-        vjudge_solution where vjudge_solution.contest_id=? 
-        and num>=0 and problem_id>0)vsol
-        left join users on users.user_id=vsol.user_id
-        ORDER BY user_id,in_date`;
-	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
-	const sql3 = "select start_time,title from contest where contest_id = ?";
-	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
-left join users on users.user_id = t.user_id`;
-	const _data = query(sql, [cid, cid]);
-	const _total = query(sql2, [cid]);
-	const _start_time = query(sql3, [cid]);
-	const _user = query(sql4, ["c" + cid]);
-	Promise.all([_data, _total, _start_time, _user]).then((result) => {
-		console.log(result[2]);
-		if (result[2].length === 0) {
-			res.json(error.errorMaker("no such contest"));
-		} else {
-			res.json({
-				status: "OK",
-				data: result[0],
-				total: result[1][0].total_problem,
-				start_time: result[2][0].start_time,
-				title: result[2][0].title,
-				users: result[3]
-			});
+	res.json(await scoreboardHandler(cid));
+});
+
+router.get("/:cid/line", async (req, res) => {
+	const cid = parseInt(req.params.cid);
+	if(!await check(req, res, cid)) {
+		return;
+	}
+	let [submitStat, line_break] = await Promise.all([submitHandler(cid), lineBreakHandler(cid)]);
+	let map = {};
+	for(const i of submitStat) {
+		map[i.solution_id] = i;
+	}
+	for(const i of line_break) {
+		try {
+			map[i.solution_id] = Object.assign(map[i.solution_id], i);
 		}
-	});
+		catch (e) {
+			console.log("map[i.solution_id]: ", map[i.solution_id]);
+			console.log("i: ", i);
+		}
+	}
+	res.json(ok.okMaker(map));
 });
 
 module.exports = ["/scoreboard", auth, router];
