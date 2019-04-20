@@ -138,7 +138,7 @@ left join users on users.user_id = t.user_id`;
 async function lineBreakHandler(cid) {
 	const sql = `select code_stat.solution_id,
        code_stat.line,
-       user.user_id
+       user.user_id, user.problem_id
 from (select solution_id,
              length(source) - length(replace(source, '\\n', '')) as line,
              source
@@ -150,7 +150,7 @@ from (select solution_id,
                and num >= 0
                and problem_id > 0)) code_stat
          left join
-         (select user_id, solution_id from solution where contest_id = ?) user
+         (select user_id, solution_id, problem_id from solution where contest_id = ?) user
          on user.solution_id = code_stat.solution_id`;
 	return await cache_query(sql, [cid, cid]);
 }
@@ -174,13 +174,7 @@ router.get("/:cid/line", async (req, res) => {
 		map[i.solution_id] = i;
 	}
 	for(const i of line_break) {
-		try {
-			map[i.solution_id] = Object.assign(map[i.solution_id], i);
-		}
-		catch (e) {
-			console.log("map[i.solution_id]: ", map[i.solution_id]);
-			console.log("i: ", i);
-		}
+		map[i.solution_id] = Object.assign(map[i.solution_id], i);
 	}
 	res.json(ok.okMaker(map));
 });
