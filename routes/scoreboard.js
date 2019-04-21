@@ -110,16 +110,21 @@ ORDER BY user_id, in_date`;
 	return await query(sql, [cid, cid]);
 }
 
+async function contestUserHandler(cid) {
+	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
+left join users on users.user_id = t.user_id`;
+	return query(sql4, ["c" + cid]);
+}
+
 async function scoreboardHandler(cid) {
 
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
 	const sql3 = "select start_time,title from contest where contest_id = ?";
-	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
-left join users on users.user_id = t.user_id`;
+
 	const _data = submitHandler(cid);
 	const _total = query(sql2, [cid]);
 	const _start_time = query(sql3, [cid]);
-	const _user = query(sql4, ["c" + cid]);
+	const _user = contestUserHandler(cid);
 	const result = await Promise.all([_data, _total, _start_time, _user]);
 	if (result[2].length === 0) {
 		return error.errorMaker("no such contest");
@@ -168,7 +173,7 @@ router.get("/:cid/line", async (req, res) => {
 	if(!await check(req, res, cid)) {
 		return;
 	}
-	let [submitStat, line_break] = await Promise.all([submitHandler(cid), lineBreakHandler(cid)]);
+	let [submitStat, line_break, contest_user] = await Promise.all([submitHandler(cid), lineBreakHandler(cid), contestUserHandler(cid)]);
 	let map = {};
 	for(const i of submitStat) {
 		map[i.solution_id] = i;
@@ -176,7 +181,10 @@ router.get("/:cid/line", async (req, res) => {
 	for(const i of line_break) {
 		map[i.solution_id] = Object.assign(map[i.solution_id], i);
 	}
-	res.json(ok.okMaker(map));
+	res.json(ok.okMaker({
+		map: map,
+		user: contest_user
+	}));
 });
 
 module.exports = ["/scoreboard", auth, router];
