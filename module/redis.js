@@ -2,9 +2,18 @@ const redis = require("redis");
 const bluebird = require("bluebird");
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
-const client = redis.createClient();
 
-module.exports = client;
+if (global.unit_test === "autotest") {
+	module.exports = {
+		lrangeAsync: function () {
+			return ["test"];
+		},
+		quit: function () {
+		}
+	};
+} else {
+	module.exports = redis.createClient();
+}
 /*
 exports.lrange=(key,start,end)=>{
     return new Promise((resolve,reject)=>{
