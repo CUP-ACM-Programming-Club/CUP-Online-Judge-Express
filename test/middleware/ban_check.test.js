@@ -35,6 +35,7 @@ describe("test ban_check", function () {
         await query("insert into privilege (user_id,rightstr)values(?,?)",
             ["test_name", "source_browser"]);
         await query("insert into ban_user (user_id,bantime)values(?,?)", ["test_name", "2045-12-31"]);
+        await query("insert into ban_user (user_id,bantime)values(?,?)", ["test1_name", "2005-12-31"]);
     });
 
     it('should return empty while next is not function', function (done) {
@@ -64,6 +65,20 @@ describe("test ban_check", function () {
         ban_check({
             session: {
                 auth: true, isadmin: false, user_id: "test_name", destroy: function () {
+                    done();
+                }
+            }
+        }, {
+            json: function (data) {
+                expect(data).to.deep.equal(require("../../module/const_var")[0].errorMaker("You have been banned"));
+            }
+        }, done);
+    });
+
+    it('was be banned but now expired', function (done) {
+        ban_check({
+            session: {
+                auth: true, isadmin: false, user_id: "test1_name", destroy: function () {
                     done();
                 }
             }
