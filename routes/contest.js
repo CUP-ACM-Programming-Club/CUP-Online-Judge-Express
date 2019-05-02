@@ -15,6 +15,7 @@ const query = require("../module/mysql_query");
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 const router = express.Router();
+router.use(...require("./user"));
 const check = async (req, res, cid) => {
 	if (cid < 1000) {
 		res.json(error.invalidParams);
