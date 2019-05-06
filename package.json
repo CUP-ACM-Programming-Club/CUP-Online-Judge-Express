@@ -35,6 +35,7 @@
     "express-php-fpm": "^2.0.2",
     "express-session": "^1.16.1",
     "express-status-monitor": "^1.2.5",
+    "hash-generator": "^0.1.0",
     "helmet": "^3.16.0",
     "iconv-lite": "^0.4.24",
     "is-image": "^3.0.0",

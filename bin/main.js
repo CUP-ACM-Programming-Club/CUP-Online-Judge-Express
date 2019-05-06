@@ -19,7 +19,7 @@ const cachePool = require("../module/cachePool");
 const submitControl = require("../module/submitControl");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-// const client = require("../module/redis");
+const client = require("../module/redis");
 const WebSocket = require("ws");
 const _localJudge = require("../module/judger");
 const _dockerRunner = require("../module/docker_runner");
@@ -91,8 +91,8 @@ global.contest_mode = false;
 
 wss.on("connection", function (ws) {
 	/**
-	 * 绑定judger发送的事件
-	 */
+     * 绑定judger发送的事件
+     */
 	ws.on("judger", function (message) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
@@ -100,10 +100,10 @@ wss.on("connection", function (ws) {
 		if (submitUserInfo[solution_id]) {
 			Object.assign(solution_pack, submitUserInfo[solution_id]);
 			/*
-			solution_pack.nick = submitUserInfo[solution_id].nick;
-			solution_pack.user_id = submitUserInfo[solution_id].user_id;
-			solution_pack.in_date = submitUserInfo[solution_id].in_date;
-			*/
+            solution_pack.nick = submitUserInfo[solution_id].nick;
+            solution_pack.user_id = submitUserInfo[solution_id].user_id;
+            solution_pack.in_date = submitUserInfo[solution_id].in_date;
+            */
 		}
 		if (problemFromContest[solution_id]) {
 			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
@@ -144,8 +144,8 @@ wss.on("connection", function (ws) {
 	});
 
 	/**
-	 * 获得推送信息，根据信息类型emit对应事件
-	 */
+     * 获得推送信息，根据信息类型emit对应事件
+     */
 	ws.on("message", function (message) {
 		let request;
 		try {
@@ -265,15 +265,24 @@ io.use((socket, next) => {
  * 验证用户身份合法性
  */
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
 	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
-	socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
+	const user_id = socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
+	const newToken = parse_cookie["newToken"];
+	const token = parse_cookie["token"];
 	if (!socket.user_id) {
 		next(new Error("Auth failed"));
-	} else {
+		return;
+	}
+	const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
+	const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
+	if (new_token_list.indexOf(newToken) !== -1 || original_token.indexOf(token) !== -1) {
 		socket.auth = true;
 		next();
+	} else {
+		next(new Error("Token Expired."));
 	}
+
 	/*
     if (!socket.request.session.auth && !socket.auth) {
         const token = parse_cookie["token"] || "";
@@ -304,7 +313,7 @@ io.use(async (socket, next) => {
 		} else {
 			const privilege = await
 			query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-					"user_id=?", [socket.user_id]);
+                    "user_id=?", [socket.user_id]);
 			socket.privilege = parseInt(privilege[0].cnt) > 0;
 			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
 		}
@@ -429,8 +438,8 @@ io.on("connection", async function (socket) {
 	});
 
 	/**
-	 * 获取状态信息
-	 */
+     * 获取状态信息
+     */
 
 	socket.on("status", function (data) {
 		if (socket.privilege) {
@@ -441,22 +450,22 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-	 * 提交推送处理
-	 */
+     * 提交推送处理
+     */
 	socket.on("submit", async function (_data) {
 		/**
-		 * { submission_id: 61459,
-		 * val:
-		 * { id: '',
-		 * input_text: '1 2',
-		 * language: '1',
-		 * source: '',
-		 * type: 'problem',
-		 * csrf: '' },
-		 * user_id: '',
-		 * nick: '' }
-		 *
-		 */
+         * { submission_id: 61459,
+         * val:
+         * { id: '',
+         * input_text: '1 2',
+         * language: '1',
+         * source: '',
+         * type: 'problem',
+         * csrf: '' },
+         * user_id: '',
+         * nick: '' }
+         *
+         */
 		let data = Object.assign({}, _data);
 
 		const response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
@@ -529,8 +538,8 @@ io.on("connection", async function (socket) {
 		sendMessage(admin_user, "judger", localJudge.getStatus());
 	});
 	/**
-	 * 全局推送功能
-	 */
+     * 全局推送功能
+     */
 	socket.on("msg", function (data) {
 		if (data.to) {
 			for (let soc of socketSet) {
@@ -544,8 +553,8 @@ io.on("connection", async function (socket) {
 		socket.emit("msg", data);
 	});
 	/**
-	 * 聊天功能，向目标用户发送聊天信息
-	 */
+     * 聊天功能，向目标用户发送聊天信息
+     */
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data.to;
@@ -566,8 +575,8 @@ io.on("connection", async function (socket) {
 		}
 	});
 	/**
-	 * 断开连接销毁所有保存的数据
-	 */
+     * 断开连接销毁所有保存的数据
+     */
 	socket.on("disconnect", function () {
 		const user_id = socket.user_id;
 		let pos = onlineUser[user_id];

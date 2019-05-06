@@ -9,6 +9,11 @@ module.exports = async (req, user_id) => {
 	let val;
 	//for session admin privilege
 	val = await query("select rightstr from privilege where user_id = ?", [user_id]);
+	let nick = await query("select nick,avatar from users where user_id = ?", [user_id]);
+	if(nick && nick.length && nick.length > 0) {
+		req.session.nick = nick[0].nick;
+		req.session.avatar = nick[0].avatar;
+	}
 	for (let i of val) {
 		if (i.rightstr === "administrator") {
 			req.session.isadmin = true;

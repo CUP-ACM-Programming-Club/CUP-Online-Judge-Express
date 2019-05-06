@@ -1,7 +1,12 @@
 const log4js = require("../../module/logger");
 const log = log4js.logger("cheese", "info");
-
 module.exports = (app, io = undefined) => {
+	if (process.env.NODE_ENV === "local") {
+		app.all("*", function(req, res, next) {
+			res.header("Access-Control-Allow-Origin", "*");
+			next();
+		});
+	}
 	if(io !== undefined) {
 		app.use(require("express-status-monitor")({
 			websocket: io,

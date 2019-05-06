@@ -194,6 +194,9 @@ class localJudger extends eventEmitter {
      */
 
 	async collectSubmissionFromDatabase() {
+		if (process.env.NODE_ENV === "local") {
+			return;
+		}
 		let result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
 		for (let i in result) {
 			const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
