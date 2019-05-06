@@ -15,4 +15,4 @@ router.get("/", (req, res) => {
 	res.status(200).send(captcha.data);
 });
 
-module.exports = ["/captcha", auth, router];
+module.exports = ["/captcha", router];

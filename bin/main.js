@@ -417,8 +417,8 @@ io.on("connection", async function (socket) {
 			socket.send_auth = true;
 			const pos = onlineUser[socket.user_id];
 			pos.identity = socket.privilege ? "admin" : "normal";
-			pos.intranet_ip = pos.intranet_ip || data["intranet_ip"] || socket.handshake.address || "未知";
-			pos.ip = pos.ip || data["ip"] || "";
+			//pos.intranet_ip = pos.intranet_ip || data["intranet_ip"] || socket.handshake.address || "未知";
+			//pos.ip = pos.ip || data["ip"] || "";
 			pos.version = data["version"] || "";
 			pos.platform = data["platform"] || "";
 			pos.browser_core = data["browser_core"] || "";
