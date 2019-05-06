@@ -8,6 +8,9 @@ if (global.unit_test === "autotest") {
 		lrangeAsync: function () {
 			return ["test"];
 		},
+		rpushAsync: function () {
+			return ["test"];
+		},
 		quit: function () {
 		}
 	};

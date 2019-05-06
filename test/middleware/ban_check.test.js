@@ -5,6 +5,7 @@ global.unit_test = "autotest";
 async function removeAll() {
     await query("delete from privilege where user_id = ?", ["test_name"]);
     await query("delete from ban_user where user_id = ?", ["test_name"]);
+    await query("delete from ban_user where user_id = ?", ["test1_name"]);
 }
 
 function afterAll() {

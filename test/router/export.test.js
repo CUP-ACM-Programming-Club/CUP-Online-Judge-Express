@@ -3,6 +3,7 @@ const query = require("../../module/mysql_cache");
 const [error] = require("../../module/const_var");
 async function removeAll() {
     await query("delete from users where nick = 'test' or nick = 'test1'");
+    await query("delete from users where user_id = 'test1' or nick = 'test1'");
     await query("delete from source_code");
     await query("delete from privilege where user_id = 'test'");
     await query("delete from solution where user_id = 'test'");

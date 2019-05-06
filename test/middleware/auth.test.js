@@ -35,18 +35,6 @@ describe("test auth", function () {
             ["test_name", "source_browser"]);
     });
 
-    it('should call next when NODE_ENV is local', function (done) {
-        const oldEnv = process.env.NODE_ENV;
-        process.env.NODE_ENV = "local";
-        let req = {session: {auth: false, isadmin: false}};
-        auth(req, {}, () => {
-            process.env.NODE_ENV = oldEnv;
-            expect(req.session.auth).to.equal(true);
-            expect(req.session.isadmin).to.equal(true);
-            done();
-        });
-    });
-
 
     it('should call login action', function (done) {
         let req =
