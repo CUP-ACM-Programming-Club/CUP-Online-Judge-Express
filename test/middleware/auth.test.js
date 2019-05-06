@@ -47,18 +47,6 @@ describe("test auth", function () {
         });
     });
 
-    it('should set user_id when NODE_ENV is test', function (done) {
-        const oldEnv = process.env.NODE_ENV;
-        process.env.NODE_ENV = "test";
-        let req = {session: {auth: false, isadmin: false, user_id: ""}};
-        auth(req, {}, () => {
-            process.env.NODE_ENV = oldEnv;
-            expect(req.session.auth).to.equal(true);
-            expect(req.session.isadmin).to.equal(true);
-            expect(req.session.user_id).to.equal("admin");
-            done();
-        });
-    });
 
     it('should call login action', function (done) {
         let req =
@@ -76,7 +64,8 @@ describe("test auth", function () {
         let res = {
             json: function(data){
 
-            }
+            },
+            cookie: function() {}
         };
         auth(req, res, () => {
             expect(req.session.auth).to.equal(true);

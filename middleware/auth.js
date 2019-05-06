@@ -4,16 +4,6 @@ const contest_mode = require("./contest_mode");
 const ban_check = require("./ban_check");
 const generateToken = require("./generate_token");
 module.exports = async (req, res, next) => {
-	if (process.env.NODE_ENV === "local") {
-		if (!req.session.auth) {
-			req.session.auth = true;
-			req.session.isadmin = true;
-			req.session.user_id = "2016011253";
-			req.session.nick = "Ryan Lee";
-			req.session.avatar = false;
-		}
-		return next();
-	}
 	if (!req.session.auth) {
 		const original_cookie = req.cookies;
 		//req.cookies is an object

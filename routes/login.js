@@ -87,10 +87,9 @@ async function storeNewTypePassword(res, password, user_id, newpass) {
 
 router.post("/newlogin", async function(req, res) {
 	let {user_id, password} = req.body;
-	console.log(req.body);
-	res.json({test: "test"});
 	if(!checkCaptcha(req, "login")) {
 		res.json(error.invalidCaptcha);
+		return;
 	}
 	if (user_id !== "" && password !== "") {
 		const val = await query("select password,newpassword from users where user_id=?", [user_id]);
