@@ -106,6 +106,9 @@ router.post("/newlogin", async function(req, res) {
 				res.json(error.invalidUser);
 			}
 		}
+		else {
+			res.json(error.errorMaker("No such user!"));
+		}
 	}
 	else {
 		res.json(error.errorMaker("You should enter your user_id and password"));
