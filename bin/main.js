@@ -241,6 +241,22 @@ function onlineUserBroadcast() {
 	});
 }
 
+function removeStatus(socket) {
+	const contest_id = socket.contest_id;
+	if (contest_id) {
+		const socket_pos = pagePush.contest_status[contest_id].indexOf(socket);
+		if (~socket_pos) {
+			pagePush.contest_status[contest_id].splice(socket_pos, 1);
+		}
+	}
+	if (socket.status) {
+		const socket_pos = pagePush.status.indexOf(socket);
+		if (~socket_pos) {
+			pagePush.status.splice(socket_pos, 1);
+		}
+	}
+}
+
 function whiteBoardBroadCast(socket, content) {
 	for (let _socket of whiteboard.values()) {
 		if (_socket !== socket) {
@@ -282,23 +298,6 @@ io.use(async (socket, next) => {
 	} else {
 		next(new Error("Token Expired."));
 	}
-
-	/*
-    if (!socket.request.session.auth && !socket.auth) {
-        const token = parse_cookie["token"] || "";
-        const cache_token = await client.lrangeAsync(`${socket.user_id}token`, 0, -1);
-        if (~cache_token.indexOf(token)) {
-            socket.auth = true;
-            next();
-        }
-        else {
-
-        }
-    }
-    else {
-        next();
-    }
-    */
 });
 
 /**
@@ -386,8 +385,7 @@ io.use((socket, next) => {
 /**
  * 处理URL包含的信息
  */
-
-io.use((socket, next) => {
+function buildStatusSocket(socket) {
 	if (socket.url && (~socket.url.indexOf("status") || ~socket.url.indexOf("rank"))) {
 		if (~socket.url.indexOf("cid")) {
 			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("?") + 1, socket.url.length));
@@ -399,11 +397,29 @@ io.use((socket, next) => {
 				socket.contest_id = contest_id;
 				pagePush.contest_status[contest_id].push(socket);
 			}
-		} else {
-			pagePush.status.push(socket);
-			socket.status = true;
+		}  else {
+			const url_split = socket.url.split("/");
+			if (url_split.includes("contest")) {
+				const idx = url_split.indexOf("contest");
+				if(idx < url_split.length - 1 && !isNaN(url_split[idx + 1])) {
+					const contest_id = parseInt(url_split[idx + 1]);
+					if (!pagePush.contest_status[contest_id]) {
+						pagePush.contest_status[contest_id] = [];
+					}
+					socket.contest_id = contest_id;
+					pagePush.contest_status[contest_id].push(socket);
+				}
+			}
+			else {
+				pagePush.status.push(socket);
+				socket.status = true;
+			}
 		}
 	}
+}
+
+io.use((socket, next) => {
+	buildStatusSocket(socket);
 	socket.currentTimeStamp = (new Date() - 0);
 	socketSet[socket.currentTimeStamp] = socket;
 	next();
@@ -440,6 +456,17 @@ io.on("connection", async function (socket) {
 	/**
      * 获取状态信息
      */
+
+	socket.on("updateURL", function (data) {
+		removeStatus(socket);
+		const pos = onlineUser[socket.user_id].url.indexOf(socket.url);
+		if (pos !== -1) {
+			onlineUser[socket.user_id].url[pos] = data.url;
+		}
+		socket.url = data.url;
+		buildStatusSocket(socket);
+		onlineUserBroadcast();
+	});
 
 	socket.on("status", function (data) {
 		if (socket.privilege) {
@@ -589,19 +616,7 @@ io.on("connection", async function (socket) {
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
 				pos.url.splice(url_pos, 1);
-			const contest_id = socket.contest_id;
-			if (contest_id) {
-				const socket_pos = pagePush.contest_status[contest_id].indexOf(socket);
-				if (~socket_pos) {
-					pagePush.contest_status[contest_id].splice(socket_pos, 1);
-				}
-			}
-			if (socket.status) {
-				const socket_pos = pagePush.status.indexOf(socket);
-				if (~socket_pos) {
-					pagePush.status.splice(socket_pos, 1);
-				}
-			}
+			removeStatus(socket);
 			let socket_pos;
 			if (socket.privilege) {
 				socket_pos = admin_user[user_id].indexOf(socket);
