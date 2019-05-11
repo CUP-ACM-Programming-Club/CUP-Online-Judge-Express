@@ -63,6 +63,32 @@ const check = async (req, res, cid) => {
 	}
 };
 
+function safeArrayParse(array) {
+	if (typeof array !== "object" && !array.length) {
+		return [];
+	}
+	return array.length ? array : Object.keys(array);
+}
+
+async function generateContestList(req) {
+	let myContest = "1 = 1";
+	if (req.query.myContest) {
+		myContest = `(${safeArrayParse(req.session.contest_maker).concat(safeArrayParse(req.session.contest)).map(el => el.substring(1)).join(",")})`;
+	}
+	let admin_str = "1 = 1";
+	if (!req.session.isadmin && !req.session.contest_manager) {
+		admin_str = "ctest.defunct = 'N'";
+	}
+	if (global.contest_mode) {
+		admin_str = `${admin_str} and ctest.cmod_visible = '${!req.session.isadmin ? 1 : 0}'`;
+	}
+	let base_sql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
+	let promiseArray = [cache_query(base_sql)];
+	promiseArray.push(cache_query(`select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`));
+	const ret = (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
+	console.log(ret);
+	return ret;
+}
 
 router.get("/general/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
@@ -219,12 +245,9 @@ group by problem_id,result`, [req.session.user_id, cid]));
 });
 
 router.get("/list", async (req, res) => {
-	let privilege = Boolean(req.session.isadmin);
-	let sql = `select title,start_time,end_time,contest_id from contest ${privilege ? "" : " where defunct = 'N'"}`;
-	const _data = await cache_query(sql);
 	res.json({
 		status: "OK",
-		data: _data
+		data: await generateContestList(req)
 	});
 });
 
@@ -247,7 +270,7 @@ union all SELECT
 			,
 			cache_query("select count(1)total_problem,contest_id from contest_problem where contest_id = ?", [cid])
 		])
-		;
+        ;
 		res.json({
 			status: "OK",
 			data: contest_statistics_detail,

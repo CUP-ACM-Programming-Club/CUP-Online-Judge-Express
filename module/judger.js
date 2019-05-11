@@ -161,9 +161,17 @@ class localJudger extends eventEmitter {
 			args.push("-admin");
 		}
 		const judger = spawn(`${process.cwd()}/wsjudged`, args);
+		let killed = false;
+		let timeoutID = setTimeout(() => {
+			killed = true;
+			judger.kill("SIGKILL");
+		},1000 * 100);//kill process after 100s
 		this.emit("change", this.getStatus().free_judger);
 		judger.on("close", EXITCODE => {
 			this.judge_queue.push(runner_id);
+			if(!killed) {
+				clearTimeout(timeoutID);
+			}
 			const solutionPOS = this.judging_queue.indexOf(solution_id);
 			if (~solutionPOS) {
 				this.judging_queue.splice(solutionPOS, 1);
