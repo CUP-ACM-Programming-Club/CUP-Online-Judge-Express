@@ -456,6 +456,9 @@ io.on("connection", async function (socket) {
 	/**
      * 获取状态信息
      */
+	socket.on("getUser", function () {
+		onlineUserBroadcast();
+	});
 
 	socket.on("updateURL", function (data) {
 		removeStatus(socket);
