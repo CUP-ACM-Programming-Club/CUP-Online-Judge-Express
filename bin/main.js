@@ -290,6 +290,11 @@ io.use(async (socket, next) => {
 		next(new Error("Auth failed"));
 		return;
 	}
+	if(socket.request.session && socket.request.session.user_id) {
+		socket.auth = true;
+		next();
+		return;
+	}
 	const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
 	const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
 	if (new_token_list.indexOf(newToken) !== -1 || original_token.indexOf(token) !== -1) {

@@ -54,6 +54,7 @@ router.get("/:source/:id", async (req, res) => {
 	const source = (local = req.params.source === "local") ? "source_code_user" : "vjudge_source_code";
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
+	const raw = !!req.query.raw;
 	const browse_code = req.session.isadmin || req.session.source_browser;
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
@@ -76,7 +77,7 @@ where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or 
 		res.json({
 			status: "OK",
 			data: {
-				code: local ? make_code(data[0]) : make_code(data[0], _source[0].oj_name),
+				code: raw ? data[0] : local ? make_code(data[0]) : make_code(data[0], _source[0].oj_name),
 				problem: data[0].problem_id,
 				user_id: data[0].user_id,
 				language: language_name[data[0].oj_name ? data[0].oj_name.toLowerCase() : "local"][data[0].language],
