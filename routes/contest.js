@@ -71,13 +71,19 @@ function safeArrayParse(array) {
 }
 
 async function generateContestList(req) {
-	let myContest = "1 = 1";
+	let myContest = " 1 = 1 ";
 	if (req.query.myContest) {
 		myContest = `(${safeArrayParse(req.session.contest_maker).concat(safeArrayParse(req.session.contest)).map(el => el.substring(1)).join(",")})`;
+		if (myContest === "()") {
+			myContest = " 1 = 1 ";
+		}
+		else {
+			myContest = `contest_id in ${myContest}`;
+		}
 	}
-	let admin_str = "1 = 1";
+	let admin_str = " 1 = 1 ";
 	if (!req.session.isadmin && !req.session.contest_manager) {
-		admin_str = "ctest.defunct = 'N'";
+		admin_str += " and ctest.defunct = 'N' ";
 	}
 	if (global.contest_mode) {
 		admin_str = `${admin_str} and ctest.cmod_visible = '${!req.session.isadmin ? 1 : 0}'`;
