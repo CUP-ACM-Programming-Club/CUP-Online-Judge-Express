@@ -12,56 +12,13 @@ md.use(mk);
 md.use(mh);
 const cache_query = require("../module/mysql_cache");
 const query = require("../module/mysql_query");
+const getProblemData = require("../module/contest/problem");
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 const router = express.Router();
-router.use(...require("./user"));
-const check = async (req, res, cid) => {
-	if (cid < 1000) {
-		res.json(error.invalidParams);
-		return false;
-	}
-	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
-	const start_time = dayjs(contest[0].start_time);
-	const now = dayjs();
-	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
-	if (privilege) {
-		return contest;
-	}
-	if (global.contest_mode) {
-		if (!privilege) {
-			if (parseInt(contest[0].cmod_visible) === 0) {
-				res.json(error.contestMode);
-				return false;
-			}
-		}
-	} else {
-		if (parseInt(contest[0].cmod_visible) === 1) {
-			res.json(error.contestMode);
-			return false;
-		}
-	}
-	// req.session.contest[`c${cid}`]
-
-	if (start_time.isAfter(now)) {
-		res.json(error.contestNotStart);
-		return false;
-	} else if (parseInt(contest[0].private) === 1) {
-		if (req.session.contest[`c${cid}`]) {
-			return contest;
-		} else {
-			await require("../module/login_action")(req, req.session.user_id);
-			if (req.session.contest[`c${cid}`]) {
-				return contest;
-			} else {
-				res.json(error.noprivilege);
-				return false;
-			}
-		}
-	} else {
-		return contest;
-	}
-};
+router.use(...require("./contest/user"));
+router.use(...require("./contest/rest_problem"));
+const check = require("../module/contest/check");
 
 function safeArrayParse(array) {
 	if (typeof array !== "object" && !array.length) {
@@ -123,83 +80,7 @@ router.get("/problem/:cid", async (req, res) => {
 			let contest_general_detail;
 			const contest_is_end = dayjs(contest_detail.end_time).isBefore(dayjs());
 			let sqlQueue = [];
-			if (contest_detail.vjudge) {
-				sqlQueue.push(cache_query(`select * from (SELECT \`problem\`.\`title\` as \`title\`,\`problem\`.\`problem_id\` as \`pid\`,source as source,"LOCAL" as oj_name,contest_problem.num as pnum
-
-		FROM \`contest_problem\`,\`problem\`
-
-		WHERE \`contest_problem\`.\`problem_id\`=\`problem\`.\`problem_id\` 
-
-		AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\` IS NULL ORDER BY \`contest_problem\`.\`num\` 
-                ) problem
-                left join (select problem_id pid1,num,count(1) accepted from solution where result=4 and contest_id= ? group by pid1) p1 on problem.pid=p1.pid1
-                left join (select problem_id pid2,num,count(1) submit from solution where contest_id= ?  group by pid2) p2 on problem.pid=p2.pid2
-union all
-select * from (SELECT \`vjudge_problem\`.\`title\` as \`title\`,\`vjudge_problem\`.\`problem_id\` as \`pid\`,"" as source,source as oj_name,contest_problem.num as pnum FROM
- \`contest_problem\`,\`vjudge_problem\`
-WHERE \`contest_problem\`.\`problem_id\`=\`vjudge_problem\`.\`problem_id\`
-AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\`=\`vjudge_problem\`.\`source\` ORDER BY \`contest_problem\`.\`num\`) vproblem
-left join(select problem_id pid1,num,count(1) accepted from vjudge_solution where result=4 and contest_id= ? group by num) vp1 on vproblem.pid=vp1.pid1 and vproblem.pnum=vp1.num
-left join(select problem_id pid2,num,count(1) submit from vjudge_solution where contest_id= ? group by num) vp2 on vproblem.pid=vp2.pid2 and vproblem.pnum=vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]));
-
-			} else {
-				sqlQueue.push(cache_query(`select *
-from (SELECT
-        \`problem\`.\`title\`      as \`title\`,
-        \`problem\`.\`problem_id\` as \`pid\`,
-        source                 as source,
-        contest_problem.num    as pnum
-
-      FROM \`contest_problem\`, \`problem\`
-
-      WHERE \`contest_problem\`.\`problem_id\` = \`problem\`.\`problem_id\`
-
-            AND \`contest_problem\`.\`contest_id\` = ? AND \`contest_problem\`.\`oj_name\` IS NULL
-      ORDER BY \`contest_problem\`.\`num\`
-     ) problem
-  left join (select
-               problem_id pid1,
-               num,
-               count(1)   accepted
-             from solution
-             where result = 4 and contest_id = ?
-             group by pid1) p1 on problem.pid = p1.pid1
-  left join (select
-               problem_id pid2,
-               num,
-               count(1)   submit
-             from solution
-             where contest_id = ?
-             group by pid2) p2 on problem.pid = p2.pid2
-union all
-select *
-from (SELECT
-        \`vjudge_problem\`.\`title\`      as \`title\`,
-        \`vjudge_problem\`.\`problem_id\` as \`pid\`,
-        source                        as source,
-        contest_problem.num           as pnum
-      FROM
-        \`contest_problem\`, \`vjudge_problem\`
-      WHERE \`contest_problem\`.\`problem_id\` = \`vjudge_problem\`.\`problem_id\`
-            AND \`contest_problem\`.\`contest_id\` = ? AND \`contest_problem\`.\`oj_name\` = \`vjudge_problem\`.\`source\`
-      ORDER BY \`contest_problem\`.\`num\`) vproblem
-  left join (select
-               problem_id pid1,
-               num,
-               count(1)   accepted
-             from vjudge_solution
-             where result = 4 and contest_id = ?
-             group by num) vp1 on vproblem.pid = vp1.pid1 and vproblem.pnum = vp1.num
-  left join (select
-               problem_id pid2,
-               num,
-               count(1)   submit
-             from vjudge_solution
-             where contest_id = ?
-             group by num) vp2 on vproblem.pid = vp2.pid2 and vproblem.pnum = vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]));
-			}
+			sqlQueue.push(getProblemData(cid, contest_detail.vjudge));
 			sqlQueue.push(cache_query(`select count(1) as cnt,problem_id,result from solution where 
 			user_id = ? and contest_id = ?
 and result <> 13
@@ -233,7 +114,6 @@ group by problem_id,result`, [req.session.user_id, cid]));
 					i.pid = i.pid1 = i.pid2 = "";
 				}
 			}
-			console.log(limit_data);
 			delete contest_detail.password;
 			res.json({
 				status: "OK",

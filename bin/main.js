@@ -406,13 +406,23 @@ function buildStatusSocket(socket) {
 			const url_split = socket.url.split("/");
 			if (url_split.includes("contest")) {
 				const idx = url_split.indexOf("contest");
-				if(idx < url_split.length - 1 && !isNaN(url_split[idx + 1])) {
-					const contest_id = parseInt(url_split[idx + 1]);
-					if (!pagePush.contest_status[contest_id]) {
-						pagePush.contest_status[contest_id] = [];
+				if(idx < url_split.length - 1) {
+					if (!isNaN(url_split[idx + 1])) {
+						const contest_id = parseInt(url_split[idx + 1]);
+						if (!pagePush.contest_status[contest_id]) {
+							pagePush.contest_status[contest_id] = [];
+						}
+						socket.contest_id = contest_id;
+						pagePush.contest_status[contest_id].push(socket);
 					}
-					socket.contest_id = contest_id;
-					pagePush.contest_status[contest_id].push(socket);
+					else if(url_split[idx + 1] === "rank" && !isNaN(url_split[idx + 2])) {
+						const contest_id = parseInt(url_split[idx + 2]);
+						if (!pagePush.contest_status[contest_id]) {
+							pagePush.contest_status[contest_id] = [];
+						}
+						socket.contest_id = contest_id;
+						pagePush.contest_status[contest_id].push(socket);
+					}
 				}
 			}
 			else {
