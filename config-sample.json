@@ -20,5 +20,6 @@
   "website": {
   "dir": "/home/"
   },
-  "session_secret": "YourSecretKeytoSession"
+  "session_secret": "YourSecretKeytoSession",
+  "salt": "PleaseModifyThis"
 }
