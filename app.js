@@ -36,6 +36,7 @@ const options = {
 app.use(compression());
 app.use(logger("dev"));
 app.use(helmet());
+app.use(require("request-ip").mw());
 app.use(bodyParser.json({limit: "50mb"}));
 app.use(bodyParser.urlencoded({limit: "50mb", extended: true}));
 app.use(cookieParser());
