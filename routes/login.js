@@ -62,6 +62,7 @@ async function storeNewTypePassword(res, password, user_id, newpass) {
 		await generateNewEncryptPassword(user_id, password, salt);
 	} catch (e) {
 		res.json(error.database);
+		console.log(e);
 		log.fatal(e);
 	}
 }

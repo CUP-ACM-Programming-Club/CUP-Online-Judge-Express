@@ -83,7 +83,7 @@ describe("test login router", function(){
             });
     });
 
-    it('should add newpassword return ok', function (done) {
+    /*it('should add newpassword return ok', function (done) {
         let data = {
             user_id:"test",
             pasword:"123456"
@@ -99,7 +99,7 @@ describe("test login router", function(){
                 expect(res.body).to.deep.equal(ok.ok);
                 done();
             })
-    });
+    });*/
 
     it('should return invalidJSON', function (done) {
         let data = "3f";

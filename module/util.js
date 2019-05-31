@@ -18,7 +18,7 @@ function decryptPassword(encryptedPassword, salt) {
 function generateNewEncryptPassword(user_id, rawPassword, salt) {
 	return new Promise((resolve, reject) => {
 		query("update users set newpassword=? where user_id=?",
-			[this.encryptPassword(rawPassword, salt), user_id])
+			[encryptPassword(rawPassword, salt), user_id])
 			.then(resolve)
 			.catch(reject);
 	});
