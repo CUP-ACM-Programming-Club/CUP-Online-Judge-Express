@@ -1,4 +1,5 @@
 const express = require("express");
 const router = express.Router();
-router.use(...require("./contest/list"));
+const path = require("path");
+require("../../module/router_loader")(router, path.resolve(__dirname, "./contest"));
 module.exports = ["/contest", router];

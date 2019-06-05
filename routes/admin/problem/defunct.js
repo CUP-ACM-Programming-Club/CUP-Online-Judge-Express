@@ -1,0 +1,1 @@
+module.exports = require("../../../module/admin/defunct")("problem", "problem_id");

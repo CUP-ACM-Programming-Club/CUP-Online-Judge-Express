@@ -1,8 +1,8 @@
 const path = require("path");
 const fs = require("fs");
 
-module.exports = function (app) {
-	const routerDir = path.join(process.cwd(), "routes");
+module.exports = function (app, _dir) {
+	const routerDir = typeof _dir !== "undefined" ? _dir : path.join(process.cwd(), "routes");
 	const routerFiles = fs.readdirSync(routerDir);
 	routerFiles.forEach(fileName => {
 		if (path.extname(fileName) !== ".js") return;
