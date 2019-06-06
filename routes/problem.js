@@ -120,7 +120,7 @@ async function contestProblemHandler(httpInstance, val = {}) {
 	let {req, res} = httpInstance;
 	let {source, solution_id, raw, cid, pid} = val;
 	const [contest, result] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
-		"num = ?", [cid, pid])]);
+        "num = ?", [cid, pid])]);
 	if (!checkPrivilege(req)) {
 		if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {
 			res.json(error.contestMode);
@@ -154,7 +154,7 @@ async function TopicProblemHandler(httpInstance, val = {}) {
 		return;
 	}
 	const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and " +
-		"num = ?", [tid, pid]);
+        "num = ?", [tid, pid]);
 	if (result.length > 0) {
 		let problem_id = result[0].problem_id;
 		make_cache(res, req, {problem_id, source, solution_id, raw, after_contest: true});
@@ -259,11 +259,11 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			const browse_privilege = req.session.isadmin || req.session.source_browser;
 			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
 			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
-				"           and not exists\n" +
-				"           (select * from contest where contest_id in\n" +
-				"           (select contest_id from contest_problem\n" +
-				"           where solution.problem_id = contest_problem.problem_id)\n" +
-				"          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
+                "           and not exists\n" +
+                "           (select * from contest where contest_id in\n" +
+                "           (select contest_id from contest_problem\n" +
+                "           where solution.problem_id = contest_problem.problem_id)\n" +
+                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
 				.then(resolve => {
 					res.json(Object.assign({
 						problem: packed_problem,
@@ -288,29 +288,93 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 	}
 };
 
+function SemanticUIAPIHandler(req, res, key, promisify = false) {
+	return new Promise((resolve, reject) => {
+		const val = "%" + req.params.val + "%";
+		const _res = cache.get(key + req.session.isadmin + val);
+		if (_res === undefined) {
+			if (val.length < 3) {
+				res.json(error.errorMaker("Value too short!"));
+				return;
+			}
+			query(`SELECT * FROM problem WHERE ${(req.session.isadmin ? "" : " defunct='N' AND")} 
+			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [val, val, val, val, val])
+				.then(rows => {
+					let result;
+					if (promisify) {
+						result = rows;
+						resolve(rows);
+					} else {
+						for (let i in rows) {
+							if (rows.hasOwnProperty(i)) {
+								rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];// deprecated
+								rows[i].source = cheerio.load(rows[i].source).text();
+							}
+						}
+						result = {
+							items: rows
+						};
+						res.json(result);
+					}
+					cache.set(key + req.session.isadmin + val, result, 24 * 60 * 60);
+				})
+				.catch(reject);
+		} else {
+			res.json(_res);
+		}
+	});
+}
 
 router.get("/module/search/:val", function (req, res) {
-	const val = "%" + req.params.val + "%";
-	const _res = cache.get("/module/search/" + req.session.isadmin + val);
-	if (_res === undefined) {
-		if (val.length < 3) {
-			res.json(error.errorMaker("Value too short!"));
-			return;
-		}
-		query(`SELECT * FROM problem WHERE ${(req.session.isadmin ? "" : " defunct='N' AND")} 
-			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [val, val, val, val, val], function (rows) {
-			for (let i in rows) {
-				rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];
-				rows[i].source = cheerio.load(rows[i].source).text();
+	try {
+		SemanticUIAPIHandler(req, res, "/module/search/");
+	}
+	catch (e) {
+		console.log(e);
+		res.json(error.database);
+	}
+});
+
+router.get("/module/search/dropdown/:val", async (req, res) => {
+	try {
+		const data = await SemanticUIAPIHandler(req, res, "/module/search/dropdown/", true);
+		const sendData = [];
+		for (let i in data) {
+			if (data.hasOwnProperty(i)) {
+				sendData.push({
+					name: `Problem ${data[i].problem_id}: ${data[i].title}`,
+					value: parseInt(data[i].problem_id)
+				});
 			}
-			const result = {
-				items: rows
-			};
-			res.json(result);
-			cache.set("/module/search/" + req.session.isadmin + val, result, 10 * 24 * 60 * 60);
+		}
+		let val = req.params.val;
+		sendData.sort((a, b) => {
+			let intVal = parseInt(val);
+			let strVal = val + "";
+			if (a.value === intVal && b.value !== intVal) {
+				return -1;
+			}
+			else if(b.value === intVal && a.value !== intVal) {
+				return 1;
+			}
+			else if(strVal.includes(a.value + "") && !strVal.includes(b.value + "")) {
+				return -1;
+			}
+			else if(strVal.includes(b.value + "") && !strVal.includes(a.value + "")) {
+				return 1;
+			}
+			else {
+				return 0;
+			}
 		});
-	} else {
-		res.json(_res);
+		res.json({
+			success: true,
+			results: sendData
+		});
+	}
+	catch (e) {
+		console.log(e);
+		res.json(error.database);
 	}
 });
 
@@ -418,8 +482,7 @@ async function storePhotoToDir(problem_id, key, data, type) {
 	await mkdirAsync(picPath);
 	try {
 		base64Img.imgAsync(data, picPath, key);
-	}
-	catch(e) {
+	} catch (e) {
 		console.log(e);
 	}
 }
