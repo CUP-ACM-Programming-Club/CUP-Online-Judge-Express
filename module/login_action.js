@@ -1,5 +1,34 @@
 const query = require("../module/mysql_query");
 
+function isAdmin(str) {
+	return str === "administrator";
+}
+
+function isEditor(str) {
+	 return str.indexOf("editor") === 0;
+}
+
+function isContestManager(str) {
+	return str.indexOf("contest_manager") === 0;
+}
+
+function isSourceBrowser(str) {
+	return str.indexOf("source_browser") === 0;
+}
+
+function isContestUser(str) {
+	return str.indexOf("c") === 0;
+}
+
+function isContestMaker(str) {
+	return str.indexOf("m") === 0;
+}
+
+function isProblemMaker(str) {
+	return str.indexOf("p") === 0;
+
+}
+
 module.exports = async (req, user_id) => {
 	req.session.user_id = user_id;
 	req.session.auth = true;
@@ -15,25 +44,25 @@ module.exports = async (req, user_id) => {
 		req.session.avatar = nick[0].avatar;
 	}
 	for (let i of val) {
-		if (i.rightstr === "administrator") {
+		if (isAdmin(i.rightstr)) {
 			req.session.isadmin = true;
 		}
-		else if (i.rightstr.indexOf("editor") === 0) {
+		else if (isEditor(i.rightstr)) {
 			req.session.editor = true;
 		}
-		else if (i.rightstr.indexOf("contest_manager") === 0) {
+		else if (isContestManager(i.rightstr)) {
 			req.session.contest_manager = true;
 		}
-		else if (i.rightstr.indexOf("source_browser") === 0) {
+		else if (isSourceBrowser(i.rightstr)) {
 			req.session.source_browser = true;
 		}
-		else if (i.rightstr.indexOf("c") === 0) {
+		else if (isContestUser(i.rightstr)) {
 			req.session.contest[i.rightstr] = true;
 		}
-		else if (i.rightstr.indexOf("m") === 0) {
+		else if (isContestMaker(i.rightstr)) {
 			req.session.contest_maker[i.rightstr] = true;
 		}
-		else if (i.rightstr.indexOf("p") === 0) {
+		else if (isProblemMaker(i.rightstr)) {
 			req.session.problem_maker[i.rightstr] = true;
 		}
 	}

@@ -82,6 +82,11 @@ error.invalidProblemID = {
 	statement: "Problem ID is invalid"
 };
 
+error.internalError = {
+	status: "error",
+	statement: "Server Internal error"
+};
+
 error.errorMaker = function(statement) {
 	return {
 		status: "error",
