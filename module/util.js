@@ -28,10 +28,20 @@ function checkJSON(text) {
 	return /^[\],:{}\s]*$/.test(text.replace(/\\["\\\/bfnrtu]/g, "@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:\s*\[)+/g, ""));
 }
 
+function trimProperty(target) {
+	for (let property in target) {
+		if (target.hasOwnProperty(property) && typeof target[property] === "string") {
+			target[property] = target[property].trim();
+		}
+	}
+	return target;
+}
+
 module.exports = {
 	reverse,
 	checkJSON,
 	generateNewEncryptPassword,
 	encryptPassword,
-	decryptPassword
+	decryptPassword,
+	trimProperty
 };

@@ -2,15 +2,7 @@ const isNumber = require("../../../module/util/isNumber");
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const router = require("../../../module/admin/baseGetter")("contest", "contest_id");
-
-function trimProperty(target) {
-	for (let property in target) {
-		if (target.hasOwnProperty(property) && typeof target[property] === "string") {
-			target[property] = target[property].trim();
-		}
-	}
-	return target;
-}
+const {trimProperty} = require("../../../module/util");
 
 router.post("/", async (req, res) => {
 	res.json(error.errorMaker("developing"));
