@@ -5,7 +5,7 @@ function isAdmin(str) {
 }
 
 function isEditor(str) {
-	 return str.indexOf("editor") === 0;
+	return str.indexOf("editor") === 0;
 }
 
 function isContestManager(str) {
@@ -35,34 +35,29 @@ module.exports = async (req, user_id) => {
 	req.session.contest = {};
 	req.session.contest_maker = {};
 	req.session.problem_maker = {};
-	let val;
+	let [val, nick] = await Promise.all(
+		[query("select rightstr from privilege where user_id = ?", [user_id]),
+			query("select nick,avatar,avatarUrl from users where user_id = ?", [user_id])]);
 	//for session admin privilege
-	val = await query("select rightstr from privilege where user_id = ?", [user_id]);
-	let nick = await query("select nick,avatar from users where user_id = ?", [user_id]);
-	if(nick && nick.length && nick.length > 0) {
+	if (nick && nick.length && nick.length > 0) {
 		req.session.nick = nick[0].nick;
 		req.session.avatar = nick[0].avatar;
+		req.session.avatarUrl = nick[0].avatarUrl;
 	}
 	for (let i of val) {
 		if (isAdmin(i.rightstr)) {
 			req.session.isadmin = true;
-		}
-		else if (isEditor(i.rightstr)) {
+		} else if (isEditor(i.rightstr)) {
 			req.session.editor = true;
-		}
-		else if (isContestManager(i.rightstr)) {
+		} else if (isContestManager(i.rightstr)) {
 			req.session.contest_manager = true;
-		}
-		else if (isSourceBrowser(i.rightstr)) {
+		} else if (isSourceBrowser(i.rightstr)) {
 			req.session.source_browser = true;
-		}
-		else if (isContestUser(i.rightstr)) {
+		} else if (isContestUser(i.rightstr)) {
 			req.session.contest[i.rightstr] = true;
-		}
-		else if (isContestMaker(i.rightstr)) {
+		} else if (isContestMaker(i.rightstr)) {
 			req.session.contest_maker[i.rightstr] = true;
-		}
-		else if (isProblemMaker(i.rightstr)) {
+		} else if (isProblemMaker(i.rightstr)) {
 			req.session.problem_maker[i.rightstr] = true;
 		}
 	}

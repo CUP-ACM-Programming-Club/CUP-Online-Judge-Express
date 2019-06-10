@@ -353,11 +353,12 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	}
 	let result = [];
 	for (const val of _res) {
-		const _user_info = await cache_query("SELECT nick,avatar FROM users WHERE user_id = ?", [val.user_id]);
+		const _user_info = await cache_query("SELECT nick,avatar,avatarUrl FROM users WHERE user_id = ?", [val.user_id]);
 		if (_user_info.length > 0) {
 			const nick = _user_info[0].nick.trim();
 			const avatar = Boolean(_user_info[0].avatar);
-			let element = Object.assign({nick, avatar}, val);
+			const avatarUrl = _user_info[0].avatarUrl || "";
+			let element = Object.assign({nick, avatar, avatarUrl}, val);
 			renameProperty(element, "sim_id", "sim_s_id");
 			renameProperty(element, "length", "code_length");
 			if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {

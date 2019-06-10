@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const [error, ok] = require("../../../module/const_var");
-const cache_query = require("../../../module/mysql_cache");
+const query = require("../../../module/mysql_query");
 const LENGTH_LIMIT = 100;
 const checkPassword = require("../../../module/check_password");
+const loginAction = require("../../../module/login_action");
+const {encryptPassword} = require("../../../module/util");
+const salt = require("../../../config.json").salt || "thisissalt";
 
 function checkLength(str) {
 	str += "";
@@ -11,7 +14,7 @@ function checkLength(str) {
 }
 
 function buildUpdateQuery(name, val, user_id) {
-	return cache_query(`update users set ${name} = ? where user_id = ?`, [val, user_id]);
+	return query(`update users set ${name} = ? where user_id = ?`, [val, user_id]);
 }
 
 function checkExists(str) {
@@ -33,7 +36,7 @@ function checkRequestBodyProperties(body) {
 }
 
 async function checkPasswordAdapter(user_id, password) {
-	const res = await cache_query("select password,newpassword from users where user_id = ?", [user_id]);
+	const res = await query("select password,newpassword from users where user_id = ?", [user_id]);
 	return checkPassword(res[0].password, password, res[0].newpassword);
 }
 
@@ -43,7 +46,7 @@ router.post("/", async (req, res) => {
 		res.json(error.invalidParams);
 		return;
 	}
-	let {blog, github, biography, confirmquestion, confirmanswer, password, newpassword, repeatpassword, email, school, nick} = req.body;
+	let {blog, github, biography, confirmquestion, confirmanswer, password, newpassword, repeatpassword, email, school, nick, avatarUrl} = req.body;
 	if (!await checkPasswordAdapter(user_id, password)) {
 		res.json(error.errorMaker("Password wrong"));
 		return;
@@ -52,15 +55,28 @@ router.post("/", async (req, res) => {
 		res.json(error.errorMaker("Two password not same"));
 		return;
 	}
+	newpassword = encryptPassword(newpassword, salt);
 	try {
 		let Queue = [];
-		let Property = {newpassword, nick, school, email, blog, github, biography, confirmquestion, confirmanswer};
+		let Property = {
+			newpassword,
+			nick,
+			school,
+			email,
+			blog,
+			github,
+			biography,
+			confirmquestion,
+			confirmanswer,
+			avatarUrl
+		};
 		Object.keys(Property).forEach(el => {
 			if (checkExists(Property[el])) {
 				Queue.push(buildUpdateQuery(el, Property[el], user_id));
 			}
 		});
 		await Promise.all(Queue);
+		await loginAction(req, req.session.user_id);
 		res.json(ok.ok);
 	} catch (e) {
 		res.json(error.database);

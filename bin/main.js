@@ -531,14 +531,16 @@ io.on("connection", async function (socket) {
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
 		submissions[submission_id] = socket;
-		const avatar = await cache_query("select avatar from users where user_id = ?", [data.user_id]);
+		const avatar = await cache_query("select avatar,avatarUrl from users where user_id = ?", [data.user_id]);
 		submitUserInfo[submission_id] = {
 			nick: data.nick,
 			user_id: data.user_id,
 			in_date: new Date().toISOString(),
-			avatar: !!avatar[0].avatar
+			avatar: !!avatar[0].avatar,
+			avatarUrl: avatar[0].avatarUrl
 		};
 		data.val.avatar = !!avatar[0].avatar;
+		data.val.avatarUrl = avatar[0].avatarUrl;
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
                 contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);

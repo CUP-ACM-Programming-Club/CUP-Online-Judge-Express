@@ -80,7 +80,7 @@ router.post("/newlogin", async function(req, res) {
 		if (val.length && val.length > 0) {
 			ans = val[0].password;
 			newpass = val[0].newpassword;
-			if (checkPassword(ans, password, null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
+			if (checkPassword(ans, password, newpass)) {
 				await storeNewTypePassword(res, password, user_id, newpass);
 				await login_action(req, user_id);
 				res.json(ok.ok);
@@ -131,7 +131,7 @@ router.post("/", async function (req, res) {
 		if (val.length && val.length > 0) {
 			ans = val[0].password;
 			newpass = val[0].newpassword;
-			if (checkPassword(ans, password, null /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
+			if (checkPassword(ans, password, newpass /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
 				await storeNewTypePassword(res, password, user_id, newpass);
 				await login_action(req, user_id);
 				res.json(ok.ok);

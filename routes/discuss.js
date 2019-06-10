@@ -59,12 +59,12 @@ router.get("/:id", async (req, res) => {
 	let _tot, _article;
 	[discuss_content, _tot, _article] = await Promise.all([
 		cache_query(`select * from 
-		(select t.*,users.avatar,users.nick from (select * from article_content where article_id = ?)t left join users
+		(select t.*,users.avatar,users.avatarUrl,users.nick from (select * from article_content where article_id = ?)t left join users
 	on users.user_id = t.user_id)joint
 	 order by comment_id asc 
 	limit ?,?`, [id, page, page_cnt]),
 		cache_query("select count(1) as cnt from article_content where article_id = ?", [id]),
-		cache_query(`select tmp.*,users.avatar,users.nick,users.biography,users.solved from (
+		cache_query(`select tmp.*,users.avatar,users.avatarUrl,users.nick,users.biography,users.solved from (
 		select * from article where article_id = ?)
 		tmp
 		left join users on users.user_id = tmp.user_id

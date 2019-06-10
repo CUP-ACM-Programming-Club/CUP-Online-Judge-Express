@@ -797,6 +797,7 @@ CREATE TABLE `users` (
   `blog` text,
   `github` text,
   `biography` text,
+  `avatarUrl` varchar(100) null,
   PRIMARY KEY (`user_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;

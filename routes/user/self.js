@@ -13,6 +13,7 @@ router.get("/", (req, res) => {
 			nick: req.session.nick,
 			admin: req.session.isadmin,
 			avatar: req.session.avatar,
+			avatarUrl: req.session.avatarUrl,
 			privilege: sessionCopy
 		}));
 	}

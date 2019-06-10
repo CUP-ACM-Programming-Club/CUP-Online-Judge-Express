@@ -60,7 +60,7 @@ router.get("/:source/:id", async (req, res) => {
 	const source = _sourceId.source;
 	const id = _sourceId.id;
 	let sqlQuery = [];
-	sqlQuery.push(cache_query(`select tutorial.*,users.user_id,users.nick,users.avatar,users.solved,users.biography,
+	sqlQuery.push(cache_query(`select tutorial.*,users.user_id,users.nick,users.avatar,users.avatarUrl,users.solved,users.biography,
 	 solution.time,solution.memory,solution.language,solution.result,solution.code_length,solution.in_date,source_code_user.source as code
 	from tutorial
 left join users on users.user_id = tutorial.user_id
