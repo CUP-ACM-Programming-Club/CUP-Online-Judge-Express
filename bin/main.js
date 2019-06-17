@@ -21,10 +21,10 @@ const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
-const _localJudge = require("../module/judger");
+const LocalJudge = require("../module/judger");
 const _dockerRunner = require("../module/docker_runner");
 const querystring = require("querystring");
-const localJudge = new _localJudge(config.judger.oj_home, config.judger.oj_judge_num);
+const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 
 const wss = new WebSocket.Server({port: config.ws.judger_port});

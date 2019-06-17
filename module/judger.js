@@ -80,12 +80,13 @@ class localJudger extends eventEmitter {
 	}
 
 	/**
-     * 添加一个提交任务
-     * @param {Number} solution_id 提交ID
-     */
+	 * 添加一个提交任务
+	 * @param {Number} solution_id 提交ID
+	 * @param admin
+	 */
 
 	addTask(solution_id, admin) {
-		if (typeof solution_id === "object") {
+		if (typeof solution_id === "object" && solution_id !== null) {
 			if (!isNaN(solution_id.submission_id)) {
 				solution_id = solution_id.submission_id;
 			} else if (!isNaN(solution_id.solution_id)) {
