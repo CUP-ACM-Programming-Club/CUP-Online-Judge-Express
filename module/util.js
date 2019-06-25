@@ -1,5 +1,6 @@
 const crypto = require("../module/encrypt");
 const query = require("./mysql_query");
+const isNumber = require("./util/isNumber");
 function reverse(val) {
 	if (typeof val !== "string")
 		return (val + "").split("").reverse().join("");
@@ -37,11 +38,27 @@ function trimProperty(target) {
 	return target;
 }
 
+function assertString(str) {
+	if (typeof str !== "string") {
+		throw new Error("variable should be a string");
+	}
+	return true;
+}
+
+function assertInt(num) {
+	if (!isNumber(num)) {
+		throw new Error("variable should be a number");
+	}
+	return parseInt(num);
+}
+
 module.exports = {
 	reverse,
 	checkJSON,
 	generateNewEncryptPassword,
 	encryptPassword,
 	decryptPassword,
-	trimProperty
+	trimProperty,
+	assertInt,
+	assertString
 };

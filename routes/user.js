@@ -10,6 +10,7 @@ router.use(...require("./user/register_timeline"));
 router.use(...require("./user/submit_stat"));
 router.use(...require("./user/self"));
 router.use(...require("./user/update"));
+router.use(...require("./user/lost"));
 router.get("/:user_id", async (req, res) => {
 	const user_id = req.params.user_id;
 	let sqlQueue = [];

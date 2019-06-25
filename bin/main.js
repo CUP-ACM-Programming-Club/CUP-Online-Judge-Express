@@ -23,12 +23,12 @@ const client = require("../module/redis");
 const WebSocket = require("ws");
 const LocalJudge = require("../module/judger");
 const _dockerRunner = require("../module/docker_runner");
+const BanCheaterModel = require("../module/contest/cheating_ban");
 const querystring = require("querystring");
 const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
-
 const wss = new WebSocket.Server({port: config.ws.judger_port});
-
+const banCheaterModel = new BanCheaterModel();
 String.prototype.exist = function (str) {
 	return this.indexOf(str) !== -1;
 };
@@ -89,28 +89,43 @@ let solutionContext = {};
 global.submissions = submissions;
 global.contest_mode = false;
 
+function clearBinding(solution_id) {
+	if (problemFromContest[solution_id]) {
+		delete problemFromContest[solution_id];
+	}
+	if (problemFromSpecialSubject[solution_id]) {
+		delete problemFromSpecialSubject[solution_id];
+	}
+	if (submissionOrigin[solution_id]) {
+		delete submissionOrigin[solution_id];
+	}
+	delete submitUserInfo[solution_id];
+	delete submissions[solution_id];
+	delete solutionContext[solution_id];
+}
+
+async function banSubmissionChecker(solution_pack) {
+	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 15 && solution_pack.hasOwnProperty("contest_id")) {
+		const {contest_id, num, user_id, solution_id} = solution_pack;
+		await banCheaterModel.addCheating(user_id, contest_id, {solution_id, num});
+	}
+}
+
 wss.on("connection", function (ws) {
 	/**
      * 绑定judger发送的事件
      */
-	ws.on("judger", function (message) {
+	ws.on("judger", async function (message) {
 		const solution_pack = message;
 		const finished = parseInt(solution_pack.finish);
 		const solution_id = parseInt(solution_pack.solution_id);
 		if (submitUserInfo[solution_id]) {
 			Object.assign(solution_pack, submitUserInfo[solution_id]);
-			/*
-            solution_pack.nick = submitUserInfo[solution_id].nick;
-            solution_pack.user_id = submitUserInfo[solution_id].user_id;
-            solution_pack.in_date = submitUserInfo[solution_id].in_date;
-            */
 		}
 		if (problemFromContest[solution_id]) {
-			solution_pack.contest_id = problemFromContest[solution_id].contest_id;
-			solution_pack.num = problemFromContest[solution_id].num;
+			Object.assign(solution_pack, problemFromContest[solution_id]);
 		} else if (problemFromSpecialSubject[solution_id]) {
-			solution_pack.topic_id = problemFromSpecialSubject[solution_id].topic_id;
-			solution_pack.num = problemFromSpecialSubject[solution_id].num;
+			Object.assign(solution_pack, problemFromSpecialSubject[solution_id]);
 		}
 		if (solutionContext[solution_id]) {
 			Object.assign(solution_pack, solutionContext[solution_id]);
@@ -124,18 +139,8 @@ wss.on("connection", function (ws) {
 		}
 
 		if (finished) {
-			if (problemFromContest[solution_id]) {
-				delete problemFromContest[solution_id];
-			}
-			if (problemFromSpecialSubject[solution_id]) {
-				delete problemFromSpecialSubject[solution_id];
-			}
-			if (submissionOrigin[solution_id]) {
-				delete submissionOrigin[solution_id];
-			}
-			delete submitUserInfo[solution_id];
-			delete submissions[solution_id];
-			delete solutionContext[solution_id];
+			await banSubmissionChecker(solution_pack);
+			clearBinding(solution_id);
 		}
 	});
 
@@ -186,7 +191,13 @@ server.listen(port, function () {
 function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
+			if (!userArr.hasOwnProperty(i)) {
+				continue;
+			}
 			for (let j in userArr[i]) {
+				if (!userArr[i].hasOwnProperty(j)) {
+					continue;
+				}
 				if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
 					continue;
 				}
@@ -197,7 +208,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
-			if (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1) {
+			if (!userArr.hasOwnProperty(i) || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
 				continue;
 			}
 			if (!privilege || userArr[i].privilege) {
@@ -217,19 +228,13 @@ localJudge.on("change", (freeJudger) => {
  */
 
 function onlineUserBroadcast() {
-	let online = Object.values(onlineUser);
+	let online = Object.values(onlineUser).filter(el => typeof el !== "undefined" && el !== null);
 	let userArr = {
 		user_cnt: online.length,
 		user: online.map(e => {
-			if (e && e.user_id) {
-				return {
-					user_id: e.user_id
-				};
-			} else {
-				return {
-					user_id: ""
-				};
-			}
+			return {
+				user_id: (e && e.user_id) ? e.user_id : ""
+			};
 		})
 	};
 	sendMessage(normal_user, "user", {
@@ -263,7 +268,7 @@ function whiteBoardBroadCast(socket, content) {
 			_socket.emit("whiteboard", {
 				type: "content",
 				from: socket.user_id,
-				content: content
+				content
 			});
 		}
 	}
@@ -290,7 +295,7 @@ io.use(async (socket, next) => {
 		next(new Error("Auth failed"));
 		return;
 	}
-	if(socket.request.session && socket.request.session.user_id) {
+	if (socket.request.session && socket.request.session.user_id) {
 		socket.auth = true;
 		next();
 		return;
@@ -387,6 +392,7 @@ io.use((socket, next) => {
 	onlineUserBroadcast();
 	next();
 });
+
 /**
  * 处理URL包含的信息
  */
@@ -402,11 +408,11 @@ function buildStatusSocket(socket) {
 				socket.contest_id = contest_id;
 				pagePush.contest_status[contest_id].push(socket);
 			}
-		}  else {
+		} else {
 			const url_split = socket.url.split("/");
 			if (url_split.includes("contest")) {
 				const idx = url_split.indexOf("contest");
-				if(idx < url_split.length - 1) {
+				if (idx < url_split.length - 1) {
 					if (!isNaN(url_split[idx + 1])) {
 						const contest_id = parseInt(url_split[idx + 1]);
 						if (!pagePush.contest_status[contest_id]) {
@@ -414,8 +420,7 @@ function buildStatusSocket(socket) {
 						}
 						socket.contest_id = contest_id;
 						pagePush.contest_status[contest_id].push(socket);
-					}
-					else if(url_split[idx + 1] === "rank" && !isNaN(url_split[idx + 2])) {
+					} else if (url_split[idx + 1] === "rank" && !isNaN(url_split[idx + 2])) {
 						const contest_id = parseInt(url_split[idx + 2]);
 						if (!pagePush.contest_status[contest_id]) {
 							pagePush.contest_status[contest_id] = [];
@@ -424,8 +429,7 @@ function buildStatusSocket(socket) {
 						pagePush.contest_status[contest_id].push(socket);
 					}
 				}
-			}
-			else {
+			} else {
 				pagePush.status.push(socket);
 				socket.status = true;
 			}

@@ -6,7 +6,7 @@ const {trimProperty} = require("../../../module/util");
 
 router.post("/", async (req, res) => {
 	res.json(error.errorMaker("developing"));
-	let {title, password, description, privilege, contestMode, access, classroom} = trimProperty(req.body);
+	let {title, password, description, privilege, contestMode, access, classroom, problemList} = trimProperty(req.body);
 	if (access.length === 0) {
 		access = "null";
 	}
