@@ -10,7 +10,7 @@ const salt = require("../config.json").salt || "thisissalt";
 const login_action = require("../module/login_action");
 const {checkCaptcha} = require("../module/captcha_checker");
 const {checkJSON, generateNewEncryptPassword} = require("../module/util");
-
+const banChecker = require("../middleware/ban_check");
 
 router.get("/", function (req, res) {
 	res.json({
@@ -83,7 +83,9 @@ router.post("/newlogin", async function(req, res) {
 			if (checkPassword(ans, password, newpass)) {
 				await storeNewTypePassword(res, password, user_id, newpass);
 				await login_action(req, user_id);
-				res.json(ok.ok);
+				if (await banChecker(req, res)) {
+					res.json(ok.ok);
+				}
 			} else {
 				res.json(error.invalidUser);
 			}
@@ -134,7 +136,9 @@ router.post("/", async function (req, res) {
 			if (checkPassword(ans, password, newpass /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
 				await storeNewTypePassword(res, password, user_id, newpass);
 				await login_action(req, user_id);
-				res.json(ok.ok);
+				if (await banChecker(req, res)) {
+					res.json(ok.ok);
+				}
 			} else {
 				res.json(error.invalidUser);
 			}

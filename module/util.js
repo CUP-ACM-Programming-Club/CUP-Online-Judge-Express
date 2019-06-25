@@ -52,6 +52,37 @@ function assertInt(num) {
 	return parseInt(num);
 }
 
+async function removeAllContestProblem(contest_id) {
+	await query("delete from contest_problem where contest_id = ?", [contest_id]);
+}
+
+async function removeAllConpetitorPrivilege(contest_id) {
+	await query("delete from privilege where rightstr = ?", [`c${contest_id}`]);
+}
+
+
+async function addContestProblem(contest_id, problemList) {
+	let baseSql = "insert into contest_problem(contest_id, problem_id, num) values";
+	let sqlArray = [];
+	let valueArray = [];
+	for (let num = 0, len = problemList.length; num < len; ++num) {
+		sqlArray.push("(?,?,?)");
+		valueArray.push(contest_id, problemList[num], num);
+	}
+	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+}
+
+async function addContestConpetitor(contest_id, userList) {
+	let baseSql = "insert into privilege (user_id, rightstr) values";
+	let sqlArray = [], valueArray = [];
+	userList.forEach(el => {
+		sqlArray.push("(?,?)");
+		valueArray.push(contest_id, el);
+	});
+	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+}
+
+
 module.exports = {
 	reverse,
 	checkJSON,
@@ -60,5 +91,9 @@ module.exports = {
 	decryptPassword,
 	trimProperty,
 	assertInt,
-	assertString
+	assertString,
+	addContestConpetitor,
+	addContestProblem,
+	removeAllConpetitorPrivilege,
+	removeAllContestProblem
 };
