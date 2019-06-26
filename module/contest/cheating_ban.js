@@ -40,7 +40,7 @@ async function removeBannedSolution(contest, user_id) {
 
 async function banChecker(contest, user_id) {
 	if (getSet(contest, user_id).size > 1) {
-		await banUser(user_id, dayjs().add(1, "month").format("YYYY-MM-DD HH:mm:ss"));
+		await banUser(user_id, dayjs().add(1, "day").format("YYYY-MM-DD HH:mm:ss"));
 		await removeBannedSolution(contest, user_id);
 	}
 }
