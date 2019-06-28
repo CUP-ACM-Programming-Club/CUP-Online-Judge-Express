@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
 const express = require("express");
 const router = express.Router();
-const [error] = require("../../module/const_var");
+const [error, ok] = require("../../module/const_var");
 const cache_query = require("../../module/mysql_cache");
+const getSim = require("../../module/status/sim");
 
 router.get("/", async (req, res) => {
 	const cid = parseInt(req.query.cid);
@@ -14,10 +15,18 @@ router.get("/", async (req, res) => {
 		on u1.user_id = t.s_user_id)s
 left join users as u2
 		on u2.user_id = s.s_s_user_id`,[cid]);
-		res.json({
-			status: "OK",
-			data
-		});
+		res.json(ok.okMaker(data));
+	}
+	catch (e) {
+		console.log(e);
+		res.json(error.database);
+	}
+});
+
+router.get("/:cid", async (req, res) => {
+	try {
+		let data = await getSim(req.params.cid);
+		res.json(ok.okMaker(data));
 	}
 	catch (e) {
 		console.log(e);
