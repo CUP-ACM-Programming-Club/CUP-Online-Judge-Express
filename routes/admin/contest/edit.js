@@ -16,7 +16,7 @@ router.post("/", async (req, res) => {
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0) {
-			hostname = "null";
+			hostname = "";
 		}
 		if (defunct) {
 			defunct = "Y";

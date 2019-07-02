@@ -25,6 +25,7 @@ const LocalJudge = require("../module/judger");
 const _dockerRunner = require("../module/docker_runner");
 const BanCheaterModel = require("../module/contest/cheating_ban");
 const querystring = require("querystring");
+const {storeSubmission} = require("../module/judger/recorder");
 const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 const wss = new WebSocket.Server({port: config.ws.judger_port});
@@ -105,7 +106,7 @@ function clearBinding(solution_id) {
 }
 
 async function banSubmissionChecker(solution_pack) {
-	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 15 && solution_pack.hasOwnProperty("contest_id")) {
+	if (parseInt(solution_pack.sim) >= 85 && solution_pack.state === 15 && solution_pack.hasOwnProperty("contest_id")) {
 		const {contest_id, num, user_id, solution_id} = solution_pack;
 		await banCheaterModel.addCheating(user_id, contest_id, {solution_id, num});
 	}
@@ -140,6 +141,7 @@ wss.on("connection", function (ws) {
 
 		if (finished) {
 			await banSubmissionChecker(solution_pack);
+			await storeSubmission(solution_pack);
 			clearBinding(solution_id);
 		}
 	});

@@ -83,9 +83,10 @@ class localJudger extends eventEmitter {
 	 * 添加一个提交任务
 	 * @param {Number} solution_id 提交ID
 	 * @param admin
+	 * @param no_sim
 	 */
 
-	addTask(solution_id, admin) {
+	addTask(solution_id, admin, no_sim = false) {
 		if (typeof solution_id === "object" && solution_id !== null) {
 			if (!isNaN(solution_id.submission_id)) {
 				solution_id = solution_id.submission_id;
@@ -102,7 +103,7 @@ class localJudger extends eventEmitter {
             !this.in_waiting_queue[solution_id]) {
 			this.latestSolutionID = solution_id;
 			if (this.judge_queue.length) {
-				this.runJudger(solution_id, this.judge_queue.shift(), admin);
+				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim);
 				this.judging_queue.push(solution_id);
 			} else {
 				this.waiting_queue.push({
@@ -153,13 +154,17 @@ class localJudger extends eventEmitter {
      * @param {Number} solution_id 提交ID
      * @param {Number} runner_id 判题机ID
      * @param {Boolean} admin 管理员提交
+     * @param {Boolean} no_sim 不启用判重
      * @returns {Promise<void>} 返回一个空Promise
      */
 
-	async runJudger(solution_id, runner_id, admin = false) {
+	async runJudger(solution_id, runner_id, admin = false, no_sim = false) {
 		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
 		if (admin) {
 			args.push("-admin");
+		}
+		if (no_sim) {
+			args.push("-no-sim");
 		}
 		const judger = spawn(`${process.cwd()}/wsjudged`, args);
 		let killed = false;

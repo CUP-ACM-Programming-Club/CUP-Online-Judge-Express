@@ -48,9 +48,7 @@ async function generateContestList(req) {
 	let base_sql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
 	let promiseArray = [cache_query(base_sql)];
 	promiseArray.push(cache_query(`select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`));
-	const ret = (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
-	console.log(ret);
-	return ret;
+	return (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
 }
 
 router.get("/general/:cid", async (req, res) => {
