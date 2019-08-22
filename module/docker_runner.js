@@ -16,8 +16,8 @@ class dockerRunner {
 		if (this.platform !== "linux") {
 			return new Error("Your platform doesn't support right now");
 		}
-		dockerRunner.startupInit();// Reset result whose solution didn't finish
-		require("./judger/DatabaseSubmissionCollector").call(this, 3000);
+		// dockerRunner.startupInit();// Reset result whose solution didn't finish
+		// require("./judger/DatabaseSubmissionCollector").call(this, 3000);
 		this.waiting_package = {};
 		this.judge_queue = [];
 		for (let i = 0; i < judger_num; ++i) {
