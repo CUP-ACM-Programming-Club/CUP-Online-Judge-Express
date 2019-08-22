@@ -1,5 +1,5 @@
 const query = require("../mysql_query");
-const log4js = require("../module/logger");
+const log4js = require("../logger");
 const logger = log4js.logger("normal", "info");
 
 function RuntimeErrorHandler() {
