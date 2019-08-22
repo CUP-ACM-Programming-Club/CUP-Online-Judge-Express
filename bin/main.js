@@ -31,14 +31,17 @@ const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 const wss = new WebSocket.Server({port: config.ws.judger_port});
 const banCheaterModel = new BanCheaterModel();
-String.prototype.exist = function (str) {
-	return this.indexOf(str) !== -1;
-};
+const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
+const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
+localJudge.setErrorHandler(new RuntimeErrorHandler());
+const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
+databaseSubmissionCollector.setJudger(localJudge).start();
+initExternalEnvironment.run();
 /**
  *
  * @type {{Object}} 记录在线用户的信息
  */
-let onlineUser = {};
+const onlineUser = {};
 /**
  *
  * @type {{Socket}} 记录在线用户的Socket连接

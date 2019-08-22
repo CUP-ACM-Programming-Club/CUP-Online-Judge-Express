@@ -82,9 +82,13 @@ async function addContestConpetitor(contest_id, userList) {
 	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
 }
 
+function startupInit() {
+	return query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+}
 
 module.exports = {
 	reverse,
+	startupInit,
 	checkJSON,
 	generateNewEncryptPassword,
 	encryptPassword,

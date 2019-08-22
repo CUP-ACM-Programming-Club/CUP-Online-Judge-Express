@@ -5,4 +5,10 @@ module.exports = function (TEST_MODE = false) {
 			process.exit(0);
 		},8000);
 	}
+	String.prototype.exist = function (str) {
+		return this.indexOf(str) !== -1;
+	};
+	Array.prototype.isEmpty = function () {
+		return this.length === 0;
+	};
 };

@@ -3,21 +3,9 @@
  * Class LocalJudger
  */
 const {spawn} = require("child_process");
-const query = require("../module/mysql_query");
-const cache_query = require("../module/mysql_cache");
-const log4js = require("../module/logger");
-const logger = log4js.logger("normal", "info");
 const PriorityQueue = require("tinyqueue");
 const os = require("os");
 const eventEmitter = require("events").EventEmitter;
-
-const SECOND = {
-	ONE_SECOND: 1000,
-	TWO_SECOND: 2000,
-	THREE_SECOND: 3000,
-	FIVE_SECOND: 5000,
-	TEN_SECOND: 10000
-};
 
 class localJudger extends eventEmitter {
 	/**
@@ -43,25 +31,26 @@ class localJudger extends eventEmitter {
 		this.CPUModel = CPUDetails[0].model;
 		this.CPUSpeed = CPUDetails[0].speed;
 		this.platform = os.platform();
+		this.errorHandler = null;
 		if (this.platform !== "linux" && this.platform !== "darwin") {
 			return new Error("Your platform doesn't support right now");
 		}
-		localJudger.startupInit();// Reset result whose solution didn't finish
-		//this.collectSubmissionFromDatabase();
-		require("./judger/looper").call(this, SECOND.THREE_SECOND);
 	}
 
-	/**
-     * 开启时更新数据库状态
-     */
-
-	static startupInit() {
-		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+	errorHandle(solutionId, runnerId) {
+		if (this.errorHandler !== null) {
+			this.errorHandler.record(solutionId, runnerId);
+		}
 	}
+
+	setErrorHandler(errorHandler) {
+		this.errorHandler = errorHandler;
+	}
+
 
 	/**
      * 返回Judger状态
-     * @returns {{judging: Array, free_judger: Array, waiting: Array, last_solution_id: number|*, is_looping: *, oj_home: String|*}} 返回评测机的所有状态
+     * @returns {{judging: Array, free_judger: Array, waiting: Array, last_solution_id: number|*, oj_home: String|*}} 返回评测机的所有状态
      */
 
 	getStatus() {
@@ -70,7 +59,6 @@ class localJudger extends eventEmitter {
 			free_judger: this.judge_queue,
 			waiting: this.waiting_queue,
 			last_solution_id: this.latestSolutionID,
-			is_looping: this.isLooping(),
 			oj_home: this.oj_home,
 			cpu_details: this.CPUDetails,
 			cpu_model: this.CPUModel,
@@ -79,14 +67,7 @@ class localJudger extends eventEmitter {
 		};
 	}
 
-	/**
-	 * 添加一个提交任务
-	 * @param {Number} solution_id 提交ID
-	 * @param admin
-	 * @param no_sim
-	 */
-
-	addTask(solution_id, admin, no_sim = false) {
+	static formatSolutionId(solution_id) {
 		if (typeof solution_id === "object" && solution_id !== null) {
 			if (!isNaN(solution_id.submission_id)) {
 				solution_id = solution_id.submission_id;
@@ -98,17 +79,26 @@ class localJudger extends eventEmitter {
 		} else {
 			solution_id = parseInt(solution_id);
 		}
+		return solution_id;
+	}
+
+	updateLatestSolutionId(solutionId) {
+		this.latestSolutionID = Math.max(this.latestSolutionID, solutionId);
+	}
+
+	addTask(solution_id, admin, no_sim = false, priority = 1) {
+		solution_id = localJudger.formatSolutionId(solution_id);
 		if (solution_id > this.latestSolutionID &&
-            !~this.judging_queue.indexOf(solution_id) &&
+            !this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
-			this.latestSolutionID = solution_id;
-			if (this.judge_queue.length) {
+			this.updateLatestSolutionId(solution_id);
+			if (!this.judge_queue.isEmpty()) {
 				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim);
 				this.judging_queue.push(solution_id);
 			} else {
 				this.waiting_queue.push({
-					solution_id: solution_id,
-					priority: 1,
+					solution_id,
+					priority,
 					admin
 				});
 				this.in_waiting_queue[solution_id] = true;
@@ -130,24 +120,6 @@ class localJudger extends eventEmitter {
 		}
 	}
 
-
-	/**
-     * 返回judger是否轮询拾取数据库数据
-     * @returns {boolean} 轮询开始返回true 否则返回false
-     */
-
-	isLooping() {
-		return this.loopingFlag;
-	}
-
-	/**
-     * 停止轮询
-     */
-
-	stopLoopJudge() {
-		this.loopingFlag = false;
-		clearInterval(this.loopJudgeFlag);
-	}
 
 	/**
      * 运行后台判题机
@@ -185,54 +157,11 @@ class localJudger extends eventEmitter {
 			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
 			if (EXITCODE) {
-				query("update solution set result = 16 where solution_id = ?", [solution_id]);
-				logger.fatal(`Fatal Error:\n
-				solution_id:${solution_id}\n
-				runner_id:${runner_id}\n
-				`);
-				if (process.env.NODE_ENV === "test") {
-					console.log(`Fatal Error:\n
-				solution_id:${solution_id}\n
-				runner_id:${runner_id}\n
-				`);
-				}
+				this.errorHandle(solution_id, runner_id);
 			}
 		});
 		//judger.stdout.on("data", () => {});no use
 		//judger.stderr.on("data", () => {});no use
-	}
-
-	/**
-     * 从数据库收集提交
-     * @returns {Promise<void>} 返回一个空Promise
-     */
-
-	async collectSubmissionFromDatabase() {
-		if (process.env.NODE_ENV === "local") {
-			return;
-		}
-		let result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
-		for (let i in result) {
-			const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
-				[result[i].user_id]);
-			const admin = Boolean(_data && _data.length && _data[0].cnt);
-			const solution_id = parseInt(result[i].solution_id);
-			const priority = parseInt(result[i].result);
-			if (!isNaN(solution_id) &&
-                !this.in_waiting_queue[solution_id] &&
-                !~this.judging_queue.indexOf(solution_id)) {
-				if (this.judge_queue.length) {
-					this.runJudger(solution_id, this.judge_queue.shift(), admin);
-					this.judging_queue.push(solution_id);
-				} else {
-					this.waiting_queue.push({
-						solution_id: solution_id,
-						priority: !priority
-					});
-					this.in_waiting_queue[solution_id] = true;
-				}
-			}
-		}
 	}
 }
 

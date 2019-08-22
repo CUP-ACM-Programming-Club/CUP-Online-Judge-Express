@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const svgCaptcha = require("svg-captcha");
-const auth = require("../middleware/auth");
 router.get("/", (req, res) => {
 	const captcha = svgCaptcha.create({
 		noise: 3
@@ -11,8 +10,7 @@ router.get("/", (req, res) => {
 		from,
 		captcha: captcha.text
 	};
-	res.type("svg");
-	res.status(200).send(captcha.data);
+	res.type("svg").status(200).send(captcha.data);
 });
 
 module.exports = ["/captcha", router];
