@@ -95,7 +95,7 @@ async function limitClassroomAccess(req, contest_id) {
 	} else {
 		return true;
 	}
-	if(detectResult === null) {
+	if (detectResult === null) {
 		return false;
 	}
 	detectResult = detectResult.toString();
@@ -111,15 +111,14 @@ async function limitClassroomAccess(req, contest_id) {
 
 async function checkTopicPrivilege(req, topic_id) {
 	if (req.session.isadmin) {
-		return true;
+		return;
 	}
 	const data = await cache_query("select private,defunct from special_subject where topic_id = ?", [topic_id]);
 	const _private = parseInt(data[0].private) === 1;
 	const defunct = data[0].defunct === "Y";
-	if (defunct) {
-		return false;
+	if (defunct || _private === true) {
+		throw error.errorMaker("You don't have privilege to access this topic");
 	}
-	return !_private;
 }
 
 async function includeProblem(id, num, sql) {
@@ -132,14 +131,22 @@ async function includeProblem(id, num, sql) {
 }
 
 async function contestIncludeProblem(contest_id, num) {
-	return await includeProblem(contest_id, num,`select problem_id from contest_problem
+	const result =  await includeProblem(contest_id, num, `select problem_id from contest_problem
      where contest_id = ? and num = ?`);
+	if (result === false) {
+		throw error.errorMaker("problem is not in contest");
+	}
+	return result;
 }
 
 
 async function TopicIncludeProblem(topic_id, num) {
-	return await includeProblem(topic_id, num, `select problem_id from special_subject_problem
+	const result = await includeProblem(topic_id, num, `select problem_id from special_subject_problem
      where topic_id = ? and num = ?`);
+	if (result === false) {
+		throw error.errorMaker("problem is not in topic");
+	}
+	return result;
 }
 
 async function problemPublic(problem_id) {
@@ -164,7 +171,7 @@ async function makePrependAndAppendCode(problem_id, source, language) {
 		if (parseInt(i.prepend) === 1 && prepend_added === false) {
 			new_source = i.code + "\n" + new_source;
 			prepend_added = true;
-		} else if(append_added === false) {
+		} else if (append_added === false) {
 			append_added = true;
 			new_source += "\n" + i.code;
 		}
@@ -178,35 +185,32 @@ function checkLangmask(language, langmask = LANGMASK) {
 
 async function checkContestValidate(req, originalContestID, originalPID, language) {
 	if (isNaN(originalContestID) || isNaN(originalPID)) {
-		return error.errorMaker("Invalid contest_id or pid");
+		throw error.errorMaker("Invalid contest_id or pid");
 	}
 	const positiveContestID = Math.abs(originalContestID);
 	let limit_address = await limitAddressForContest(req, positiveContestID);
 	if (typeof limit_address === "string") {
-		return error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
+		throw error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
 	}
 	let limit_classroom = await limitClassroomAccess(req, positiveContestID);
 	if (!limit_classroom) {
-		return error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
+		throw error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
 	}
-	if ((await contestIncludeProblem(positiveContestID, originalPID)) === false) {
-		return error.errorMaker("problem is not in contest");
-	}
+	await contestIncludeProblem(positiveContestID, originalPID);
 	if (!await checkContestPrivilege(req, positiveContestID)) {
-		return error.errorMaker("You don't have privilege to access this contest problem");
+		throw error.errorMaker("You don't have privilege to access this contest problem");
 	}
 	if (!await contestIsStart(positiveContestID)) {
-		return error.errorMaker("Contest is not start");
+		throw error.errorMaker("Contest is not start");
 	}
 	const contest_langmask = await getLangmaskForContest(positiveContestID);
 	if (!checkLangmask(language, contest_langmask)) {
-		return error.errorMaker("Your submission's language is invalid");
+		throw error.errorMaker("Your submission's language is invalid");
 	}
 	return true;
 }
 
-
-module.exports = async function (req, data, cookie) {
+async function prepareRequest(req, cookie) {
 	if (!req.session || !req.session.user_id) {
 		let obj = {};
 		obj.session = {};
@@ -220,16 +224,20 @@ module.exports = async function (req, data, cookie) {
 		}
 		Object.assign(req, obj);
 	}
-	if(!data) {
-		return error.errorMaker("submission invalid!");
+}
+
+function dataErrorChecker(data) {
+	if (!data) {
+		throw error.errorMaker("submission invalid!");
+	} else if (data.source && data.source.length > 64 * 1024) {
+		throw error.errorMaker("Your code is too long!");
+	} else if (data.input_text && data.input_text.length && data.input_text.length > 1000) {
+		throw error.errorMaker("Your custom input length cannot exceed 1000!");
 	}
-	else if(data.source && data.source.length > 64 * 1024) {
-		return error.errorMaker("Your code is too long!");
-	}
-	else if(data.input_text && data.input_text.length && data.input_text.length > 1000) {
-		return error.errorMaker("Your custom input length cannot exceed 1000!");
-	}
-	let submission_type = 0;
+}
+
+function classifySubmissionType(data) {
+	let submission_type = undefined;
 	if (data.type === "problem") {
 		submission_type = NORMAL_SUBMISSION;
 	} else if (data.type === "contest") {
@@ -237,146 +245,114 @@ module.exports = async function (req, data, cookie) {
 	} else if (data.type === "topic") {
 		submission_type = TOPIC_SUBMISSION;
 	}
-	if (submission_type === 0) {
-		return error.errorMaker("submission type is not valid");
+	if (typeof submission_type === "undefined") {
+		throw error.errorMaker("submission type is not valid");
+	}
+	return submission_type;
+}
+
+async function insertTransaction({result, source_code, source_code_user, data}, testRun) {
+	const solution_id = result.insertId;
+	let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
+		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
+	query(`insert into source_code(solution_id, source)
+		values(?,?)`, [solution_id, source_code])
+	];
+	if (testRun) {
+		promiseArray.push(query(`insert into custominput(solution_id, input_text)
+            values(?,?)`, [solution_id, data.input_text]));
+	}
+	await Promise.all(promiseArray);
+	return {
+		status: "OK",
+		solution_id
+	};
+}
+
+async function normalSubmissionTransaction(req, data) {
+	const originalProblemId = parseInt(data.id);
+	const language = parseInt(data.language);
+	if (isNaN(originalProblemId)) {
+		throw error.errorMaker("Problem ID is not valid");
+	}
+	const positiveProblemId = Math.abs(originalProblemId);
+	if (!checkLangmask(language)) {
+		throw error.errorMaker("Your language is not valid");
+	}
+	const problemPublicStatus = await problemPublic(positiveProblemId);
+	switch (problemPublicStatus) {
+	case NOTEXIST:
+		throw error.errorMaker("problem is not exist");
+	case PUBLIC:
+		break;
+	case PRIVATE:
+		if (req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`]) {
+			break;
+		} else {
+			throw error.errorMaker("You don't have privilege to access this problem");
+		}
+	}
+	if (await problemInFutureOrCurrentContest(positiveProblemId) && !(req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`])) {
+		throw error.errorMaker("problem is in current or future contest.");
 	}
 
-	if (submission_type === NORMAL_SUBMISSION) {
-		const originalProblemId = parseInt(data.id);
-		const language = parseInt(data.language);
-		if (isNaN(originalProblemId)) {
-			return error.errorMaker("Problem ID is not valid");
-		}
-		const positiveProblemId = Math.abs(originalProblemId);
-		if (!checkLangmask(language)) {
-			return error.errorMaker("Your language is not valid");
-		}
-		const problemPublicStatus = await problemPublic(positiveProblemId);
-		switch (problemPublicStatus) {
-		case NOTEXIST:
-			return error.errorMaker("problem is not exist");
-		case PUBLIC:
-			break;
-		case PRIVATE:
-			if (req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`]) {
-				break;
-			} else {
-				return error.errorMaker("You don't have privilege to access this problem");
-			}
-		}
-		if (await problemInFutureOrCurrentContest(positiveProblemId) && !(req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`])) {
-			return error.errorMaker("problem is in current or future contest.");
-		}
-
-		const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
-		const [source_code_user, IP,judger,fingerprint,fingerprintRaw,share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw,Boolean(data.share)];
-		const code_length = source_code_user.length;
-		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
+	const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
+	const [source_code_user, IP, judger, fingerprint, fingerprintRaw, share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw, Boolean(data.share)];
+	const code_length = source_code_user.length;
+	const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
-		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
-		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
-		query(`insert into source_code(solution_id, source)
-		values(?,?)`, [solution_id, source_code])
-		];
-		if (originalProblemId !== positiveProblemId) {
-			promiseArray.push(query(`insert into custominput(solution_id, input_text)
-            values(?,?)`, [solution_id, data.input_text]));
-		}
-		await Promise.all(promiseArray);
-		return {
-			status: "OK",
-			solution_id
-		};
-	} else if (submission_type === CONTEST_SUBMISSION) {
+	return await insertTransaction({result, source_code, source_code_user, data}, originalProblemId !== positiveProblemId);
+}
+
+module.exports = async function (req, data, cookie) {
+	await prepareRequest(req, cookie);
+	dataErrorChecker(data);
+	const submissionType = classifySubmissionType(data);
+	if (submissionType === NORMAL_SUBMISSION) {
+		return normalSubmissionTransaction(req, data);
+	}
+	const language = parseInt(data.language);
+	const source_code_user = deepCopy(data.source);
+	const IP = getIP(req);
+	const judger = "待分配";
+	const fingerprint = data.fingerprint;
+	const fingerprintRaw = data.fingerprintRaw;
+	const code_length = source_code_user.length;
+	if (submissionType === CONTEST_SUBMISSION) {
 		const originalContestID = parseInt(data.cid);
-		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
 		const positiveContestID = Math.abs(originalContestID);
-		let problem_id = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
-		if(problem_id === false) {
-			return error.errorMaker("Problem does not exists");
-		}
-		data.id = problem_id;
-		const validate = await checkContestValidate(req, originalContestID, originalPID, language);
-		if(validate !== true) {
-			return validate;
-		}
-		const source_code = await makePrependAndAppendCode(problem_id, data.source, language);
-		const source_code_user = deepCopy(data.source);
-		const IP = getIP(req);
-		const judger = "待分配";
-		const fingerprint = data.fingerprint;
-		const fingerprintRaw = data.fingerprintRaw;
-		const code_length = source_code_user.length;
-		if (originalContestID !== positiveContestID) {
-			problem_id = -Math.abs(problem_id);
+		const testRunFlag = originalContestID !== positiveContestID;
+		let problemId = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
+		const source_code = await makePrependAndAppendCode(problemId, data.source, language);
+		data.id = problemId;
+		await checkContestValidate(req, originalContestID, originalPID, language);
+		if (testRunFlag) {
+			problemId = -Math.abs(problemId);
 		}
 		const result = await query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
-	    values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
-		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source, hash)
-		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
-		query(`insert into source_code(solution_id, source)
-		values(?,?)`, [solution_id, source_code])
-		];
-
-		if (originalContestID !== positiveContestID) {
-			promiseArray.push(query(`insert into custominput(solution_id, input_text)
-            values(?,?)`, [solution_id, data.input_text]));
-		}
-		await Promise.all(promiseArray);
-		return {
-			status: "OK",
-			solution_id
-		};
-	} else if (submission_type === TOPIC_SUBMISSION) {
+	    values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
+		return await insertTransaction({result, source_code, source_code_user, data}, testRunFlag);
+	} else if (submissionType === TOPIC_SUBMISSION) {
 		const originalTopicID = parseInt(data.tid);
-		const language = parseInt(data.language);
 		const originalPID = parseInt(data.pid);
-		if (isNaN(originalTopicID) || isNaN(originalPID)) {
-			return error.errorMaker("Invalid topic_id or pid");
-		}
 		const positiveTopicID = Math.abs(originalTopicID);
-		let problem_id = await TopicIncludeProblem(positiveTopicID, originalPID);
-		if (problem_id === false) {
-			return error.errorMaker("problem is not in topic");
+		const testRunFlag = originalTopicID !== positiveTopicID;
+		if (isNaN(originalTopicID) || isNaN(originalPID)) {
+			throw error.errorMaker("Invalid topic_id or pid");
 		}
-		if (!await checkTopicPrivilege(req, positiveTopicID)) {
-			return error.errorMaker("You don't have privilege to access this topic");
+		let problemId = await TopicIncludeProblem(positiveTopicID, originalPID);
+		const sourceCode = await makePrependAndAppendCode(problemId, data.source, language);
+		await checkTopicPrivilege(req, positiveTopicID);
+		const topicLangmask = await getLangmaskForTopic(positiveTopicID);
+		if (!checkLangmask(language, topicLangmask)) {
+			throw error.errorMaker("Your submission's language is invalid");
 		}
-		const topic_langmask = await getLangmaskForTopic(positiveTopicID);
-		if (!checkLangmask(language, topic_langmask)) {
-			return error.errorMaker("Your submission's language is invalid");
-		}
-
-		const source_code = await makePrependAndAppendCode(problem_id, data.source, language);
-		const source_code_user = deepCopy(data.source);
-		const IP = getIP(req);
-		const judger = "待分配";
-		const fingerprint = data.fingerprint;
-		const fingerprintRaw = data.fingerprintRaw;
-		const code_length = source_code_user.length;
-		if (originalTopicID !== positiveTopicID) {
-			problem_id = -Math.abs(problem_id);
+		if (testRunFlag) {
+			problemId = -Math.abs(problemId);
 		}
 		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint,fingerprintRaw)
-		values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problem_id, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
-
-		const solution_id = result.insertId;
-		let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
-		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
-		query(`insert into source_code(solution_id, source)
-		values(?,?)`, [solution_id, source_code])
-		];
-		if (originalTopicID !== positiveTopicID) {
-			promiseArray.push(query(`insert into custominput(solution_id, input_text)
-            values(?,?)`, [solution_id, data.input_text]));
-		}
-		await Promise.all(promiseArray);
-		return {
-			status: "OK",
-			solution_id
-		};
+		values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
+		return await insertTransaction({result, source_code: sourceCode, source_code_user, data}, testRunFlag);
 	}
 };

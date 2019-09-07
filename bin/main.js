@@ -112,7 +112,7 @@ function clearBinding(solution_id) {
 async function banSubmissionChecker(solution_pack) {
 	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 4 && (solution_pack.hasOwnProperty("contest_id") || await solutionContainContestId(solution_pack.solution_id))) {
 		if (!solution_pack.hasOwnProperty("contest_id")) {
-			Object.assign(solution_pack, await getSolutionInfo(solution_pack.solution_id), {});
+			Object.assign(solution_pack, await getSolutionInfo(solution_pack.solution_id));
 		}
 		solution_pack.state = 15;
 		const {contest_id, num, user_id, solution_id} = solution_pack;
@@ -125,34 +125,24 @@ wss.on("connection", function (ws) {
      * 绑定judger发送的事件
      */
 	ws.on("judger", async function (message) {
-		const solution_pack = message;
-		const finished = parseInt(solution_pack.finish);
-		const solution_id = parseInt(solution_pack.solution_id);
-		if (submitUserInfo[solution_id]) {
-			Object.assign(solution_pack, submitUserInfo[solution_id]);
-		}
-		if (problemFromContest[solution_id]) {
-			Object.assign(solution_pack, problemFromContest[solution_id]);
-		} else if (problemFromSpecialSubject[solution_id]) {
-			Object.assign(solution_pack, problemFromSpecialSubject[solution_id]);
-		}
-		if (solutionContext[solution_id]) {
-			Object.assign(solution_pack, solutionContext[solution_id]);
-		}
+		const solutionPack = message;
+		const finished = parseInt(solutionPack.finish);
+		const solutionId = parseInt(solutionPack.solution_id);
+		Object.assign(solutionPack, submitUserInfo[solutionId], problemFromContest[solutionId], problemFromSpecialSubject[solutionId], solutionContext[solutionId]);
 		if (finished) {
-			await banSubmissionChecker(solution_pack);
-			await storeSubmission(solution_pack);
+			await banSubmissionChecker(solutionPack);
+			await storeSubmission(solutionPack);
 		}
 
-		if (submissions[solution_id]) {
-			submissions[solution_id].emit("result", solution_pack);
-			sendMessage(pagePush.status, "result", solution_pack, 1, !!problemFromContest[solution_id]);
-			if (submissionOrigin[solution_id]) {
-				sendMessage(pagePush.contest_status[submissionOrigin[solution_id]], "result", solution_pack, 1);
+		if (submissions[solutionId]) {
+			submissions[solutionId].emit("result", solutionPack);
+			sendMessage(pagePush.status, "result", solutionPack, 1, !!problemFromContest[solutionId]);
+			if (submissionOrigin[solutionId]) {
+				sendMessage(pagePush.contest_status[submissionOrigin[solutionId]], "result", solutionPack, 1);
 			}
 		}
 		if (finished) {
-			clearBinding(solution_id);
+			clearBinding(solutionId);
 		}
 	});
 
@@ -528,8 +518,13 @@ io.on("connection", async function (socket) {
          *
          */
 		let data = Object.assign({}, _data);
-
-		const response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
+		let response;
+		try {
+			response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
+		} catch (e) {
+			socket.emit("reject_submit", response);
+			return;
+		}
 		if (!response.solution_id) {
 			socket.emit("reject_submit", response);
 			return;
@@ -637,6 +632,13 @@ io.on("connection", async function (socket) {
 			whiteBoardBroadCast(socket, data.content);
 		}
 	});
+
+	function removeWhiteboardRecord() {
+		if (whiteboard.has(socket)) {
+			whiteboard.delete(socket);
+		}
+	}
+
 	/**
      * 断开连接销毁所有保存的数据
      */
@@ -645,9 +647,7 @@ io.on("connection", async function (socket) {
 		let pos = onlineUser[user_id];
 		if (pos && !socket.hasClosed) {
 			socket.hasClosed = true;
-			if (whiteboard.has(socket)) {
-				whiteboard.delete(socket);
-			}
+			removeWhiteboardRecord();
 			delete socketSet[socket.currentTimeStamp];
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
