@@ -12,5 +12,5 @@ async function getSolutionInfo(solution_id) {
 
 module.exports = {
 	solutionContainContestId,
-    getSolutionInfo
+	getSolutionInfo
 };
