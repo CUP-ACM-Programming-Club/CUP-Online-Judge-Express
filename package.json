@@ -74,7 +74,8 @@
     "stop": "pm2 stop pm2.json",
     "test": "NODE_ENV=autotest node --max-old-space-size=5000 ./bin/main.js && _mocha --recursive",
     "restart": "pm2 stop pm2.json && pm2 start pm2.json",
-    "local": "NODE_ENV=local node --max-old-space-size=5000 ./bin/main.js"
+    "local": "NODE_ENV=local node --max-old-space-size=5000 ./bin/main.js",
+    "lint": "eslint --fix ./"
   },
   "devDependencies": {
     "chai": "^4.2.0",
