@@ -87,6 +87,14 @@ ConfigManager.prototype.setConfig = function (configKey, configValue, comment) {
 	return this;
 };
 
+ConfigManager.prototype.removeConfig = function (configKey) {
+	if (this.getConfig(configKey, null) === null) {
+		return this;
+	}
+	delete this.__data__.configMap[configKey];
+	return this;
+};
+
 ConfigManager.prototype.isSwitchedOn = function (configKey, defaultValue = 0) {
 	const wrappedValue = this.__data__.switchMap[configKey];
 	const randomValue = this.getRandom();
@@ -96,6 +104,13 @@ ConfigManager.prototype.isSwitchedOn = function (configKey, defaultValue = 0) {
 	return randomValue <= wrappedValue.value;
 };
 
+ConfigManager.prototype.getSwitch = function (configKey) {
+	if (this.__data__.switchMap.hasOwnProperty(configKey)) {
+		return this.__data__.switchMap[configKey];
+	}
+	return null;
+};
+
 ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	if (!switchValueValidate(switchValue)) {
 		return this;
@@ -103,6 +118,14 @@ ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	const payload = {value: switchValue, comment};
 	this.__data__.switchMap[configKey] = payload;
 	switchPersistence(payload).call(this, payload);
+	return this;
+};
+
+ConfigManager.prototype.removeSwitch = function (configKey) {
+	if (this.getSwitch(configKey) === null) {
+		return this;
+	}
+	delete this.__data__.switchMap[configKey];
 	return this;
 };
 
