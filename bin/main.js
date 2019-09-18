@@ -27,6 +27,7 @@ const BanCheaterModel = require("../module/contest/cheating_ban");
 const querystring = require("querystring");
 const {storeSubmission} = require("../module/judger/recorder");
 const {solutionContainContestId, getSolutionInfo} = require("../module/solution/solution");
+const {ConfigManager} = require("../module/config/config-manager");
 const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 const wss = new WebSocket.Server({port: config.ws.judger_port});
@@ -37,6 +38,7 @@ localJudge.setErrorHandler(new RuntimeErrorHandler());
 const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
 databaseSubmissionCollector.setJudger(localJudge).start();
 initExternalEnvironment.run();
+ConfigManager.useMySQLStore();
 /**
  *
  * @type {{Object}} 记录在线用户的信息
@@ -110,6 +112,9 @@ function clearBinding(solution_id) {
 }
 
 async function banSubmissionChecker(solution_pack) {
+	if (!ConfigManager.isSwitchedOn("ban_contest_cheater", 0)) {
+		return;
+	}
 	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 4 && (solution_pack.hasOwnProperty("contest_id") || await solutionContainContestId(solution_pack.solution_id))) {
 		if (!solution_pack.hasOwnProperty("contest_id")) {
 			Object.assign(solution_pack, await getSolutionInfo(solution_pack.solution_id));

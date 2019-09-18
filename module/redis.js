@@ -12,6 +12,9 @@ if (global.unit_test === "autotest") {
 			return ["test"];
 		},
 		quit: function () {
+		},
+		hmset: function () {
+			// do nothing
 		}
 	};
 } else {
