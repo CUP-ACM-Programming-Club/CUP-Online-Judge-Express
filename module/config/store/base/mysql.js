@@ -1,5 +1,6 @@
 const dayjs = require("dayjs");
-const {BaseStore, inheritPrototype} = require("./base-store");
+const BaseStore = require("./base-store");
+const inheritPrototype = require("../../../util/InheritPrototype");
 module.exports = function (Model) {
 	function MySQLStore() {
 	}

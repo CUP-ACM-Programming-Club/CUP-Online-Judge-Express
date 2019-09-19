@@ -1,6 +1,6 @@
 const client = require("../../../redis");
-const {BaseStore, inheritPrototype} = require("./base-store");
-
+const BaseStore = require("./base-store");
+const inheritPrototype = require("../../../util/InheritPrototype");
 module.exports = function (hashMapKey) {
 	function RedisStore() {
 

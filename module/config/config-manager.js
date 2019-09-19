@@ -1,8 +1,11 @@
 const random = require("random");
 const dayjs = require("dayjs");
-const {baseStore} = require("./store/base/base-store");
+const BaseStore = require("./store/base/base-store");
 const configStore = require("./store/config");
 const switchStore = require("./store/switch");
+const ConfigLoggerFactory = require("./log/config");
+const SwitchLoggerFactory = require("./log/switch");
+const OPERATION_CONSTANTS = require("./constants/operation");
 
 function weakJsonParser(plainString) {
 	try {
@@ -45,7 +48,7 @@ function switchPersistence(payload) {
 	this.switchPersistenceModule.set(payload);
 }
 
-function ConfigManager(enablePersistence = true) {
+function ConfigManager() {
 	this.__data__ = {};
 	this.__data__.__switchMap__ = {};
 	this.__data__.__configMap__ = {};
@@ -59,10 +62,8 @@ function ConfigManager(enablePersistence = true) {
 			return this.__data__.__configMap__;
 		}
 	});
-
-	if (enablePersistence) {
-		this.query = require("../mysql_query");
-	}
+	this.configLogger = ConfigLoggerFactory({set: this.setConfig, remvoe: this.removeConfig});
+	this.switchLogger = SwitchLoggerFactory({set: this.setSwitch, remove: this.removeSwitch});
 }
 
 ConfigManager.prototype.getRandom = function () {
@@ -84,6 +85,7 @@ ConfigManager.prototype.setConfig = function (configKey, configValue, comment) {
 	const payload = {value: configValue, comment};
 	this.__data__.configMap[configKey] = payload;
 	configPersistence.call(this, payload);
+	this.configLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: configValue, comment});
 	return this;
 };
 
@@ -91,6 +93,8 @@ ConfigManager.prototype.removeConfig = function (configKey) {
 	if (this.getConfig(configKey, null) === null) {
 		return this;
 	}
+	const {value, comment} = this.getConfig(configKey, null);
+	this.configLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
 	delete this.__data__.configMap[configKey];
 	return this;
 };
@@ -118,6 +122,7 @@ ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	const payload = {value: switchValue, comment};
 	this.__data__.switchMap[configKey] = payload;
 	switchPersistence(payload).call(this, payload);
+	this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
 	return this;
 };
 
@@ -125,6 +130,8 @@ ConfigManager.prototype.removeSwitch = function (configKey) {
 	if (this.getSwitch(configKey) === null) {
 		return this;
 	}
+	const {value, comment} = this.__data__.switchMap[configKey];
+	this.switchLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
 	delete this.__data__.switchMap[configKey];
 	return this;
 };
@@ -138,14 +145,14 @@ ConfigManager.prototype.getSwitchMap = function () {
 };
 
 ConfigManager.prototype.setConfigPersistenceModule = function (module) {
-	if (module instanceof baseStore) {
+	if (module instanceof BaseStore) {
 		this.configPersistenceModule = module;
 	}
 	return this;
 };
 
 ConfigManager.prototype.setSwitchPersistenceModule = function (module) {
-	if (module instanceof baseStore) {
+	if (module instanceof BaseStore) {
 		this.switchPersistenceModule = module;
 	}
 	return this;
