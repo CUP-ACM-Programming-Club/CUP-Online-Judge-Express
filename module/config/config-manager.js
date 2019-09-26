@@ -84,7 +84,7 @@ ConfigManager.prototype.getConfig = function (configKey, defaultValue) {
 ConfigManager.prototype.setConfig = function (configKey, configValue, comment) {
 	const payload = {value: configValue, comment};
 	this.__data__.configMap[configKey] = payload;
-	configPersistence.call(this, payload);
+	configPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.configLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: configValue, comment});
 	return this;
 };
@@ -109,6 +109,7 @@ ConfigManager.prototype.isSwitchedOn = function (configKey, defaultValue = 0) {
 };
 
 ConfigManager.prototype.getSwitch = function (configKey) {
+	// eslint-disable-next-line no-prototype-builtins
 	if (this.__data__.switchMap.hasOwnProperty(configKey)) {
 		return this.__data__.switchMap[configKey];
 	}
@@ -121,7 +122,7 @@ ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	}
 	const payload = {value: switchValue, comment};
 	this.__data__.switchMap[configKey] = payload;
-	switchPersistence(payload).call(this, payload);
+	switchPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
 	return this;
 };
@@ -158,14 +159,26 @@ ConfigManager.prototype.setSwitchPersistenceModule = function (module) {
 	return this;
 };
 
+ConfigManager.prototype.initConfigMap = function () {
+	if (typeof this.configPersistenceModule !== "undefined") {
+		const result = this.configPersistenceModule.getAll();
+	}
+};
+
+ConfigManager.prototype.initSwitchMap = function () {
+	if (typeof this.switchPersistenceModule !== "undefined") {
+		const result = this.switchPersistenceModule.getAll();
+	}
+};
+
 ConfigManager.prototype.useMySQLStore = function () {
-	this.setConfigPersistenceModule(configStore.mysql);
-	this.setSwitchPersistenceModule(switchStore.mysql);
+	this.setConfigPersistenceModule(new configStore.mysql());
+	this.setSwitchPersistenceModule(new switchStore.mysql());
 };
 
 ConfigManager.prototype.useRedisStore = function () {
-	this.setConfigPersistenceModule(configStore.redis);
-	this.setSwitchPersistenceModule(switchStore.redis);
+	this.setConfigPersistenceModule(new configStore.redis());
+	this.setSwitchPersistenceModule(new switchStore.redis());
 };
 
 module.exports = {ConfigManager: new ConfigManager(), configStore: require("./store/config"), switchStore: require("./store/switch")};

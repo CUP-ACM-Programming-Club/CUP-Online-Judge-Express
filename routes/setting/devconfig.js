@@ -4,7 +4,7 @@ const {error, ok} = require("../../module/constants/state");
 const ConfigManager = require("../../manager/ConfigManager/index");
 
 function validator(key, value, comment) {
-	arguments.forEach(el => {
+	[key, value, comment].forEach(el => {
 		if (!(el && el.toString() && el.toString().length > 0)) {
 			throw new Error(`validate failed: key:${key}, value:${value}, comment:${comment}`);
 		}
