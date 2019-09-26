@@ -16,7 +16,7 @@ function weakJsonParser(plainString) {
 }
 
 function switchValueValidate(switchValue) {
-	if (typeof switchValue !== "number") {
+	if (isNaN(parseInt(switchValue))) {
 		return false;
 	}
 	return switchValue >= 0 && switchValue <= 100;
@@ -159,26 +159,33 @@ ConfigManager.prototype.setSwitchPersistenceModule = function (module) {
 	return this;
 };
 
-ConfigManager.prototype.initConfigMap = function () {
-	if (typeof this.configPersistenceModule !== "undefined") {
-		const result = this.configPersistenceModule.getAll();
+async function baseMapInitHandler (thisArg, module, setter) {
+	if (typeof module !== "undefined") {
+		const result = await module.getAll();
+		result.forEach(el =>setter.call(thisArg, el.key, el.value, el.comment));
 	}
+}
+
+ConfigManager.prototype.initConfigMap = function () {
+	baseMapInitHandler(this, this.configPersistenceModule, this.setConfig);
+	return this;
 };
 
 ConfigManager.prototype.initSwitchMap = function () {
-	if (typeof this.switchPersistenceModule !== "undefined") {
-		const result = this.switchPersistenceModule.getAll();
-	}
+	baseMapInitHandler(this, this.switchPersistenceModule, this.setSwitch);
+	return this;
 };
 
 ConfigManager.prototype.useMySQLStore = function () {
 	this.setConfigPersistenceModule(new configStore.mysql());
 	this.setSwitchPersistenceModule(new switchStore.mysql());
+	return this;
 };
 
 ConfigManager.prototype.useRedisStore = function () {
 	this.setConfigPersistenceModule(new configStore.redis());
 	this.setSwitchPersistenceModule(new switchStore.redis());
+	return this;
 };
 
 module.exports = {ConfigManager: new ConfigManager(), configStore: require("./store/config"), switchStore: require("./store/switch")};

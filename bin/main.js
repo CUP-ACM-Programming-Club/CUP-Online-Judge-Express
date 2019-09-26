@@ -38,7 +38,7 @@ localJudge.setErrorHandler(new RuntimeErrorHandler());
 const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
 databaseSubmissionCollector.setJudger(localJudge).start();
 initExternalEnvironment.run();
-ConfigManager.useMySQLStore();
+ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 /**
  *
  * @type {{Object}} 记录在线用户的信息
