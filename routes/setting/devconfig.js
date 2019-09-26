@@ -3,13 +3,8 @@ const router = express.Router();
 const {error, ok} = require("../../module/constants/state");
 const ConfigManager = require("../../manager/ConfigManager/index");
 
-function validator(key, value, comment) {
-	[key, value, comment].forEach(el => {
-		if (typeof el === "undefined") {
-			throw new Error(`validate failed: key:${key}, value:${value}, comment:${comment}`);
-		}
-	});
-	if (key.length === 0) {
+function validator(key) {
+	if (typeof key !== "string" || key.length === 0) {
 		throw new Error("key should be a valid value");
 	}
 }

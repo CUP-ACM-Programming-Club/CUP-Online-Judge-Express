@@ -16,7 +16,7 @@ function weakJsonParser(plainString) {
 }
 
 function switchValueValidate(switchValue) {
-	if (isNaN(parseInt(switchValue))) {
+	if (isNaN(switchValue = parseInt(switchValue))) {
 		return false;
 	}
 	return switchValue >= 0 && switchValue <= 100;
@@ -120,7 +120,7 @@ ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	if (!switchValueValidate(switchValue)) {
 		return this;
 	}
-	const payload = {value: switchValue, comment};
+	const payload = {value: parseInt(switchValue), comment};
 	this.__data__.switchMap[configKey] = payload;
 	switchPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
