@@ -1,9 +1,6 @@
 const inheritPrototype = require("../../../util/InheritPrototype");
-const sequelize = require("../../../../orm/instance/sequelize");
 const BaseLogger = require("./base-log");
-const ConfigLog = sequelize.import("config_log", require("../../../../orm/models/config_log"));
 const OPERATION_CONSTANTS = require("../../constants/operation");
-ConfigLog.sync();
 
 module.exports = function (Model) {
 	return function (Methods) {
