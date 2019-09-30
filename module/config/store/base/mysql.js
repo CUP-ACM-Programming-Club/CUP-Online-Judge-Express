@@ -15,6 +15,12 @@ module.exports = function (Model) {
 		return Model.findOne({where: key});
 	};
 
+	MySQLStore.prototype.remove = function (key) {
+		return Model.destroy({
+			where: {key}
+		})
+	};
+
 	MySQLStore.prototype.getAll = function () {
 		return Model.findAll();
 	};

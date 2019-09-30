@@ -37,6 +37,13 @@ function configPersistence(payload) {
 	this.configPersistenceModule.set(payload);
 }
 
+function configRemove(key) {
+	if (!(this && this.configPersistenceModule)) {
+		return;
+	}
+	this.configPersistenceModule.remove(key);
+}
+
 function switchPersistence(payload) {
 	Object.assign(payload, nowTimeInstance());
 	if (typeof this === "undefined") {
@@ -46,6 +53,13 @@ function switchPersistence(payload) {
 		return;
 	}
 	this.switchPersistenceModule.set(payload);
+}
+
+function switchRemove(key) {
+	if (!(this && this.switchPersistenceModule)) {
+		return;
+	}
+	this.switchPersistenceModule.remove(key);
 }
 
 function ConfigManager() {
@@ -96,6 +110,7 @@ ConfigManager.prototype.removeConfig = function (configKey) {
 	const {value, comment} = this.getConfig(configKey, null);
 	this.configLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
 	delete this.__data__.configMap[configKey];
+	configRemove.call(this, configKey);
 	return this;
 };
 
@@ -134,6 +149,7 @@ ConfigManager.prototype.removeSwitch = function (configKey) {
 	const {value, comment} = this.__data__.switchMap[configKey];
 	this.switchLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
 	delete this.__data__.switchMap[configKey];
+	switchRemove.call(this, configKey);
 	return this;
 };
 

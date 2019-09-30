@@ -4,6 +4,7 @@ module.exports = function(sequelize, DataTypes) {
 	return sequelize.define("switchLog", {
 		id: {
 			type: DataTypes.BIGINT,
+			autoIncrement: true,
 			allowNull: false,
 			primaryKey: true,
 			field: "id"
