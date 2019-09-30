@@ -188,4 +188,8 @@ ConfigManager.prototype.useRedisStore = function () {
 	return this;
 };
 
+ConfigManager.prototype.SWITCH_ON = 100;
+
+ConfigManager.prototype.SWITCH_OFF = 0;
+
 module.exports = {ConfigManager: new ConfigManager(), configStore: require("./store/config"), switchStore: require("./store/switch")};

@@ -5,8 +5,10 @@ const dayjs = require("dayjs");
 const page_cnt = 50;
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
+const Interceptor = require("../module/problemset/interceptor");
 const NONE_PRIVILEGE_AND_SQL = ` and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) `;
+
 function sort_string(sort) {
 	const _sort = ["asc", "desc"];
 	return _sort[sort] || "asc";
@@ -199,4 +201,4 @@ router.get("/:start/:search/:order/:order_rule", async function (req, res) {
 	await get_problem(req, res);
 });
 
-module.exports = ["/problemset", auth, router];
+module.exports = ["/problemset", auth, Interceptor, router];

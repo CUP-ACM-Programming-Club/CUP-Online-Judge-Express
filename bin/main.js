@@ -3,15 +3,11 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
 const config = global.config;
-const app = require("../app");
 const easyMonitor = require("easy-monitor");
 easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
-const server = require("http").createServer(app);
-const io = require("socket.io")(server);
-require("../module/init/express_loader")(app, io);
 const port = process.env.PORT || config.ws.client_port;
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
@@ -39,6 +35,10 @@ const databaseSubmissionCollector = require("../module/judger/DatabaseSubmission
 databaseSubmissionCollector.setJudger(localJudge).start();
 initExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
+const app = require("../app");
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
+require("../module/init/express_loader")(app, io);
 /**
  *
  * @type {{Object}} 记录在线用户的信息

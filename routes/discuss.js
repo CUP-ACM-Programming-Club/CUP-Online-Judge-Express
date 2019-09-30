@@ -5,6 +5,7 @@ const router = express.Router();
 const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
+const DiscussInterceptor = require("../module/discuss/interceptor");
 const {checkCaptcha} = require("../module/captcha_checker");
 
 const checkPrivilege = (req) => {
@@ -250,4 +251,4 @@ router.get("/update/reply/block/:id/:comment_id", async (req, res) => {
 		});
 });
 
-module.exports = ["/discuss", auth, router];
+module.exports = ["/discuss", auth, DiscussInterceptor, router];

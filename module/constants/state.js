@@ -87,6 +87,12 @@ error.internalError = {
 	statement: "Server Internal error"
 };
 
+error.unavailable = {
+	status: "error",
+	statement: "According to setting, current service is unavailable",
+	rule: -1
+};
+
 error.errorMaker = function(statement) {
 	return {
 		status: "error",
