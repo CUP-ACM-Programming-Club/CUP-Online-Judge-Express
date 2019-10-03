@@ -22,7 +22,7 @@ router.post("/solution", async (req, res) => {
 });
 
 router.post("/problem", async (req, res) => {
-	await rejudgeHandler(res, res.body.problem_id, rejudgeByProblem);
+	await rejudgeHandler(res, req.body.problem_id, rejudgeByProblem);
 });
 
 

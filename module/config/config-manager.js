@@ -95,9 +95,13 @@ ConfigManager.prototype.getConfig = function (configKey, defaultValue) {
 	return wrappedValue.value;
 };
 
+ConfigManager.prototype.setConfigWithoutStore = function (configKey, configValue, comment) {
+	this.__data__.configMap[configKey] = {value: configValue, comment};
+};
+
 ConfigManager.prototype.setConfig = function (configKey, configValue, comment) {
 	const payload = {value: configValue, comment};
-	this.__data__.configMap[configKey] = payload;
+	this.setConfigWithoutStore(configKey, configValue, comment);
 	configPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.configLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: configValue, comment});
 	return this;
@@ -131,12 +135,16 @@ ConfigManager.prototype.getSwitch = function (configKey) {
 	return null;
 };
 
+ConfigManager.prototype.setSwitchWithoutStore = function (configKey, switchValue, comment) {
+	this.__data__.switchMap[configKey] = {value: parseInt(switchValue), comment};
+};
+
 ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	if (!switchValueValidate(switchValue)) {
 		return this;
 	}
 	const payload = {value: parseInt(switchValue), comment};
-	this.__data__.switchMap[configKey] = payload;
+	this.setSwitchWithoutStore(configKey, switchValue, comment);
 	switchPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
 	return this;
@@ -178,17 +186,17 @@ ConfigManager.prototype.setSwitchPersistenceModule = function (module) {
 async function baseMapInitHandler (thisArg, module, setter) {
 	if (typeof module !== "undefined") {
 		const result = await module.getAll();
-		result.forEach(el =>setter.call(thisArg, el.key, el.value, el.comment));
+		result.forEach(el => setter.call(thisArg, el.key, el.value, el.comment));
 	}
 }
 
 ConfigManager.prototype.initConfigMap = function () {
-	baseMapInitHandler(this, this.configPersistenceModule, this.setConfig);
+	baseMapInitHandler(this, this.configPersistenceModule, this.setConfigWithoutStore);
 	return this;
 };
 
 ConfigManager.prototype.initSwitchMap = function () {
-	baseMapInitHandler(this, this.switchPersistenceModule, this.setSwitch);
+	baseMapInitHandler(this, this.switchPersistenceModule, this.setSwitchWithoutStore);
 	return this;
 };
 

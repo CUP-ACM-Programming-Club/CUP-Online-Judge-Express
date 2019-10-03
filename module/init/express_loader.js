@@ -15,9 +15,10 @@ module.exports = (app, io = undefined) => {
 	});
 
 	app.use((err, req, res) => {
+		log.fatal(`Error URL: ${req.originalUrl}`);
 		log.fatal(err);
 		let obj = {
-			status: "ERROR",
+			status: "error",
 			statement: "resource not found"
 		};
 		res.json(obj);
