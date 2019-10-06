@@ -198,11 +198,11 @@ server.listen(port, function () {
 function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
-			if (!userArr.hasOwnProperty(i)) {
+			if (!userArr.hasOwnProperty(i) || null === userArr[i]) {
 				continue;
 			}
 			for (let j in userArr[i]) {
-				if (!userArr[i].hasOwnProperty(j)) {
+				if (!userArr[i].hasOwnProperty(j) || null === userArr[i][j]) {
 					continue;
 				}
 				if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
@@ -215,7 +215,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
-			if (!userArr.hasOwnProperty(i) || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
+			if (!userArr.hasOwnProperty(i) || null === userArr[i] || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
 				continue;
 			}
 			if (!privilege || userArr[i].privilege) {

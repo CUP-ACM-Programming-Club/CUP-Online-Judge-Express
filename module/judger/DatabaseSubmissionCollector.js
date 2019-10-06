@@ -1,20 +1,26 @@
 const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
+const {ConfigManager} = require("../config/config-manager");
 const DEFAULT_LOOP_SECONDS = 3000;
 const localJudger = require("../judger");
 async function collectHandler () {
-	this.collectFinished = false;
-	const result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
-	for (let i in result) {
-		if (!result.hasOwnProperty(i)) {
-			continue;
+	try {
+		this.collectFinished = false;
+		const result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
+		for (let i in result) {
+			if (!result.hasOwnProperty(i)) {
+				continue;
+			}
+			const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
+				[result[i].user_id]);
+			const admin = !!(_data && _data.length && _data[0].cnt);
+			const solutionId = parseInt(result[i].solution_id);
+			const priority = parseInt(!!result[i].result);
+			this.judger.addTask(solutionId, admin, false, !priority);
 		}
-		const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
-			[result[i].user_id]);
-		const admin = !!(_data && _data.length && _data[0].cnt);
-		const solutionId = parseInt(result[i].solution_id);
-		const priority = parseInt(!!result[i].result);
-		this.judger.addTask(solutionId, admin, false, !priority);
+	}
+	catch (e) {
+		console.log(e);
 	}
 	this.collectFinished = true;
 }
@@ -38,11 +44,11 @@ DatabaseSubmissionCollector.prototype.start = function () {
 	if (this.interval === null) {
 		const that = this;
 		this.collectFinished = true;
-		setInterval(() => {
+		this.interval = setInterval(() => {
 			if (this.collectFinished) {
 				collectHandler.call(that);
 			}
-		}, DEFAULT_LOOP_SECONDS);
+		}, ConfigManager.getConfig("judger_loop_time", DEFAULT_LOOP_SECONDS));
 		return true;
 	}
 	else {

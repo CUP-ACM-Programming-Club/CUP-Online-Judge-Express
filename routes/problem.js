@@ -481,7 +481,7 @@ async function storePhotoToDir(problem_id, key, data, type) {
 	const picPath = path.join(website_dir, "images", problem_id.toString(), type);
 	await mkdirAsync(picPath);
 	try {
-		base64Img.imgAsync(data, picPath, key);
+		await base64Img.imgAsync(data, picPath, key);
 	} catch (e) {
 		console.log(e);
 	}
@@ -525,12 +525,12 @@ router.post("/:source/:id", function (req, res) {
 			storePhoto(problem_id, json.imageData);
 			let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
 			memory_limit = ?,description = ?,input = ?,output = ?,
-			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ? " : ""} where problem_id = ?
+			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ?, spj = ? " : ""} where problem_id = ?
 			 ${local ? "" : " and source = ?"}`;
 			let sqlArr = [json.title, checkEmpty(json.time), checkEmpty(json.memory), json.description, json.input,
 				json.output, json.sampleinput, json.sampleoutput, json.label];
 			if (local) {
-				sqlArr.push(json.hint,
+				sqlArr.push(json.hint, json.spj,
 					problem_id);
 			} else {
 				sqlArr.push(problem_id, from);
@@ -539,7 +539,7 @@ router.post("/:source/:id", function (req, res) {
 				.then()
 				.catch(err => {
 					if (ENVIRONMENT === "test") {
-						console.error(`${path.basename(__filename)} line 414:`);
+						console.error(`${path.basename(__filename)} line 542:`);
 						console.error(err);
 					} else {
 						logger.fatal(err);

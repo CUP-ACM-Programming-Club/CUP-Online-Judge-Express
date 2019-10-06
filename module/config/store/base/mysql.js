@@ -12,7 +12,7 @@ module.exports = function (Model) {
 	};
 
 	MySQLStore.prototype.get = function (key) {
-		return Model.findOne({where: key});
+		return Model.findOne({where: {key}});
 	};
 
 	MySQLStore.prototype.remove = function (key) {

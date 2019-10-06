@@ -5,6 +5,7 @@
 const {spawn} = require("child_process");
 const PriorityQueue = require("tinyqueue");
 const os = require("os");
+const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
 
 class localJudger extends eventEmitter {
@@ -88,8 +89,7 @@ class localJudger extends eventEmitter {
 
 	addTask(solution_id, admin, no_sim = false, priority = 1) {
 		solution_id = localJudger.formatSolutionId(solution_id);
-		if (solution_id > this.latestSolutionID &&
-            !this.judging_queue.includes(solution_id) &&
+		if (!this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
 			this.updateLatestSolutionId(solution_id);
 			if (!this.judge_queue.isEmpty()) {
@@ -143,9 +143,12 @@ class localJudger extends eventEmitter {
 		let timeoutID = setTimeout(() => {
 			killed = true;
 			judger.kill("SIGKILL");
-		},1000 * 100);//kill process after 100s
+		}, ConfigManager.getConfig("judger_process_kill_time", 1000 * 30));//kill process after 100s
 		this.emit("change", this.getStatus().free_judger);
 		judger.on("close", EXITCODE => {
+			if (process.env.NODE_ENV === "test") {
+				console.log(`solution_id: ${solution_id}, EXITCODE:${EXITCODE}`);
+			}
 			this.judge_queue.push(runner_id);
 			if(!killed) {
 				clearTimeout(timeoutID);
@@ -156,7 +159,7 @@ class localJudger extends eventEmitter {
 			}
 			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
-			if (EXITCODE) {
+			if (null === EXITCODE || EXITCODE) {
 				this.errorHandle(solution_id, runner_id);
 			}
 		});

@@ -8,15 +8,8 @@ module.exports = (app, io = undefined) => {
 		}));
 	}
 	require("../../module/router_loader")(app);
-	app.use((req, res, next) => {
-		let err = new Error("Not Found");
-		err.status = 404;
-		next(err);
-	});
-
-	app.use((err, req, res) => {
+	app.use((req, res) => {
 		log.fatal(`Error URL: ${req.originalUrl}`);
-		log.fatal(err);
 		let obj = {
 			status: "error",
 			statement: "resource not found"
