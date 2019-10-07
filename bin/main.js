@@ -129,6 +129,7 @@ wss.on("connection", function (ws) {
 	/**
      * 绑定judger发送的事件
      */
+	ws.on("error", console.log);
 	ws.on("judger", async function (message) {
 		const solutionPack = message;
 		const finished = parseInt(solutionPack.finish);

@@ -132,6 +132,7 @@ class localJudger extends eventEmitter {
 
 	async runJudger(solution_id, runner_id, admin = false, no_sim = false) {
 		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
+		const stderrBuilder = [], stdoutBuilder = [];
 		if (admin) {
 			args.push("-admin");
 		}
@@ -160,11 +161,13 @@ class localJudger extends eventEmitter {
 			this.emit("change", this.getStatus().free_judger);
 			this.getRestTask();
 			if (null === EXITCODE || EXITCODE) {
+				console.log("stdout: \n", stdoutBuilder.join(""));
+				console.log("stderr: \n", stderrBuilder.join(""));
 				this.errorHandle(solution_id, runner_id);
 			}
 		});
-		//judger.stdout.on("data", () => {});no use
-		//judger.stderr.on("data", () => {});no use
+		judger.stdout.on("data", (resp) => {stdoutBuilder.push(resp.toString());});
+		judger.stderr.on("data", (resp) => {stderrBuilder.push(resp.toString());});
 	}
 }
 
