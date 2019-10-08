@@ -3,6 +3,8 @@ const client = require("../module/redis");
 const contest_mode = require("./contest_mode");
 const ban_check = require("./ban_check");
 const generateToken = require("./generate_token");
+const UpdatePool = require("../module/user/LazyPrivilegeUpdatePool");
+const login_action = require("../module/login_action");
 module.exports = async (req, res, next) => {
 	if (!req.session.auth) {
 		const original_cookie = req.cookies;
@@ -17,7 +19,6 @@ module.exports = async (req, res, next) => {
 			const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
 			if (original_token.indexOf(token) !== -1 || new_token_list.indexOf(newToken) !== -1) {
 				// if (token === original_token) {//check token
-				const login_action = require("../module/login_action");
 				await login_action(req, user_id);
 				generateToken(req, res);
 				return await ban_check(req, res,await contest_mode(req, res, next));
@@ -29,10 +30,13 @@ module.exports = async (req, res, next) => {
 		else {
 			return res.json(error.nologin);
 		}
-
 	}
 	else {
 		generateToken(req, res);
+		const user_id = req.session.user_id || req.cookies["user_id"] || "";
+		if (UpdatePool.needUpdate(user_id)) {
+			await login_action(req, user_id);
+		}
 		return await ban_check(req, res,await contest_mode(req, res, next));
 	}
 };

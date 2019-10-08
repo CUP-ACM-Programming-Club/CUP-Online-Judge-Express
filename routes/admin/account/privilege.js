@@ -3,6 +3,7 @@ const router = express.Router();
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const {trimProperty} = require("../../../module/util");
+const UpdatePool = require("../../../module/user/LazyPrivilegeUpdatePool");
 const privilegeList = ["administrator", "source_browser", "contest_creator", "http_judge", "problem_editor", "contest_manager", "editor"];
 
 async function privilegeListGetter() {
@@ -16,6 +17,7 @@ async function modifyHandler(req, res, sql) {
 	if (privilegeList.includes(rightstr)) {
 		try {
 			await query(sql, [user_id, rightstr]);
+			UpdatePool.addToUpdate(user_id);
 			res.json(ok.ok);
 		} catch (e) {
 			console.log(e);
