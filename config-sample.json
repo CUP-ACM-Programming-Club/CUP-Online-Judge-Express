@@ -6,6 +6,9 @@
     "port": "3306",
     "database": "jol"
   },
+  "monitor": {
+    "port": 3002
+  },
   "ws": {
     "client_port": 3000,
     "judger_port": 5100

@@ -3,12 +3,16 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
 const config = global.config;
+const dash = require("appmetrics-dash");
+const dashConfig = require("../module/init/dash-config");
+dash.monitor(dashConfig);
 const easyMonitor = require("easy-monitor");
 easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 const port = process.env.PORT || config.ws.client_port;
+const wsport = process.env.WSPORT || config.ws.judger_port;
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const cachePool = require("../module/cachePool");
@@ -26,7 +30,7 @@ const {solutionContainContestId, getSolutionInfo} = require("../module/solution/
 const {ConfigManager} = require("../module/config/config-manager");
 const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
-const wss = new WebSocket.Server({port: config.ws.judger_port});
+const wss = new WebSocket.Server({port: wsport });
 const banCheaterModel = new BanCheaterModel();
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
@@ -202,8 +206,16 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 			if (!userArr.hasOwnProperty(i) || null === userArr[i]) {
 				continue;
 			}
+			if (userArr[i] === undefined) {
+				delete userArr[i];
+				continue;
+			}
 			for (let j in userArr[i]) {
 				if (!userArr[i].hasOwnProperty(j) || null === userArr[i][j]) {
+					continue;
+				}
+				if (userArr[i][j] === undefined) {
+					delete userArr[i][j];
 					continue;
 				}
 				if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {

@@ -17,6 +17,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@ryanlee2014/markdown-it-katex": "^1.0.4",
+    "appmetrics-dash": "^5.2.0",
     "base64-img": "^1.0.4",
     "bluebird": "^3.5.5",
     "body-parser": "^1.19.0",
