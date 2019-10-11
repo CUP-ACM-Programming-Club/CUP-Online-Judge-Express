@@ -32,6 +32,7 @@ const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_
 const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 const wss = new WebSocket.Server({port: wsport });
 const banCheaterModel = new BanCheaterModel();
+const ErrorCollector = require("../module/error/collector");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
 localJudge.setErrorHandler(new RuntimeErrorHandler());
@@ -168,6 +169,7 @@ wss.on("connection", function (ws) {
 		try {
 			request = JSON.parse(message);
 		} catch (e) {
+			ErrorCollector.push(__filename, e);
 			logger.fatal(`Error:\n
 			Error name:${e.name}\n
 			Error Message:${e.message}
@@ -203,26 +205,42 @@ server.listen(port, function () {
 function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
-			if (!userArr.hasOwnProperty(i) || null === userArr[i]) {
-				continue;
+			try {
+				if (!userArr.hasOwnProperty(i) || null === userArr[i]) {
+					continue;
+				}
+				if (userArr[i] === undefined) {
+					delete userArr[i];
+					continue;
+				}
 			}
-			if (userArr[i] === undefined) {
-				delete userArr[i];
-				continue;
+			catch (e) {
+				ErrorCollector.push(__filename, {error: e, i, userArr});
+				console.log("i in userArr");
+				console.log("i", i);
+				console.log("userArr", userArr);
 			}
 			for (let j in userArr[i]) {
-				if (!userArr[i].hasOwnProperty(j) || null === userArr[i][j]) {
-					continue;
+				try {
+					if (!userArr[i].hasOwnProperty(j) || null === userArr[i][j]) {
+						continue;
+					}
+					if (userArr[i][j] === undefined) {
+						delete userArr[i][j];
+						continue;
+					}
+					if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
+						continue;
+					}
+					if (!privilege || userArr[i][j].privilege) {
+						userArr[i][j].emit(type, value);
+					}
 				}
-				if (userArr[i][j] === undefined) {
-					delete userArr[i][j];
-					continue;
-				}
-				if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
-					continue;
-				}
-				if (!privilege || userArr[i][j].privilege) {
-					userArr[i][j].emit(type, value);
+				catch (e) {
+					ErrorCollector.push(__filename, j, userArr[i]);
+					console.log("j in userArr[i]");
+					console.log("j", j);
+					console.log("userArr[i]", userArr[i]);
 				}
 			}
 		}
