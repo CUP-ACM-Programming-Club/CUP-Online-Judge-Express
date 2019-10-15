@@ -6,6 +6,7 @@ const switchStore = require("./store/switch");
 const ConfigLoggerFactory = require("./log/config");
 const SwitchLoggerFactory = require("./log/switch");
 const OPERATION_CONSTANTS = require("./constants/operation");
+const ErrorCollector = require("../error/collector");
 
 function weakJsonParser(plainString) {
 	try {
@@ -93,6 +94,26 @@ ConfigManager.prototype.getConfig = function (configKey, defaultValue) {
 		return weakJsonParser(wrappedValue.value);
 	}
 	return wrappedValue.value;
+};
+
+ConfigManager.prototype.getJSONConfig = function (configKey, defaultValue) {
+	const response = this.getConfig(configKey, defaultValue);
+	try {
+		return JSON.parse(response);
+	}
+	catch (e) {
+		console.log(e);
+		ErrorCollector.push(__filename, e);
+		return defaultValue;
+	}
+};
+
+ConfigManager.prototype.getArrayConfig = function (configKey, defaultValue) {
+	return this.getJSONConfig(configKey, defaultValue);
+};
+
+ConfigManager.prototype.getObjectConfig = function (configKey, defaultValue) {
+	return this.getJSONConfig(configKey, defaultValue);
 };
 
 ConfigManager.prototype.setConfigWithoutStore = function (configKey, configValue, comment) {

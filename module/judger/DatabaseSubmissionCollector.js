@@ -3,6 +3,18 @@ const cache_query = require("../mysql_cache");
 const {ConfigManager} = require("../config/config-manager");
 const DEFAULT_LOOP_SECONDS = 3000;
 const localJudger = require("../judger");
+
+function isJudgerGraySolutionId (solutionId) {
+	solutionId = parseInt(solutionId);
+	const grayList = ConfigManager.getArrayConfig("judger_solution_gray_solution_id", []);
+	if (Array.isArray(grayList)) {
+		return grayList.map(e => parseInt(e)).includes(solutionId);
+	}
+	else {
+		return false;
+	}
+}
+
 async function collectHandler () {
 	try {
 		this.collectFinished = false;
@@ -16,7 +28,7 @@ async function collectHandler () {
 			const admin = !!(_data && _data.length && _data[0].cnt);
 			const solutionId = parseInt(result[i].solution_id);
 			const priority = parseInt(!!result[i].result);
-			this.judger.addTask(solutionId, admin, false, !priority);
+			this.judger.addTask(solutionId, admin, false, !priority, isJudgerGraySolutionId(solutionId));
 		}
 	}
 	catch (e) {

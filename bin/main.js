@@ -34,6 +34,7 @@ const wss = new WebSocket.Server({port: wsport });
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
+const SolutionUserCollector = require("../module/judger/SolutionUserCollector");
 const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
 localJudge.setErrorHandler(new RuntimeErrorHandler());
 const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
@@ -565,7 +566,7 @@ io.on("connection", async function (socket) {
 			socket.emit("reject_submit", response);
 			return;
 		}
-		data.submission_id = response.solution_id;
+		data.submission_id = data.solution_id = response.solution_id;
 		const ip = onlineUser[socket.user_id].ip;
 		const fingerprint = data.val.fingerprint;
 		const fingerprintRaw = data.val.fingerprintRaw;
@@ -621,6 +622,7 @@ io.on("connection", async function (socket) {
 			sendMessage(pagePush.status, "submit", data, 1);
 		}
 		const language = parseInt(data.val.language);
+		SolutionUserCollector.set(data.submission_id, data);
 		switch (language) {
 		case 15:
 		case 22:

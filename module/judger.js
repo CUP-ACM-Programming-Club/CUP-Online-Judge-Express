@@ -87,19 +87,21 @@ class localJudger extends eventEmitter {
 		this.latestSolutionID = Math.max(this.latestSolutionID, solutionId);
 	}
 
-	addTask(solution_id, admin, no_sim = false, priority = 1) {
+	addTask(solution_id, admin, no_sim = false, priority = 1, gray_task = false) {
 		solution_id = localJudger.formatSolutionId(solution_id);
 		if (!this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
 			this.updateLatestSolutionId(solution_id);
 			if (!this.judge_queue.isEmpty()) {
-				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim);
+				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
 				this.judging_queue.push(solution_id);
 			} else {
 				this.waiting_queue.push({
 					solution_id,
 					priority,
-					admin
+					admin,
+					no_sim,
+					gray_task
 				});
 				this.in_waiting_queue[solution_id] = true;
 			}
@@ -115,8 +117,10 @@ class localJudger extends eventEmitter {
 			const task = this.waiting_queue.pop();
 			const solution_id = task.solution_id;
 			const admin = task.admin;
+			const no_sim = task.no_sim;
+			const gray_task = task.gray_task;
 			delete this.in_waiting_queue[solution_id];
-			this.runJudger(solution_id, this.judge_queue.shift(), admin);
+			this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
 		}
 	}
 
@@ -127,12 +131,16 @@ class localJudger extends eventEmitter {
      * @param {Number} runner_id 判题机ID
      * @param {Boolean} admin 管理员提交
      * @param {Boolean} no_sim 不启用判重
+	 * @param {Boolean} gray_task 灰度任务
      * @returns {Promise<void>} 返回一个空Promise
      */
 
-	async runJudger(solution_id, runner_id, admin = false, no_sim = false) {
-		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
+	async runJudger(solution_id, runner_id, admin = false, no_sim = false, gray_task = false) {
 		const stderrBuilder = [], stdoutBuilder = [];
+		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
+		if (gray_task) {
+			args.push("-no-mysql");
+		}
 		if (admin) {
 			args.push("-admin");
 		}
@@ -140,6 +148,9 @@ class localJudger extends eventEmitter {
 			args.push("-no-sim");
 		}
 		const judger = spawn(`${process.cwd()}/wsjudged`, args);
+		if (process.env.NODE_ENV === "test") {
+			console.log("arguments: ", args);
+		}
 		let killed = false;
 		let timeoutID = setTimeout(() => {
 			killed = true;
