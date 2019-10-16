@@ -26,12 +26,19 @@ function isContestMaker(str) {
 
 function isProblemMaker(str) {
 	return str.indexOf("p") === 0;
-
 }
 
+const defaultPrivilege = {
+	auth: true,
+	contest_manager: false,
+	editor: false,
+	isadmin: false,
+	source_browser: false
+};
+
 module.exports = async (req, user_id) => {
+	Object.assign(req.session, defaultPrivilege);
 	req.session.user_id = user_id;
-	req.session.auth = true;
 	req.session.contest = {};
 	req.session.contest_maker = {};
 	req.session.problem_maker = {};
