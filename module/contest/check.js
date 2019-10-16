@@ -30,11 +30,11 @@ module.exports = async (req, res, cid) => {
 		res.json(error.contestNotStart);
 		return false;
 	} else if (parseInt(contest[0].private) === 1) {
-		if (req.session.contest[`c${cid}`]) {
+		if (req.session.contest_manager || req.session.contest[`c${cid}`]) {
 			return contest;
 		} else {
 			await require("../login_action")(req, req.session.user_id);
-			if (req.session.contest[`c${cid}`]) {
+			if (req.session.contest_manager || req.session.contest[`c${cid}`]) {
 				return contest;
 			} else {
 				res.json(error.noprivilege);

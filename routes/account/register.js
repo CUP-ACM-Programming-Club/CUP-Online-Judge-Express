@@ -18,12 +18,7 @@ router.post("/", async (req, res) => {
 			nick,
 			ip
 		});
-		if (resp === true) {
-			res.json(ok.ok);
-		}
-		else {
-			res.json(error.errorMaker(resp));
-		}
+		res.json(resp === true ? ok.ok : error.errorMaker(resp));
 	}
 	catch (e) {
 		ErrorCollector.push(__filename, e);

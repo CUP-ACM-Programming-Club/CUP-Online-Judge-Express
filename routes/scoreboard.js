@@ -2,57 +2,10 @@ const express = require("express");
 
 const router = express.Router();
 const query = require("../module/mysql_cache");
-const dayjs = require("dayjs");
 const cache_query = query;
 const auth = require("../middleware/auth");
 const [error, ok] = require("../module/const_var");
-
-const check = async (req, res, cid) => {
-	if (cid < 1000) {
-		res.json(error.invalidParams);
-		return false;
-	}
-	const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
-	if(contest && contest.length === 0) {
-		res.json(error.errorMaker("no such contest"));
-		return false;
-	}
-	const start_time = dayjs(contest[0].start_time);
-	const now = dayjs();
-	const privilege = req.session.isadmin || req.session.contest_maker[`m${cid}`];
-	if (privilege) {
-		return contest;
-	}
-	if (global.contest_mode) {
-		if (!privilege) {
-			if (parseInt(contest[0].cmod_visible) === 0) {
-				res.json(error.contestMode);
-				return false;
-			}
-		}
-	} else {
-		if (parseInt(contest[0].cmod_visible) === 1) {
-			res.json(error.contestMode);
-			return false;
-		}
-	}
-	// req.session.contest[`c${cid}`]
-	console.log(contest);
-	if (start_time.isAfter(now)) {
-		res.json(error.contestNotStart);
-		return false;
-	} else if (parseInt(contest[0].private) === 1) {
-		if (req.session.contest[`c${cid}`]) {
-			return contest;
-		} else {
-			res.json(error.noprivilege);
-			return false;
-		}
-	} else {
-		return contest;
-	}
-};
-
+const check = require("../module/contest/check");
 
 router.get("/:cid", (req, res, next) => {
 	const cid = isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
