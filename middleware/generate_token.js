@@ -15,6 +15,7 @@ async function storeRedis(hash, user_id) {
 module.exports = function (req, res, next) {
 	const hash = createHash(HashLength);
 	res.cookie("newToken", hash, {maxAge: 3600 * 1000 * 24, httpOnly: true});
+	res.cookie("user_id", req.session.user_id, {maxAge: 3600 * 1000 * 24, httpOnly: true});
 	storeRedis(hash, req.session.user_id);
 	if (typeof next === "function") {
 		return next();
