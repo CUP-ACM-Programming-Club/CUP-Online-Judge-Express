@@ -499,6 +499,7 @@ io.on("connection", async function (socket) {
 			pos.useragent = data["useragent"] || "";
 			pos.screen = data["screen"] || "";
 			pos.nick = pos.nick || socket.user_nick || data["nick"];
+			pos.lastUpdated = Date.now();
 			if ((!socket.url || (socket.url.length && socket.url.length === 0)) && data["url"]) {
 				let url = data["url"];
 				if (~url.indexOf(socket.handshake.headers.origin)) {
@@ -520,6 +521,7 @@ io.on("connection", async function (socket) {
 
 	socket.on("updateURL", function (data) {
 		removeStatus(socket);
+		onlineUser[socket.user_id].lastUpdated = Date.now();
 		const pos = onlineUser[socket.user_id].url.indexOf(socket.url);
 		if (pos !== -1) {
 			onlineUser[socket.user_id].url[pos] = data.url;
