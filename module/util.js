@@ -73,6 +73,9 @@ async function addContestProblem(contest_id, problemList) {
 }
 
 async function addContestConpetitor(contest_id, userList) {
+	if (userList.length === 0) {
+		return;
+	}
 	let baseSql = "insert into privilege (user_id, rightstr) values";
 	let sqlArray = [], valueArray = [];
 	userList.forEach(el => {
