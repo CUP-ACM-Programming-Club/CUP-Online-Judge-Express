@@ -56,7 +56,7 @@ async function removeAllContestProblem(contest_id) {
 	await query("delete from contest_problem where contest_id = ?", [contest_id]);
 }
 
-async function removeAllConpetitorPrivilege(contest_id) {
+async function removeAllCompetitorPrivilege(contest_id) {
 	await query("delete from privilege where rightstr = ?", [`c${contest_id}`]);
 }
 
@@ -72,7 +72,7 @@ async function addContestProblem(contest_id, problemList) {
 	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
 }
 
-async function addContestConpetitor(contest_id, userList) {
+async function addContestCompetitor(contest_id, userList) {
 	if (userList.length === 0) {
 		return;
 	}
@@ -80,7 +80,7 @@ async function addContestConpetitor(contest_id, userList) {
 	let sqlArray = [], valueArray = [];
 	userList.forEach(el => {
 		sqlArray.push("(?,?)");
-		valueArray.push(contest_id, el);
+		valueArray.push(el, `c${contest_id}`);
 	});
 	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
 }
@@ -99,8 +99,8 @@ module.exports = {
 	trimProperty,
 	assertInt,
 	assertString,
-	addContestConpetitor,
+	addContestCompetitor,
 	addContestProblem,
-	removeAllConpetitorPrivilege,
+	removeAllCompetitorPrivilege,
 	removeAllContestProblem
 };

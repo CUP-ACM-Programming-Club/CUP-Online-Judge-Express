@@ -3,7 +3,7 @@ const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const dayjs = require("dayjs");
 const router = require("../../../module/admin/baseGetter")("contest", "contest_id");
-const {trimProperty, removeAllConpetitorPrivilege, removeAllContestProblem, addContestConpetitor,addContestProblem} = require("../../../module/util");
+const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor,addContestProblem} = require("../../../module/util");
 
 function timeToString(time) {
 	return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
@@ -29,8 +29,8 @@ router.post("/", async (req, res) => {
 			defunct, contest_id]).then(() => console.log("update Finished"));
 		await removeAllContestProblem(contest_id).then(() => console.log("removeAllContestFinished", contest_id));
 		await addContestProblem(contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
-		await removeAllConpetitorPrivilege(contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
-		await addContestConpetitor(contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
+		await removeAllCompetitorPrivilege(contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
+		await addContestCompetitor(contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
 		res.json(ok.ok);
 	} catch (e) {
 		console.log(e);

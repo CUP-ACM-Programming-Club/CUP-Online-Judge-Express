@@ -1,7 +1,8 @@
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const express = require("express"), router = express.Router();
-const {trimProperty, removeAllConpetitorPrivilege, removeAllContestProblem, addContestConpetitor, addContestProblem} = require("../../../module/util");
+const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor, addContestProblem} = require("../../../module/util");
+const dayjs = require("dayjs");
 
 function timeToString(time) {
 	return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
@@ -27,8 +28,8 @@ router.post("/", async (req, res) => {
 			hostname]);
 		await removeAllContestProblem(contest_id);
 		await addContestProblem(contest_id, problemSelected);
-		await removeAllConpetitorPrivilege(contest_id);
-		await addContestConpetitor(contest_id, userList);
+		await removeAllCompetitorPrivilege(contest_id);
+		await addContestCompetitor(contest_id, userList);
 		res.json(ok.ok);
 	} catch (e) {
 		console.log(e);
