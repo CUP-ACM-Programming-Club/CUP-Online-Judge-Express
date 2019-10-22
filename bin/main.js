@@ -33,6 +33,7 @@ const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_j
 const wss = new WebSocket.Server({port: wsport });
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
+const OnlineUserSet = require("../module/websocket/OnlineUserSet");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector");
 const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
@@ -45,11 +46,6 @@ const app = require("../app");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
-/**
- *
- * @type {{Object}} 记录在线用户的信息
- */
-const onlineUser = {};
 /**
  *
  * @type {{Socket}} 记录在线用户的Socket连接
@@ -267,7 +263,7 @@ localJudge.on("change", (freeJudger) => {
  */
 
 function onlineUserBroadcast() {
-	let online = Object.values(onlineUser).filter(el => typeof el !== "undefined" && el !== null);
+	let online = OnlineUserSet.getAllValues();
 	let userArr = {
 		user_cnt: online.length,
 		user: online.map(e => {
@@ -385,7 +381,7 @@ io.use(async (socket, next) => {
  */
 
 io.use((socket, next) => {
-	const pos = onlineUser[socket.user_id];
+	const pos = OnlineUserSet.get(socket.user_id);
 	const referer = socket.handshake.headers.referer || "";
 	const origin = socket.handshake.headers.origin || "";
 	const _url = referer.substring(origin.length || referer.indexOf("/", 9));
@@ -421,7 +417,7 @@ io.use((socket, next) => {
 			user.url.push(_url);
 		}
 		user_socket[socket.user_id] = [socket];
-		onlineUser[socket.user_id] = user;
+		OnlineUserSet.set(socket.user_id, user);
 		if (socket.privilege) {
 			admin_user[socket.user_id] = [socket];
 		} else {
@@ -489,7 +485,7 @@ io.on("connection", async function (socket) {
 	socket.on("auth", function (data) {
 		if (!socket.send_auth && socket.auth) {
 			socket.send_auth = true;
-			const pos = onlineUser[socket.user_id];
+			const pos = OnlineUserSet.get(socket.user_id);
 			pos.identity = socket.privilege ? "admin" : "normal";
 			//pos.intranet_ip = pos.intranet_ip || data["intranet_ip"] || socket.handshake.address || "未知";
 			//pos.ip = pos.ip || data["ip"] || "";
@@ -521,10 +517,11 @@ io.on("connection", async function (socket) {
 
 	socket.on("updateURL", function (data) {
 		removeStatus(socket);
-		onlineUser[socket.user_id].lastUpdated = Date.now();
-		const pos = onlineUser[socket.user_id].url.indexOf(socket.url);
+		const user = OnlineUserSet.get(socket.user_id);
+		user.lastUpdated = Date.now();
+		const pos = user.url.indexOf(socket.url);
 		if (pos !== -1) {
-			onlineUser[socket.user_id].url[pos] = data.url;
+			user.url[pos] = data.url;
 		}
 		socket.url = data.url;
 		buildStatusSocket(socket);
@@ -569,7 +566,7 @@ io.on("connection", async function (socket) {
 			return;
 		}
 		data.submission_id = data.solution_id = response.solution_id;
-		const ip = onlineUser[socket.user_id].ip;
+		const ip = OnlineUserSet.get(socket.user_id).ip;
 		const fingerprint = data.val.fingerprint;
 		const fingerprintRaw = data.val.fingerprintRaw;
 		solutionContext[data.submission_id] = {
@@ -684,7 +681,7 @@ io.on("connection", async function (socket) {
      */
 	socket.on("disconnect", function () {
 		const user_id = socket.user_id;
-		let pos = onlineUser[user_id];
+		let pos = OnlineUserSet.get(user_id);
 		if (pos && !socket.hasClosed) {
 			socket.hasClosed = true;
 			removeWhiteboardRecord();
@@ -705,7 +702,7 @@ io.on("connection", async function (socket) {
 			}
 			if (!pos.url.length) {
 				delete user_socket[user_id];
-				delete onlineUser[user_id];
+				OnlineUserSet.remove(user_id);
 				if (admin_user[user_id]) {
 					delete admin_user[user_id];
 				}
