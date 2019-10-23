@@ -42,7 +42,7 @@
     "is-image": "^3.0.0",
     "jschardet": "^2.1.0",
     "lodash": "^4.17.15",
-    "log4js": "^5.2.2",
+    "log4js": "^5.3.0",
     "markdown-it": "^10.0.0",
     "markdown-it-highlightjs": "^3.0.0",
     "memcached": "^2.2.2",
