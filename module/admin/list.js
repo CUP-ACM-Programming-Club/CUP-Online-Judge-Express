@@ -1,16 +1,17 @@
+const express = require("express");
+const query = require("../../module/mysql_query");
+const {error, ok} = require("../../module/constants/state");
+
 module.exports = function (target, opts = {}) {
-	const express = require("express");
 	const router = express.Router();
-	const query = require("../../module/mysql_query");
 	const PAGE_SIZE = 50;
-	const [error, ok] = require("../../module/const_var");
 
 	async function baseGetter(page) {
 		let where = "", orderBy = "";
-		if (opts.hasOwnProperty("where") && typeof opts.where === "string") {
+		if (Object.prototype.hasOwnProperty.call(opts, "where") && typeof opts.where === "string") {
 			where = opts.where;
 		}
-		if (opts.hasOwnProperty("order") && typeof opts.order === "string") {
+		if (Object.prototype.hasOwnProperty.call(opts, "order") && typeof opts.order === "string") {
 			orderBy = opts.order;
 		}
 		const Query = [query(`select * from ${target} ${[where, orderBy].join(" ")} limit ${page * PAGE_SIZE},${PAGE_SIZE}`)];

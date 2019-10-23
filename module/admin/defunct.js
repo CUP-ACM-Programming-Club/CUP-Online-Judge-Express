@@ -1,20 +1,21 @@
 const isNumber = require("../util/isNumber");
+
+function switchDefunct(defunct) {
+	switch (defunct) {
+	case "Y":
+		return "N";
+	case "N":
+		return "Y";
+	default:
+		return "Y";
+	}
+}
+
 module.exports = function (target, idName) {
 	const express = require("express");
 	const router = express.Router();
 	const query = require("../../module/mysql_query");
 	const [error, ok] = require("../../module/const_var");
-
-	function switchDefunct(defunct) {
-		switch (defunct) {
-		case "Y":
-			return "N";
-		case "N":
-			return "Y";
-		default:
-			return "Y";
-		}
-	}
 
 	async function baseChanger(base_id) {
 		let res = await query(`select defunct from ${target} where ${idName} = ?`, [base_id]);

@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+/* eslint-disable require-atomic-updates */
 const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
@@ -117,11 +118,12 @@ async function banSubmissionChecker(solution_pack) {
 	if (!ConfigManager.isSwitchedOn("ban_contest_cheater", 0)) {
 		return;
 	}
-	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 4 && (solution_pack.hasOwnProperty("contest_id") || await solutionContainContestId(solution_pack.solution_id))) {
-		if (!solution_pack.hasOwnProperty("contest_id")) {
+	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 4 &&
+		(Object.prototype.hasOwnProperty.call(solution_pack,"contest_id") || await solutionContainContestId(solution_pack.solution_id))) {
+		if (!Object.prototype.hasOwnProperty.call(solution_pack, "contest_id")) {
 			Object.assign(solution_pack, await getSolutionInfo(solution_pack.solution_id));
 		}
-		solution_pack.state = 15;
+		Object.assign(solution_pack, {state: 15});
 		const {contest_id, num, user_id, solution_id} = solution_pack;
 		await banCheaterModel.addCheating(user_id, contest_id, {solution_id, num});
 	}
@@ -203,7 +205,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 	if (dimension === 2) {
 		for (let i in userArr) {
 			try {
-				if (!userArr.hasOwnProperty(i) || null === userArr[i]) {
+				if (!Object.prototype.hasOwnProperty.call(userArr, i)|| null === userArr[i]) {
 					continue;
 				}
 				if (userArr[i] === undefined) {
@@ -219,7 +221,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 			}
 			for (let j in userArr[i]) {
 				try {
-					if (!userArr[i].hasOwnProperty(j) || null === userArr[i][j]) {
+					if (!Object.prototype.hasOwnProperty.call(userArr[i], j) || null === userArr[i][j]) {
 						continue;
 					}
 					if (userArr[i][j] === undefined) {
@@ -243,7 +245,7 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 		}
 	} else if (dimension === 1) {
 		for (let i in userArr) {
-			if (!userArr.hasOwnProperty(i) || null === userArr[i] || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
+			if (!Object.prototype.hasOwnProperty.call(userArr, i) || null === userArr[i] || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
 				continue;
 			}
 			if (!privilege || userArr[i].privilege) {
@@ -338,7 +340,7 @@ io.use(async (socket, next) => {
 	const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
 	const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
 	if (new_token_list.indexOf(newToken) !== -1 || original_token.indexOf(token) !== -1) {
-		socket.auth = true;
+		Object.assign(socket, {auth: true});
 		next();
 	} else {
 		next(new Error("Token Expired."));

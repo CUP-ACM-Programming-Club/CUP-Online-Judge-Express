@@ -1,14 +1,67 @@
 const Interceptor = require("../interceptor/middleware");
 const {ConfigManager} = require("../config/config-manager");
 
-
-module.exports = function (switchKey, defaultValue, errorResponse = undefined) {
-	const InterceptorFactory = new Interceptor();
-	InterceptorFactory.setValidator(function () {
-		return ConfigManager.isSwitchedOn(switchKey, defaultValue);
-	});
-	if (typeof errorResponse !== "undefined") {
-		InterceptorFactory.setErrorResponse(errorResponse);
+class ConfigInterceptor {
+	constructor() {
+		this.interceptorFactory = new Interceptor();
+		this.additionalValidator = [];
 	}
-	return InterceptorFactory.getInterceptorInstance();
-};
+
+	static newInstance() {
+		return new ConfigInterceptor();
+	}
+
+	getSwitchKey () {
+		return this.switchKey;
+	}
+
+	setSwitchKey (switchKey) {
+		this.switchKey = switchKey;
+		return this;
+	}
+
+	setAdditionalValidator (validator) {
+		this.additionalValidator.push(validator);
+		return this;
+	}
+
+	getDefaultValue () {
+		return this.defaultValue;
+	}
+
+	setDefaultValue (value) {
+		this.defaultValue = value;
+		return this;
+	}
+
+	getErrorResponse () {
+		return this.errorResponse;
+	}
+
+	setErrorResponse (response) {
+		this.errorResponse = response;
+		return this;
+	}
+
+	build() {
+		const interceptorFactory = this.interceptorFactory;
+		const additionalValidator = this.additionalValidator;
+		const {switchKey, defaultValue} = this;
+		interceptorFactory.setValidator(function () {
+			return ConfigManager.isSwitchedOn(switchKey, defaultValue);
+		});
+
+		if (typeof this.errorResponse !== "undefined") {
+			interceptorFactory.setErrorResponse(this.errorResponse);
+		}
+		const middleware = interceptorFactory.getInterceptorInstance();
+		return function (req, res, next) {
+			return additionalValidator
+				.map(element => element(req))
+				.reduce((a, b) => a + b, 0) && next() || middleware(req, res, next);
+		};
+	}
+}
+
+
+module.exports = ConfigInterceptor;

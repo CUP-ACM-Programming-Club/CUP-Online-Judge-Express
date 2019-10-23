@@ -26,7 +26,7 @@ module.exports = function(sequelize, DataTypes) {
 		},
 		comment: {
 			type: DataTypes.STRING(1024),
-			allowNull: false,
+			allowNull: true,
 			field: "comment"
 		}
 	}, {

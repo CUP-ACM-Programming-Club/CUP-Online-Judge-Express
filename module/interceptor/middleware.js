@@ -4,11 +4,9 @@ function baseValidator() {
 	return false;
 }
 
-let errorResponse = error.unavailable;
-
 function Interceptor() {
 	this.validator = baseValidator;
-	errorResponse = error.unavailable;
+	this.errorResponse = error.unavailable;
 }
 
 Interceptor.prototype.setValidator = function (validator) {
@@ -18,12 +16,17 @@ Interceptor.prototype.setValidator = function (validator) {
 	this.validator = validator;
 };
 
+Interceptor.prototype.getValidator = function () {
+	return this.validator;
+};
+
 Interceptor.prototype.setErrorResponse = function (response) {
-	errorResponse = Object.assign(Object.assign({}, error.unavailable), response);
+	this.errorResponse = Object.assign(Object.assign({}, error.unavailable), response);
 };
 
 Interceptor.prototype.getInterceptorInstance = function () {
 	const validator = this.validator || baseValidator;
+	const errorResponse = this.errorResponse;
 	return function (req, res, next) {
 		const response = validator(req, res);
 		if (response && typeof next === "function") {
