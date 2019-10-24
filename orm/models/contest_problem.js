@@ -26,6 +26,7 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: "0"
 		}
 	}, {
-		tableName: "contest_problem"
+		tableName: "contest_problem",
+		timestamps: false
 	});
 };

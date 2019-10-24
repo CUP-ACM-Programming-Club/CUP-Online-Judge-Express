@@ -67,6 +67,7 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: true
 		}
 	}, {
-		tableName: "contest"
+		tableName: "contest",
+		timestamps: false
 	});
 };
