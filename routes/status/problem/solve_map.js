@@ -85,7 +85,7 @@ async function standardHandler(req, res, problem_id) {
 		let cacheBody = solveMapCache[problem_id || "global"];
 		if (cacheBody) {
 			const prevTime = cacheBody.time;
-			if (dayjs().subtract(1, "day").isAfter(prevTime)) {
+			if (dayjs().subtract(1, "day").isBefore(prevTime)) {
 				res.json(cacheBody.content);
 				return;
 			}

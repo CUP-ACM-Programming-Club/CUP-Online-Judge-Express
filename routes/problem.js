@@ -29,7 +29,8 @@ const auth = require("../middleware/auth");
 const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
-const [error, ok] = require("../module/const_var");
+const {error, ok} = require("../module/constants/state");
+require("../module/router_loader")(router, path.resolve(__dirname, "./problem"));
 
 
 const checkEmpty = (str) => {
