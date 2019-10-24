@@ -99,7 +99,12 @@ ConfigManager.prototype.getConfig = function (configKey, defaultValue) {
 ConfigManager.prototype.getJSONConfig = function (configKey, defaultValue) {
 	const response = this.getConfig(configKey, defaultValue);
 	try {
-		return JSON.parse(response);
+		if (typeof response === "string") {
+			return JSON.parse(response);
+		}
+		else {
+			return defaultValue;
+		}
 	}
 	catch (e) {
 		console.log(e);

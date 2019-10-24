@@ -4,6 +4,9 @@ const cache_query = require("../../../module/mysql_cache");
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const interceptorMiddleware = require("../../../module/status/problem/SolveMapInterceptor");
+const dayjs = require("dayjs");
+
+const solveMapCache = {};
 
 async function getUserList() {
 	return await cache_query("select user_id from users");
@@ -79,13 +82,23 @@ function mergeSameEdges(Edges = []) {
 
 async function standardHandler(req, res, problem_id) {
 	try {
+		let cacheBody = solveMapCache[problem_id || "global"];
+		if (cacheBody) {
+			const prevTime = cacheBody.time;
+			if (dayjs().subtract(1, "day").isAfter(prevTime)) {
+				res.json(cacheBody.content);
+				return;
+			}
+		}
 		const userList = await getUserList();
 		const ACLists = await Promise.all(userList.map(user => getUserACList(user.user_id)));
 		const formattedEdges = await Promise.all(ACLists.map(list => formatAcceptProblemToEdges(list, problem_id)));
 		const edges = [];
 		formattedEdges.forEach(edgeList => edges.push(...edgeList));
 		const mergeEdges = mergeSameEdges(edges);
-		res.json(ok.okMaker(mergeEdges));
+		cacheBody = {content: ok.okMaker(mergeEdges), time: dayjs()};
+		solveMapCache[problem_id || "global"] = cacheBody;
+		res.json(cacheBody.content);
 	} catch (e) {
 		console.log(e);
 		res.json(error.database);
