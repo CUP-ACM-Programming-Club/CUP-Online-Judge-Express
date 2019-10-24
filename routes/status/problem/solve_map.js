@@ -3,6 +3,7 @@ const router = express.Router();
 const cache_query = require("../../../module/mysql_cache");
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
+const interceptorMiddleware = require("../../../module/status/problem/SolveMapInterceptor");
 
 async function getUserList() {
 	return await cache_query("select user_id from users");
@@ -29,7 +30,7 @@ async function formatAcceptProblemToEdges(problem_list = [], problem_id) {
 		let prev_problem_id = parseInt(problem_list[i - 1].problem_id);
 		let current_problem_id = parseInt(problem_list[i].problem_id);
 		if (prev_problem_id !== current_problem_id) {
-		    if(!specific_problem || (specific_problem && (prev_problem_id === problem_id || current_problem_id === problem_id))) {
+			if (!specific_problem || (specific_problem && (prev_problem_id === problem_id || current_problem_id === problem_id))) {
 				result.push({from: problem_list[i - 1].problem_id, to: problem_list[i].problem_id});
 			}
 		}
@@ -100,4 +101,4 @@ router.get("/", async (req, res) => {
 });
 
 
-module.exports = ["/solve_map", router];
+module.exports = ["/solve_map", interceptorMiddleware ,router];
