@@ -56,9 +56,15 @@ class ConfigInterceptor {
 		}
 		const middleware = interceptorFactory.getInterceptorInstance();
 		return function (req, res, next) {
-			return additionalValidator
+			const condition = additionalValidator
 				.map(element => element(req))
-				.reduce((a, b) => a + b, 0) && next() || middleware(req, res, next);
+				.reduce((a, b) => a + b, 0);
+			if (condition) {
+				next();
+			}
+			else {
+				middleware(req, res, next);
+			}
 		};
 	}
 }
