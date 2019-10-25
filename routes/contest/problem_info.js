@@ -14,9 +14,9 @@ function privilegeMiddleware(req, res, next) {
 	}
 }
 
-router.get("/:contest_id", async (req, res) => {
+router.get("/:contestId", async (req, res) => {
 	try {
-		const contestId = parseInt(req.params.cid);
+		const contestId = parseInt(req.params.contestId);
 		const contestProblemInfo = await getProblemInfo(contestId, false);
 		const problemInfo = (await Promise
 			.all(contestProblemInfo
