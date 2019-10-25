@@ -84,6 +84,7 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: "0"
 		}
 	}, {
-		tableName: "problem"
+		tableName: "problem",
+		timestamps: false
 	});
 };
