@@ -18,6 +18,7 @@
   "dependencies": {
     "@ryanlee2014/markdown-it-katex": "^1.0.4",
     "appmetrics-dash": "^5.2.0",
+    "await-lock": "^2.0.0",
     "base64-img": "^1.0.4",
     "bluebird": "^3.7.1",
     "body-parser": "^1.19.0",

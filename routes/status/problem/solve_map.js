@@ -5,6 +5,8 @@ const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const interceptorMiddleware = require("../../../module/status/problem/SolveMapInterceptor");
 const dayjs = require("dayjs");
+const AwaitLock = require("await-lock");
+const lock = new AwaitLock();
 
 const solveMapCache = {};
 
@@ -82,10 +84,12 @@ function mergeSameEdges(Edges = []) {
 
 async function standardHandler(req, res, problem_id) {
 	try {
+		await lock.acquireAsync();
 		let cacheBody = solveMapCache[problem_id || "global"];
 		if (cacheBody) {
 			const prevTime = cacheBody.time;
 			if (dayjs().subtract(1, "day").isBefore(prevTime)) {
+				lock.release();
 				res.json(cacheBody.content);
 				return;
 			}
@@ -102,6 +106,8 @@ async function standardHandler(req, res, problem_id) {
 	} catch (e) {
 		console.log(e);
 		res.json(error.database);
+	} finally {
+		lock.release();
 	}
 }
 

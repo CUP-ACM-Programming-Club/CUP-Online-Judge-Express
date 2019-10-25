@@ -20,7 +20,7 @@ async function collectHandler () {
 		this.collectFinished = false;
 		const result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
 		for (let i in result) {
-			if (!result.hasOwnProperty(i)) {
+			if (!Object.prototype.hasOwnProperty.call(result,i)) {
 				continue;
 			}
 			const _data = await cache_query("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
