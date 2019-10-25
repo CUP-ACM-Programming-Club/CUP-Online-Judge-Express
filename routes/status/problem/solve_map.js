@@ -5,7 +5,7 @@ const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const interceptorMiddleware = require("../../../module/status/problem/SolveMapInterceptor");
 const dayjs = require("dayjs");
-const AwaitLock = require("await-lock");
+const AwaitLock = require("await-lock").default;
 const lock = new AwaitLock();
 
 const solveMapCache = {};
