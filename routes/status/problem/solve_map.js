@@ -89,7 +89,6 @@ async function standardHandler(req, res, problem_id) {
 		if (cacheBody) {
 			const prevTime = cacheBody.time;
 			if (dayjs().subtract(1, "day").isBefore(prevTime)) {
-				lock.release();
 				res.json(cacheBody.content);
 				return;
 			}
