@@ -18,6 +18,7 @@ const auth = require("../middleware/auth");
 const router = express.Router();
 router.use(...require("./contest/user"));
 router.use(...require("./contest/rest_problem"));
+router.use(...require("./contest/problem_info"));
 const check = require("../module/contest/check");
 
 function safeArrayParse(array) {
