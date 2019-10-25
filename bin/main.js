@@ -560,7 +560,8 @@ io.on("connection", async function (socket) {
 		try {
 			response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
 		} catch (e) {
-			socket.emit("reject_submit", response);
+			socket.emit("reject_submit", e);
+			console.log(e);
 			return;
 		}
 		if (!response.solution_id) {
