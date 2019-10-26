@@ -11,9 +11,18 @@ require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 let port, wsport;
+let localJudge, dockerRunner;
+const LocalJudge = require("../module/judger");
+const _dockerRunner = require("../module/docker_runner");
+localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
+dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
 	wsport = process.env.WSPORT || config.ws.judger_port;
+	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
+	localJudge.setErrorHandler(new RuntimeErrorHandler());
+	const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
+	databaseSubmissionCollector.setJudger(localJudge).start();
 }
 else {
 	port = process.env.PORT || 0;
@@ -31,25 +40,20 @@ const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
 const client = require("../module/redis");
 const WebSocket = require("ws");
-const LocalJudge = require("../module/judger");
-const _dockerRunner = require("../module/docker_runner");
+
 const BanCheaterModel = require("../module/contest/cheating_ban");
 const querystring = require("querystring");
 const {storeSubmission} = require("../module/judger/recorder");
 const {solutionContainContestId, getSolutionInfo} = require("../module/solution/solution");
 const {ConfigManager} = require("../module/config/config-manager");
-const localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
-const dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
+
 const wss = new WebSocket.Server({port: wsport });
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
 const OnlineUserSet = require("../module/websocket/OnlineUserSet");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector");
-const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
-localJudge.setErrorHandler(new RuntimeErrorHandler());
-const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
-databaseSubmissionCollector.setJudger(localJudge).start();
+
 initExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 const app = require("../app");
