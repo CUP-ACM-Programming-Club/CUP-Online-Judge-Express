@@ -5,8 +5,8 @@ require("../module/init/preinstall")();
 require("../module/init/build_env")();
 const config = global.config;
 
-const easyMonitor = require("easy-monitor");
-easyMonitor("CUP Online Judge Express");
+// const easyMonitor = require("easy-monitor");
+// easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");

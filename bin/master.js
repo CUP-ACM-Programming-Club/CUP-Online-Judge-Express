@@ -9,11 +9,14 @@ if (cluster.isMaster) {
 	require("../module/init/build_env")();
 	const config = global.config;
 	const port = config.ws.http_client_port;
+	let restart = true;
 	var spawn = function (i) {
 		workers[i] = cluster.fork();
 		workers[i].on("exit", function (code, signal) {
-			console.log("respawning worker", i);
-			spawn(i);
+			if (restart) {
+				console.log("respawning worker", i);
+				spawn(i);
+			}
 		});
 	};
 
@@ -22,6 +25,7 @@ if (cluster.isMaster) {
 	}
 
 	const destory = function () {
+		restart = false;
 		for (let i = 0; i < num_processes; i++) {
 			workers[i].destroy();
 			console.log(`destroy ${i}`);
