@@ -1,5 +1,9 @@
 /* eslint-disable no-console */
 const express = require("express");
+const router = express.Router();
+const ContestCachePool = require("../module/contest/ContestCachePool");
+const AwaitLock = require("await-lock").default;
+const cacheLock = new AwaitLock();
 const dayjs = require("dayjs");
 const md = require("markdown-it")({
 	html: true,
@@ -15,7 +19,6 @@ const query = require("../module/mysql_query");
 const getProblemData = require("../module/contest/problem");
 const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
-const router = express.Router();
 router.use(...require("./contest/user"));
 router.use(...require("./contest/rest_problem"));
 router.use(...require("./contest/problem_info"));
@@ -46,10 +49,28 @@ async function generateContestList(req) {
 	if (global.contest_mode) {
 		admin_str = `${admin_str} and ctest.cmod_visible = '${!req.session.isadmin ? 1 : 0}'`;
 	}
-	let base_sql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
-	let promiseArray = [cache_query(base_sql)];
-	promiseArray.push(cache_query(`select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`));
-	return (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
+	const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
+	const runningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`;
+	try {
+		await cacheLock.acquireAsync();
+		const cacheKey = `${notRunningSql}${runningSql}`;
+		const cache = ContestCachePool.get(cacheKey);
+		if (cache && dayjs().subtract(10, "minute").isBefore(cache.time)) {
+			cacheLock.release();
+			return cache.data;
+		} else {
+			const promiseArray = [cache_query(notRunningSql), cache_query(runningSql)];
+			const response = (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
+			ContestCachePool.set(cacheKey, response);
+			cacheLock.release();
+			return response;
+		}
+	}
+	catch (e) {
+		console.log("contest.js generateContestList: ");
+		console.log(e);
+		cacheLock.release();
+	}
 }
 
 router.get("/general/:cid", async (req, res) => {
