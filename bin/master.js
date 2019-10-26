@@ -42,15 +42,9 @@ if (cluster.isMaster) {
 		destory();
 		process.exit(0);
 	});	// ip hash
+	let idx = 0;
 	var worker_index = function (ip, len) {
-		var s = "";
-		for (var i = 0, _len = ip.length; i < _len; i++) {
-			if (!isNaN(ip[i])) {
-				s += ip[i];
-			}
-		}
-
-		return Number(s) % len;
+		return (idx = (idx + 1) % num_processes);
 	};
 
 	var server = net.createServer({pauseOnConnect: true}, function (connection) {
