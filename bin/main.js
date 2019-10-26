@@ -4,16 +4,25 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
 const config = global.config;
-const dash = require("appmetrics-dash");
-const dashConfig = require("../module/init/dash-config");
-dash.monitor(dashConfig);
+
 const easyMonitor = require("easy-monitor");
 easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
-const port = process.env.PORT || config.ws.client_port;
-const wsport = process.env.WSPORT || config.ws.judger_port;
+let port, wsport;
+if (process.env.MODE === "websocket") {
+	port = process.env.PORT || config.ws.websocket_client_port;
+	wsport = process.env.WSPORT || config.ws.judger_port;
+}
+else {
+	port = process.env.PORT || 0;
+	wsport = process.env.WSPORT || 0;
+	const dash = require("appmetrics-dash");
+	const dashConfig = require("../module/init/dash-config");
+	dash.monitor(dashConfig);
+}
+
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
 const cachePool = require("../module/cachePool");
@@ -190,6 +199,16 @@ wss.on("connection", function (ws) {
 
 server.listen(port, function () {
 	logger.info("Server listening at port %d", port);
+});
+
+process.on("message", function(message, connection) {
+	if (message !== "sticky-session:connection") {
+		return;
+	}
+
+	server.emit("connection", connection);
+
+	connection.resume();
 });
 
 /**

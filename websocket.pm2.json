@@ -1,5 +1,5 @@
 {
-  "name"        : "CUP Online Judge Express",
+  "name"        : "CUP Online Judge Express -- WebSocket",
   "script"      : "./bin/main.js",
   "exec_mode"   : "fork",
   "cwd"         : "./",
@@ -22,6 +22,6 @@
   "out_file"   : "./logs/app-out.log",
   "env": {
     "NODE_ENV": "production",
-    "MODE": "http"
+    "MODE": "websocket"
   }
 }

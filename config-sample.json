@@ -10,7 +10,8 @@
     "port": 3002
   },
   "ws": {
-    "client_port": 3000,
+    "http_client_port": 3000,
+    "websocket_client_port": 3300,
     "judger_port": 5100
   },
   "judger": {
