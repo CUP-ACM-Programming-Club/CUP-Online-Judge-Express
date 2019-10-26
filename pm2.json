@@ -1,6 +1,6 @@
 {
   "name"        : "CUP Online Judge Express",
-  "script"      : "./bin/main.js",
+  "script"      : "./bin/master.js",
   "exec_mode"   : "fork",
   "cwd"         : "./",
   "watch": [
@@ -18,8 +18,8 @@
   "watch_options": {
     "followSymlinks": false
   },
-  "error_file" : "./logs/app-err.log",
-  "out_file"   : "./logs/app-out.log",
+  "error_file" : "./logs/http-app-err.log",
+  "out_file"   : "./logs/http-app-out.log",
   "env": {
     "NODE_ENV": "production",
     "MODE": "http"
