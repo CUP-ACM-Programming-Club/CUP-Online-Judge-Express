@@ -34,11 +34,13 @@ if (cluster.isMaster) {
 
 	process.on("exit", () => {
 		destory();
+		process.exit(0);
 	});
 
 	//catches ctrl+c event
 	process.on("SIGINT", () => {
 		destory();
+		process.exit(0);
 	});	// ip hash
 	var worker_index = function (ip, len) {
 		var s = "";
