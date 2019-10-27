@@ -29,7 +29,7 @@ class ProblemInfoManager {
 	async find() {
 		try {
 			await lock.acquireAsync();
-			const cache = ProblemCachePool.get(this.buildCacheKey());
+			const cache = await ProblemCachePool.get(this.buildCacheKey());
 			if (cache) {
 				lock.release();
 				return cache.data;

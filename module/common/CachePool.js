@@ -1,15 +1,27 @@
 const dayjs = require("dayjs");
+const SegmentLock = require("../common/SegmentLock");
+const segLock = new SegmentLock();
 
 class CachePool {
 	constructor() {
 		this.__cache__ = {};
 	}
 
-	get(key) {
-		if (this.__cache__ && Object.prototype.hasOwnProperty.call(this.__cache__, key) && this.__cache__[key]) {
-			return this.__cache__[key];
-		} else {
+	async get(key) {
+		await segLock.getLock(key);
+		try {
+			if (this.__cache__ && Object.prototype.hasOwnProperty.call(this.__cache__, key) && this.__cache__[key]) {
+				return this.__cache__[key];
+			} else {
+				return null;
+			}
+		}
+		catch (e) {
+			console.log(e);
 			return null;
+		}
+		finally {
+			segLock.release(key);
 		}
 	}
 
@@ -17,11 +29,13 @@ class CachePool {
 		return Object.keys(this.__cache__);
 	}
 
-	set(key, value) {
+	async set(key, value) {
+		segLock.getLock(key);
 		this.__cache__[key] = {
 			data: value,
 			time: dayjs()
 		};
+		segLock.release(key);
 	}
 
 	remove(key) {

@@ -54,7 +54,7 @@ async function generateContestList(req) {
 	try {
 		await cacheLock.acquireAsync();
 		const cacheKey = `${notRunningSql}${runningSql}`;
-		const cache = ContestCachePool.get(cacheKey);
+		const cache = await ContestCachePool.get(cacheKey);
 		if (cache && dayjs().subtract(10, "minute").isBefore(cache.time)) {
 			cacheLock.release();
 			return cache.data;

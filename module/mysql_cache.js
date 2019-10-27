@@ -13,17 +13,19 @@ function modifySql(sql) {
 const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 	let identified = sql.toString() + JSON.stringify(sqlArr.toString());
 	let now = dayjs();
-	const cache = MySQLCachePool.get(identified);
+	let cache = await MySQLCachePool.get(identified);
 	if (cache) {
+		let data = cache.data;
 		if (cache.time.add(2, "second").isBefore(now)) {
-			query(sql, sqlArr).then(value => MySQLCachePool.set(identified, value))
-				.catch(console.log);
+			const value = await query(sql, sqlArr);
+			MySQLCachePool.set(identified, value);
+			data = value;
 		}
 		if (opt.copy) {
-			return deepCopy(cache.data);
+			return deepCopy(data);
 		}
 		else {
-			return cache.data;
+			return data;
 		}
 	}
 	else {
