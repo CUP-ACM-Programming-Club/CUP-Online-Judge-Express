@@ -29,6 +29,7 @@ const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
 const ProblemInfoManager = require("../module/problem/ProblemInfoManager");
+const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
 const {error, ok} = require("../module/constants/state");
 require("../module/router_loader")(router, path.resolve(__dirname, "./problem"));
 
@@ -552,6 +553,7 @@ router.post("/:source/:id", function (req, res) {
 					}
 				});
 			ProblemInfoManager.newInstance().setProblemId(problem_id).removeCache();
+			ProblemSetCachePool.removeAll();
 			res.json(ok.ok);
 		} catch (e) {
 			logger.fatal(e);
