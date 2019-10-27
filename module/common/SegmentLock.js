@@ -1,4 +1,4 @@
-const AwaitLock = require("await-lock");
+const AwaitLock = require("await-lock").default;
 
 class SegmentLock {
 	constructor() {
