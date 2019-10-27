@@ -75,8 +75,9 @@ async function get_problem(req, res) {
 		const cacheKey = makeCacheKey(req);
 		const cache = await ProblemSetCachePool.get(cacheKey);
 		if (cache) {
-			return cache.data;
-		} else {
+			res.json(cache.data);
+		}
+		else {
 			const target = req.query.source || "local";
 			if (!checkPrivilege(req)) {
 				if (global.contest_mode) {
