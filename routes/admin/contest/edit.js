@@ -2,7 +2,7 @@ const isNumber = require("../../../module/util/isNumber");
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const dayjs = require("dayjs");
-const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
+const ProblemSetCachePool = require("../../../module/problemset/ProblemSetCachePool");
 
 const router = require("../../../module/admin/baseGetter")("contest", "contest_id");
 const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor,addContestProblem} = require("../../../module/util");
