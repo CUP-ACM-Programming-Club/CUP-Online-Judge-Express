@@ -1,18 +1,21 @@
-const cluster = require("cluster"),
-	net = require("net");
+const cluster = require("cluster");
+const net = require("net");
 
 const num_processes = require("os").cpus().length;
 
 if (cluster.isMaster) {
-	var workers = [];
+	const workers = [];
+	global.workers = workers;
+	global.clusterMode = true;
 	require("../module/init/preinstall")();
 	require("../module/init/build_env")();
+	require("../module/config/transfer/ClusterTransfer")();
 	const config = global.config;
 	const port = config.ws.http_client_port;
 	let restart = true;
-	var spawn = function (i) {
+	const spawn = function (i) {
 		workers[i] = cluster.fork();
-		workers[i].on("exit", function (code, signal) {
+		workers[i].on("exit", function (/* code, signal */) {
 			if (restart) {
 				console.log("respawning worker", i);
 				spawn(i);
@@ -20,11 +23,11 @@ if (cluster.isMaster) {
 		});
 	};
 
-	for (var i = 0; i < num_processes; i++) {
+	for (let i = 0; i < num_processes; ++i) {
 		spawn(i);
 	}
 
-	const destory = function () {
+	const destroy = function () {
 		restart = false;
 		for (let i = 0; i < num_processes; i++) {
 			workers[i].destroy();
@@ -33,24 +36,28 @@ if (cluster.isMaster) {
 	};
 
 	process.on("exit", () => {
-		destory();
+		destroy();
 		process.exit(0);
 	});
 
 	//catches ctrl+c event
 	process.on("SIGINT", () => {
-		destory();
+		destroy();
 		process.exit(0);
-	});	// ip hash
+	});
 	let idx = 0;
-	var worker_index = function (ip, len) {
+	// RoundRobin
+	var worker_index = function (/* ip, len */) {
 		return (idx = (idx + 1) % num_processes);
 	};
 
-	var server = net.createServer({pauseOnConnect: true}, function (connection) {
-		var worker = workers[worker_index(connection.remoteAddress, num_processes)];
-		worker.send("sticky-session:connection", connection);
-	}).listen(port);
+	net
+		.createServer({pauseOnConnect: true}, function (connection) {
+			const worker = workers[worker_index(connection.remoteAddress, num_processes)];
+			worker.send("sticky-session:connection", connection);
+		})
+		.listen(port);
+
 } else {
 	require("./main");
 }

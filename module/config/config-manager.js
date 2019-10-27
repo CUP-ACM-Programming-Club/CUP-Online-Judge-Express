@@ -2,6 +2,7 @@ const random = require("random");
 const dayjs = require("dayjs");
 const BaseStore = require("./store/base/base-store");
 const configStore = require("./store/config");
+const cluster = require("cluster");
 const switchStore = require("./store/switch");
 const ConfigLoggerFactory = require("./log/config");
 const SwitchLoggerFactory = require("./log/switch");
@@ -63,6 +64,17 @@ function switchRemove(key) {
 	this.switchPersistenceModule.remove(key);
 }
 
+function clusterHandler(thisArg, setter) {
+	if (!cluster.isMaster) {
+		process.on("message", (data) => {
+			if (!data.configManager) {
+				return;
+			}
+			setter[data.method].apply(thisArg, data.args);
+		});
+	}
+}
+
 function ConfigManager() {
 	this.__data__ = {};
 	this.__data__.__switchMap__ = {};
@@ -77,8 +89,9 @@ function ConfigManager() {
 			return this.__data__.__configMap__;
 		}
 	});
-	this.configLogger = ConfigLoggerFactory({set: this.setConfig, remvoe: this.removeConfig});
+	this.configLogger = ConfigLoggerFactory({set: this.setConfig, remove: this.removeConfig});
 	this.switchLogger = SwitchLoggerFactory({set: this.setSwitch, remove: this.removeSwitch});
+	clusterHandler(this, {"setConfig": this.setConfigWithoutStore, "setSwitch": this.setSwitchWithoutStore});
 }
 
 ConfigManager.prototype.getRandom = function () {
@@ -125,9 +138,23 @@ ConfigManager.prototype.setConfigWithoutStore = function (configKey, configValue
 	this.__data__.configMap[configKey] = {value: configValue, comment};
 };
 
+ConfigManager.prototype.boardcastSetter = function (method, args) {
+	const payload = {
+		method,
+		configManager: true
+	};
+	payload.args = args;
+	process.send(payload);
+};
+
+ConfigManager.prototype.boardcastSetConfig = function () {
+	this.boardcastSetter("setConfig", arguments);
+};
+
 ConfigManager.prototype.setConfig = function (configKey, configValue, comment) {
 	const payload = {value: configValue, comment};
 	this.setConfigWithoutStore(configKey, configValue, comment);
+	this.boardcastSetConfig(configKey, configValue, comment);
 	configPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.configLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: configValue, comment});
 	return this;
@@ -165,12 +192,17 @@ ConfigManager.prototype.setSwitchWithoutStore = function (configKey, switchValue
 	this.__data__.switchMap[configKey] = {value: parseInt(switchValue), comment};
 };
 
+ConfigManager.prototype.boardcastSetSwitch = function () {
+	this.boardcastSetter("setSwitch", arguments);
+};
+
 ConfigManager.prototype.setSwitch = function (configKey, switchValue, comment) {
 	if (!switchValueValidate(switchValue)) {
 		return this;
 	}
 	const payload = {value: parseInt(switchValue), comment};
 	this.setSwitchWithoutStore(configKey, switchValue, comment);
+	this.boardcastSetSwitch(configKey, switchValue, comment);
 	switchPersistence.call(this, Object.assign(payload, {key: configKey}));
 	this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
 	return this;
