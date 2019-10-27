@@ -70,7 +70,7 @@ function clusterHandler(thisArg, setter) {
 			if (!data.configManager) {
 				return;
 			}
-			setter[data.method].apply(thisArg, data.args);
+			setter[data.method].apply(thisArg, Array.isArray(data.args) ? data.args : Object.values(data.args));
 		});
 	}
 }
