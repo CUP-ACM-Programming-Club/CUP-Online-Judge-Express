@@ -11,7 +11,7 @@ function main() {
 				return;
 			}
 			for (let i = 0; i < workers.length; ++i) {
-				if (i !== worker.id) {
+				if (workers[i].id !== worker.id) {
 					workers[i].send(data);
 				}
 			}
