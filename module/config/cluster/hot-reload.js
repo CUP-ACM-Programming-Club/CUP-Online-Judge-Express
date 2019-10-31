@@ -17,6 +17,7 @@ class HotReloadManager {
 
 	async restart() {
 		await lock.acquireAsync();
+		global.restart = false;
 		const workerList = global.workers;
 		const num = global.workers.length;
 		for (let i = 0; i < num; ++i) {
@@ -30,6 +31,7 @@ class HotReloadManager {
 			destroyWorker.destroy();
 		}
 		lock.release();
+		global.restart = true;
 	}
 
 	restartNotify() {

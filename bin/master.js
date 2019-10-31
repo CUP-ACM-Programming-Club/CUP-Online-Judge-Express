@@ -10,13 +10,14 @@ if (cluster.isMaster) {
 	require("../module/init/preinstall")();
 	require("../module/init/build_env")();
 	require("../module/config/transfer/ClusterTransfer")();
+	require("../module/config/cluster/hot-reload");
 	const config = global.config;
 	const port = config.ws.http_client_port;
-	let restart = true;
+	global.restart = true;
 	const spawn = function (i) {
 		workers[i] = cluster.fork();
 		workers[i].on("exit", function (/* code, signal */) {
-			if (restart) {
+			if (global.restart) {
 				console.log("respawning worker", i);
 				spawn(i);
 			}
@@ -28,7 +29,7 @@ if (cluster.isMaster) {
 	}
 
 	const destroy = function () {
-		restart = false;
+		global.restart = false;
 		for (let i = 0; i < num_processes; i++) {
 			workers[i].destroy();
 			console.log(`destroy ${i}`);
