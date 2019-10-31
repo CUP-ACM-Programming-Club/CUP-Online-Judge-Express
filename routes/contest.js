@@ -17,7 +17,7 @@ md.use(mh);
 const cache_query = require("../module/mysql_cache");
 const query = require("../module/mysql_query");
 const getProblemData = require("../module/contest/problem");
-const [error] = require("../module/const_var");
+const {error, ok} = require("../module/constants/state");
 const auth = require("../middleware/auth");
 router.use(...require("./contest/user"));
 router.use(...require("./contest/rest_problem"));
@@ -37,8 +37,7 @@ async function generateContestList(req) {
 		myContest = `(${safeArrayParse(req.session.contest_maker).concat(safeArrayParse(req.session.contest)).map(el => el.substring(1)).join(",")})`;
 		if (myContest === "()") {
 			myContest = " 1 = 1 ";
-		}
-		else {
+		} else {
 			myContest = `contest_id in ${myContest}`;
 		}
 	}
@@ -65,8 +64,7 @@ async function generateContestList(req) {
 			cacheLock.release();
 			return response;
 		}
-	}
-	catch (e) {
+	} catch (e) {
 		console.log("contest.js generateContestList: ");
 		console.log(e);
 		cacheLock.release();
@@ -75,18 +73,23 @@ async function generateContestList(req) {
 
 router.get("/general/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
-	if (~cid && check(req, res, cid)) {
-		const contest_general_detail = await cache_query(`select t1.contest_id,t1.title,t1.start_time,
+	if (~cid && await check(req, res, cid)) {
+		const cacheKey = `Contest:info:${cid}`;
+		const cache = await ContestCachePool.get(cacheKey);
+		if (cache) {
+			res.json(ok.okMaker(cache.data));
+		}
+		else {
+			const contest_general_detail = await cache_query(`select t1.contest_id,t1.title,t1.start_time,
 		t1.end_time,t1.description,t1.cmod_visible,t2.total_problem from (select * from contest where contest_id = ?)t1
   left join (select count(1)total_problem,contest_id from contest_problem where contest_id = ?)t2
   on t1.contest_id = t2.contest_id`, [cid, cid]);
-		if (contest_general_detail.length < 1) {
-			res.json(error.invalidParams);
-		} else {
-			res.json({
-				status: "OK",
-				data: contest_general_detail[0]
-			});
+			if (contest_general_detail.length < 1) {
+				res.json(error.invalidParams);
+			} else {
+				ContestCachePool.set(cacheKey, contest_general_detail[0]);
+				res.json(ok.okMaker(contest_general_detail[0]));
+			}
 		}
 	}
 });
@@ -197,6 +200,7 @@ router.post("/password/:cid", async (req, res) => {
 			const password = contest_detail[0].password;
 			const user_password = req.body.password;
 			if (password && password.length > 0 && password.toString() === user_password.toString()) {
+				// eslint-disable-next-line require-atomic-updates
 				req.session.contest[`c${cid}`] = true;
 				res.json({
 					status: "OK"
