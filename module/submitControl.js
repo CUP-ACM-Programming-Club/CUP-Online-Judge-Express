@@ -75,7 +75,9 @@ async function limitAddressForContest(req, contest_id) {
 	if (data && data[0] && data[0].limit_hostname) {
 		limit_hostname = data[0].limit_hostname;
 	}
-	if (limit_hostname && referer.indexOf(limit_hostname) !== -1) {
+	console.log(`limit Hostname: ${limit_hostname}`);
+	console.log(`Referer: ${referer}`);
+	if (limit_hostname && referer.includes(limit_hostname)) {
 		return true;
 	} else if (!limit_hostname) {
 		return true;
@@ -87,14 +89,15 @@ async function limitAddressForContest(req, contest_id) {
 async function limitClassroomAccess(req, contest_id) {
 	const ip = getIP(req);
 	let detectResult = detectClassroom(ip);
-
+	console.log("Detect IP result:", detectResult);
 	const data = await query("select ip_policy from contest where contest_id = ?", [contest_id]);
 	let limitClassroom;
 	if (data && data[0] && data[0].ip_policy) {
-		limitClassroom = data[0].ip_policy.split(",");
+		limitClassroom = data[0].ip_policy.split(",").map(e => e.trim());
 	} else {
 		return true;
 	}
+	console.log("limitClassroom", limitClassroom);
 	if (detectResult === null) {
 		return false;
 	}
