@@ -30,7 +30,7 @@ class CachePool {
 	}
 
 	async set(key, value) {
-		segLock.getLock(key);
+		await segLock.getLock(key);
 		this.__cache__[key] = {
 			data: value,
 			time: dayjs()

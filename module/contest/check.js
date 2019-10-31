@@ -1,4 +1,4 @@
-const [error] = require("../const_var");
+const {error} = require("../constants/state");
 const dayjs = require("dayjs");
 const cache_query = require("../mysql_cache");
 module.exports = async (req, res, cid) => {

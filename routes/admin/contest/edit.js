@@ -3,6 +3,7 @@ const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const dayjs = require("dayjs");
 const ProblemSetCachePool = require("../../../module/problemset/ProblemSetCachePool");
+const ContestCachePool = require("../../../module/contest/ContestCachePool");
 
 const router = require("../../../module/admin/baseGetter")("contest", "contest_id");
 const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor,addContestProblem} = require("../../../module/util");
@@ -34,6 +35,7 @@ router.post("/", async (req, res) => {
 		await removeAllCompetitorPrivilege(contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
 		await addContestCompetitor(contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
 		ProblemSetCachePool.removeAll();
+		ContestCachePool.removeAll();
 		res.json(ok.ok);
 	} catch (e) {
 		console.log(e);
