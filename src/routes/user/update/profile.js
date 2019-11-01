@@ -23,7 +23,7 @@ function checkExists(str) {
 
 function checkRequestBodyProperties(body) {
 	for (let index in body) {
-		if (body.hasOwnProperty(index)) {
+		if (Object.hasOwnProperty.call(body, index)) {
 			if (!checkLength(body[index])) {
 				return false;
 			}
