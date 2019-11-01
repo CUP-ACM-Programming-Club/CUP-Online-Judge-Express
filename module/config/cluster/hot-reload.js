@@ -13,6 +13,11 @@ class HotReloadManager {
 				this.restart();
 			});
 		});
+
+		process.on("exit", () => {
+			const safeExit = require("./worker/safe-exit");
+			safeExit();
+		});
 	}
 
 	async restart() {
@@ -23,10 +28,10 @@ class HotReloadManager {
 		for (let i = 0; i < num; ++i) {
 			const destroyWorker = workerList.shift();
 			const forkWorker = cluster.fork();
-			const promise = new Promise(resolve => {
+			const bootstrap = new Promise(resolve => {
 				forkWorker.on("online", resolve);
 			});
-			await promise;
+			await bootstrap;
 			workerList.push(forkWorker);
 			destroyWorker.destroy();
 		}

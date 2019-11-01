@@ -13,6 +13,7 @@ if (cluster.isMaster) {
 	require("../module/config/cluster/hot-reload");
 	const config = global.config;
 	const port = config.ws.http_client_port;
+	let destroying = false;
 	global.restart = true;
 	const spawn = function (i) {
 		workers[i] = cluster.fork();
@@ -37,19 +38,32 @@ if (cluster.isMaster) {
 	};
 
 	process.on("exit", () => {
+		if (destroying) {
+			return;
+		}
+		destroying = true;
 		destroy();
 		process.exit(0);
 	});
 
 	//catches ctrl+c event
 	process.on("SIGINT", () => {
+		if (destroying) {
+			return;
+		}
+		destroying = true;
 		destroy();
 		process.exit(0);
 	});
 	let idx = 0;
+
+	const mod = function (num, div) {
+		return num >= div ? num - div : num;
+	};
+
 	// RoundRobin
-	var worker_index = function (/* ip, len */) {
-		return (idx = (idx + 1) % num_processes);
+	const worker_index = function (/* ip, len */) {
+		return (idx = mod(idx + 1, num_processes));
 	};
 
 	net

@@ -56,8 +56,7 @@ const SolutionUserCollector = require("../module/judger/SolutionUserCollector");
 
 initExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
-const app = require("../app");
-const server = require("http").createServer(app);
+const {app, server} = require("../module/init/http-server");
 const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
 /**
