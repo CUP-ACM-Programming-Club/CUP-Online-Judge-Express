@@ -1,9 +1,13 @@
+interface UserMap {
+	[id: string]: any
+}
 class OnlineUserSet {
+	private readonly __user__: UserMap;
 	constructor() {
 		this.__user__ = {};
 	}
 
-	get(userId) {
+	get(userId: string) {
 		return this.__user__[userId];
 	}
 
@@ -11,13 +15,16 @@ class OnlineUserSet {
 		return Object.values(this.__user__).filter(el => typeof el !== "undefined" && el !== null);
 	}
 
-	set(userId, payload) {
+	set(userId: string, payload: any) {
 		this.__user__[userId] = payload;
 		return this;
 	}
 
-	remove(userId) {
-		delete this.__user__[userId];
+	remove(userId: string) {
+		if (Object.prototype.hasOwnProperty.call(this.__user__, userId)) {
+			delete this.__user__[userId];
+		}
+		return this;
 	}
 }
 

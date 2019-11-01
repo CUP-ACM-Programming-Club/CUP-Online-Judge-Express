@@ -1,4 +1,4 @@
-module.exports = (num) => {
+module.exports = (num: any) => {
 	if (typeof num === "number") {
 		return num - num === 0;
 	}
