@@ -1,7 +1,7 @@
-const CachePool = require("../common/CachePool");
+import CachePool from "../common/CachePool";
 
 class ProblemCachePool extends CachePool {
 
 }
 
-module.exports = new ProblemCachePool();
+export = new ProblemCachePool();

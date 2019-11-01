@@ -1,6 +1,6 @@
 const query = require("./mysql_query");
 const dayjs = require("dayjs");
-const MySQLCachePool = require("../module/mysql/cache");
+const MySQLCachePool = require("./mysql/cache");
 
 function deepCopy(obj) {
 	return JSON.parse(JSON.stringify(obj));

@@ -60,4 +60,4 @@ class CachePool {
 	}
 }
 
-module.exports = CachePool;
+export default CachePool;

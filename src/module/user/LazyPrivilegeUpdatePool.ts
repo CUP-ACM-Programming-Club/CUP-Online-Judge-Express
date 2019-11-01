@@ -1,5 +1,4 @@
 interface UserMap {
-	[id: string]: boolean
 }
 class Pool {
     map: UserMap;
