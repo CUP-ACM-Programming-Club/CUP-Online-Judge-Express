@@ -18,8 +18,14 @@ CUP Online Judge后端模块
 * Redis latest
 * CUP-Online-Judge-Judger(when judger needed)
 
+### Install typescript
+``npm install -g typescript``
+
 ### Install dependencies
 ``npm install``
+
+### Build JavaScript distribution
+``npm run build``
 
 ### Run HTTP Server cluster
 ``npm start``
