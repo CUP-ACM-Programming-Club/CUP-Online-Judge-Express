@@ -6,7 +6,7 @@ const LENGTH_LIMIT = 100;
 const checkPassword = require("../../../module/check_password");
 const loginAction = require("../../../module/login_action");
 const {encryptPassword} = require("../../../module/util");
-const salt = require("../../../config.json").salt || "thisissalt";
+const salt = global.config.salt || "thisissalt";
 
 function checkLength(str) {
 	str += "";

@@ -13,19 +13,25 @@ CUP Online Judge后端模块
 
 ### Requirements
 * Ubuntu 16.04 or later(Recommend)
-* Node.js 10.0.0 or later
+* Node.js 10(LTS) or later(LTS)
 * MySQL 5.7 or later
 * Redis latest
 * CUP-Online-Judge-Judger(when judger needed)
 
-### Pre-Install
+### Install dependencies
 ``npm install``
 
-### Run Program as daemon
+### Run HTTP Server cluster
 ``npm start``
 
-### Stop daemon
+### Stop HTTP Server cluster
 ``npm stop``
+
+### Run Websocket Daemon(Not cluster)
+```npm run websocket:start```
+
+### Stop Websocket Daemon(Not cluster)
+```npm run websocket:stop```
 
 ### Run Program
 ``npm run front``

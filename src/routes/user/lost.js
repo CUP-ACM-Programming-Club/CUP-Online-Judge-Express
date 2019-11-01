@@ -4,7 +4,7 @@ const query = require("../../module/mysql_query");
 const [error, ok] = require("../../module/const_var");
 const {trimProperty, generateNewEncryptPassword} = require("../../module/util");
 const checkPassword = require("../../module/check_password");
-const salt = require("../../config.json").salt || "thisissalt";
+const salt = global.config.salt || "thisissalt";
 
 async function getQuestionHandler(user_id) {
 	const res = await query("select confirmquestion from users where user_id = ?", [user_id]);

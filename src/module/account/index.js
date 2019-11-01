@@ -3,7 +3,7 @@ const dayjs = require("dayjs");
 const sequelize = require("../../orm/instance/sequelize");
 const User = sequelize.import("user", require("../../orm/models/users"));
 User.sync();
-const salt = require("../../config.json").salt;
+const salt = global.config.salt;
 
 async function validateUserId(user_id) {
 	const result = await User.findOne({where: {user_id}});

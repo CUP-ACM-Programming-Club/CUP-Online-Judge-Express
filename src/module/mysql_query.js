@@ -1,6 +1,6 @@
 /*
 const mysql = require("mysql2");
-const config = require('../config.json');
+const config = require('../../config.json');
 const pool = mysql.createPool(config['mysql']);
 const query = function (sql_query, sqlArr, callback) {
     if (typeof callback === "function") {
@@ -40,7 +40,7 @@ const query = function (sql_query, sqlArr, callback) {
 module.exports = query;
 */
 const mysql = require("mysql2");
-const config = require("../config.json");
+const config = global.config;
 //const connection = mysql.createConnection(config["mysql"]);
 let pool = mysql.createPool(config["mysql"]);
 const query = function (sql_query, sqlArr, callback) {

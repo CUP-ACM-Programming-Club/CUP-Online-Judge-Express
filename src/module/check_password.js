@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const {decryptPassword} = require("./util");
-const AESSalt = require("../config").salt || "thisissalt";
+const AESSalt = require("../../config").salt || "thisissalt";
 const checkPassword = (originalPassword, inputPassword, newpassword) => {
 	originalPassword += "";
 	inputPassword += "";

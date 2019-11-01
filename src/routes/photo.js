@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
-const website_dir = require("../config.json").website.dir;
+const website_dir = global.config.website.dir;
 const path = require("path");
 const image_dir = path.join(website_dir, "images");
 const [error] = require("../module/const_var");

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {trimProperty, generateNewEncryptPassword} = require("../../../module/util");
-const salt = require("../../../config.json").salt || "thisissalt";
+const salt = global.config.salt || "thisissalt";
 const [error, ok] = require("../../../module/const_var");
 router.post("/modify", async (req, res) => {
 	try {

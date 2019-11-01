@@ -8,7 +8,7 @@ const fs = require("fs");
 const zlib = require("zlib");
 const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
-const config = require("../config.json");
+const config = global.config;
 let upload = false;
 try {
 	upload = multer({dest: config.problem_upload_dest.dir});

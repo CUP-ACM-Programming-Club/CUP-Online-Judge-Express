@@ -1,5 +1,5 @@
 const Sequelize = require("sequelize");
-const mysqlConfig = require("../../config.json").mysql;
+const mysqlConfig = global.config.mysql;
 const sequelize = new Sequelize("jol", mysqlConfig.user, mysqlConfig.password, {
 	host: mysqlConfig.host,
 	dialect: "mysql",
