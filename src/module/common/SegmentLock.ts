@@ -1,11 +1,16 @@
-const AwaitLock = require("await-lock").default;
+import AwaitLock from "await-lock";
+
+interface Lock {
+	[id: string]: AwaitLock
+}
 
 class SegmentLock {
+	private readonly __lock__: Lock;
 	constructor() {
 		this.__lock__ = {};
 	}
 
-	async getLock(key) {
+	async getLock(key: string) {
 		if (!this.__lock__[key]) {
 			this.__lock__[key] = new AwaitLock();
 		}
@@ -13,7 +18,7 @@ class SegmentLock {
 		await lock.acquireAsync();
 	}
 
-	release(key) {
+	release(key: string) {
 		try {
 			const lock = this.__lock__[key];
 			if (lock) {

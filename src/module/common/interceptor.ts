@@ -1,7 +1,13 @@
-const Interceptor = require("../interceptor/middleware");
+import {Interceptor} from "../interceptor/middleware";
+import {Request, Response, NextFunction} from "express";
 const {ConfigManager} = require("../config/config-manager");
 
-class ConfigInterceptor {
+export class ConfigInterceptor {
+	private readonly interceptorFactory: Interceptor;
+	private readonly additionalValidator: ((...args: any[]) => boolean)[];
+	private switchKey: string | undefined;
+	defaultValue: number | undefined;
+	errorResponse: object | undefined;
 	constructor() {
 		this.interceptorFactory = new Interceptor();
 		this.additionalValidator = [];
@@ -15,12 +21,12 @@ class ConfigInterceptor {
 		return this.switchKey;
 	}
 
-	setSwitchKey (switchKey) {
+	setSwitchKey (switchKey: string) {
 		this.switchKey = switchKey;
 		return this;
 	}
 
-	setAdditionalValidator (validator) {
+	setAdditionalValidator (validator: (...args: any[]) => boolean) {
 		this.additionalValidator.push(validator);
 		return this;
 	}
@@ -29,7 +35,7 @@ class ConfigInterceptor {
 		return this.defaultValue;
 	}
 
-	setDefaultValue (value) {
+	setDefaultValue (value: number) {
 		this.defaultValue = value;
 		return this;
 	}
@@ -38,7 +44,7 @@ class ConfigInterceptor {
 		return this.errorResponse;
 	}
 
-	setErrorResponse (response) {
+	setErrorResponse (response: object) {
 		this.errorResponse = response;
 		return this;
 	}
@@ -55,10 +61,10 @@ class ConfigInterceptor {
 			interceptorFactory.setErrorResponse(this.errorResponse);
 		}
 		const middleware = interceptorFactory.getInterceptorInstance();
-		return function (req, res, next) {
+		return function (req: Request, res: Response, next: NextFunction) {
 			const condition = additionalValidator
 				.map(element => element(req))
-				.reduce((a, b) => a + b, 0);
+				.reduce((a, b) => a || b, false);
 			if (condition) {
 				next();
 			}
@@ -68,6 +74,3 @@ class ConfigInterceptor {
 		};
 	}
 }
-
-
-module.exports = ConfigInterceptor;

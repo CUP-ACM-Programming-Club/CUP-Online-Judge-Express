@@ -18,6 +18,7 @@
   "dependencies": {
     "@ryanlee2014/markdown-it-katex": "^1.0.4",
     "@types/bluebird": "^3.5.28",
+    "@types/express": "^4.17.1",
     "@types/validator": "^10.11.3",
     "appmetrics-dash": "^5.2.0",
     "await-lock": "^2.0.0",
