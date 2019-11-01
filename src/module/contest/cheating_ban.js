@@ -2,7 +2,6 @@ const {assertInt, assertString} = require("../util");
 const query = require("../mysql_query");
 const dayjs = require("dayjs");
 const BanModel = require("../user/ban");
-const banModel = new BanModel();
 const cache = {};
 
 function getSet(contest, user_id) {
@@ -31,7 +30,7 @@ async function addToCacheAndDatabase(payload) {
 }
 
 async function banUser(user_id, datetime) {
-	await banModel.set(user_id, datetime);
+	await BanModel.set(user_id, datetime);
 }
 
 async function removeBannedSolution(contest, user_id) {

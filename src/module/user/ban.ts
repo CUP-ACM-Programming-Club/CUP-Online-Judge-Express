@@ -19,4 +19,4 @@ class Ban {
 	}
 }
 
-module.exports = new Ban();
+export = new Ban();

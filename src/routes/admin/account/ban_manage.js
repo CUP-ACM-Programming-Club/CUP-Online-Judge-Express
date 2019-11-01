@@ -1,7 +1,7 @@
 const express = require("express"), router = express.Router();
 const BanModel = require("../../../module/user/ban");
 const banModel = new BanModel();
-const [error, ok] = require("../../../module/const_var");
+const {error, ok} = require("../../../module/constants/state");
 const {trimProperty} = require("../../../module/util");
 router.get("/", async (req, res) => {
 	try {
