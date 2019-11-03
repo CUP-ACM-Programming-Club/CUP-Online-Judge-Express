@@ -4,7 +4,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const cache_query = require("../module/mysql_cache");
 const {checkCaptcha} = require("../module/captcha_checker");
-const [error, ok] = require("../module/const_var");
+const {error, ok} = require("../module/constants/state");
 const const_variable = require("../module/const_name");
 const checkSourceId = (req) => {
 	const source = req.params.source;

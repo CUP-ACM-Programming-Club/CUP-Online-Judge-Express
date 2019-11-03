@@ -1,14 +1,15 @@
-const sequelize = require("../../orm/instance/sequelize");
+import sequelize from "../../orm/instance/sequelize";
 const Contest = sequelize.import("contest", require("../../orm/models/contest"));
 
 class ContestInfoManager {
+	private contestId: number | undefined;
 	constructor () {}
 
 	static newInstance() {
 		return new ContestInfoManager();
 	}
 
-	setContestId (contestId) {
+	setContestId (contestId: number) {
 		this.contestId = contestId;
 		return this;
 	}
