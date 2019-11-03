@@ -51,8 +51,7 @@ interface CompileInfoPayload {
 async function compileErrorStore(payload: CompileInfoPayload) {
 	const {compile_info, solution_id} = payload;
 	await query("delete from compileinfo where solution_id = ?", [solution_id]);
-	await query("insert into compileinfo values(?, ?)", [solution_id, compile_info]);
-}
+	await query("insert into compileinfo values(?, ?)  on duplicate key update  error = ?", [solution_id, compile_info, compile_info]);}
 
 interface RuntimeInfoPayload {
 	runtime_info: string | null | undefined,
@@ -62,7 +61,7 @@ interface RuntimeInfoPayload {
 async function runtimeErrorStore(payload: RuntimeInfoPayload) {
 	const {runtime_info, solution_id} = payload;
 	await query("delete from runtimeinfo where solution_id = ?", [solution_id]);
-	await query("insert into runtimeinfo values(?, ?)", [solution_id, runtime_info]);
+	await query("insert into runtimeinfo values(?, ?) on duplicate key update error = ?", [solution_id, runtime_info, runtime_info]);
 }
 
 async function storeNormalSubmission(payload: SubmissionPayload) {
