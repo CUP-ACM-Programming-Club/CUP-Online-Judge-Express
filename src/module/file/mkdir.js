@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 
 function mkdir(dirname, callback) {
-	fs.exists(dirname, function (exists) {
-		if (exists) {
+	fs.access(dirname, function (err) {
+		if (!err) {
 			callback();
 		} else {
 			mkdir(path.dirname(dirname), function () {
