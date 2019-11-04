@@ -1,6 +1,6 @@
 const query = require("../mysql_query");
 const isNumber = require("../util/isNumber").default;
-const SolutionUserCollector = require("../judger/SolutionUserCollector");
+const SolutionUserCollector = require("./SolutionUserCollector").default;
 const {getSolutionInfo} = require("../solution/solution");
 
 async function maintainUserInfo(user_id: string) {
@@ -95,6 +95,9 @@ async function storeSubmission(payload: SubmissionPayload) {
 		await maintainUserInfo(payload.user_id);
 		Object.assign(payload, await getSolutionInfo(payload.solution_id));
 		await maintainProblem(payload.problem_id);
+	}
+	if (payload.runtime_info) {
+		delete payload.runtime_info;
 	}
 }
 

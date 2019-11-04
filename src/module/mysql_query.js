@@ -15,7 +15,7 @@ const query = function (sql_query, sqlArr, callback) {
 		return new Promise((resolve, reject) => {
 			pool.query(sql_query, sqlArr, function (err, results, fields) {
 				if (err) {
-					reject(err);
+					reject({error:err, sql: sql_query, args: sqlArr});
 				}
 				else {
 					resolve(results, fields);

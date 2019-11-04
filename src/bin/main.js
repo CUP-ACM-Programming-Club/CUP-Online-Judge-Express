@@ -51,7 +51,7 @@ const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
 const OnlineUserSet = require("../module/websocket/OnlineUserSet");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
-const SolutionUserCollector = require("../module/judger/SolutionUserCollector");
+const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
 
 initExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
