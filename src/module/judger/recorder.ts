@@ -1,5 +1,5 @@
 const query = require("../mysql_query");
-const isNumber = require("../util/isNumber");
+const isNumber = require("../util/isNumber").default;
 const SolutionUserCollector = require("../judger/SolutionUserCollector");
 const {getSolutionInfo} = require("../solution/solution");
 

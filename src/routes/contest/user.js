@@ -1,8 +1,6 @@
 const express = require("express");
-const cache_query = require("../../module/mysql_cache");
-const query = cache_query;
-const [error, ok] = require("../../module/const_var");
-const isNumber = require("../../module/util/isNumber");
+const {error} = require("../../module/constants/state");
+const isNumber = require("../../module/util/isNumber").default;
 const router = express.Router();
 
 const checkContestID = function(cid) {

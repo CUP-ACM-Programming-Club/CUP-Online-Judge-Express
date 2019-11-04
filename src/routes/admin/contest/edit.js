@@ -1,4 +1,4 @@
-const isNumber = require("../../../module/util/isNumber");
+const isNumber = require("../../../module/util/isNumber").default;
 const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const dayjs = require("dayjs");

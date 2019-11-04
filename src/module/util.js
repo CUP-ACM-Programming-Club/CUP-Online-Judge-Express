@@ -1,6 +1,6 @@
 const crypto = require("../module/encrypt");
 const query = require("./mysql_query");
-const isNumber = require("./util/isNumber");
+const isNumber = require("./util/isNumber").default;
 function reverse(val) {
 	if (typeof val !== "string")
 		return (val + "").split("").reverse().join("");
@@ -30,8 +30,8 @@ function checkJSON(text) {
 }
 
 function trimProperty(target) {
-	for (let property in target) {
-		if (target.hasOwnProperty(property) && typeof target[property] === "string") {
+	for (const property in target) {
+		if (Object.prototype.hasOwnProperty.call(target, property) && typeof target[property] === "string") {
 			target[property] = target[property].trim();
 		}
 	}

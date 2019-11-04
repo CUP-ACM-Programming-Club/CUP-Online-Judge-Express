@@ -1,5 +1,5 @@
-const isNumber = require("../util/isNumber");
-const [error, ok] = require("../const_var");
+const isNumber = require("../util/isNumber").default;
+const {error, ok} = require("../constants/state");
 const query = require("../mysql_query");
 module.exports = function (target, baseId) {
 	const express = require("express");
