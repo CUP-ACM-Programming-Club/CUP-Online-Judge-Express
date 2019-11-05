@@ -7,7 +7,7 @@ const detectClassroom = require("./detect_classroom");
 const getIP = require("./getIP");
 const [error] = require("../module/const_var");
 const crypto = require("crypto");
-
+const login_action = require("./login_action");
 
 const NORMAL_SUBMISSION = 1;
 const CONTEST_SUBMISSION = 2;
@@ -55,8 +55,16 @@ async function getLangmaskForTopic(topic_id) {
 	return data[0].langmask;
 }
 
+function judgeContestPrivilege(req, contest_id) {
+	return !!(req.session.isadmin || req.session.contest[`c${contest_id}`] || req.session.contest_maker[`c${contest_id}`] || req.session.contest_manager);
+}
+
 async function checkContestPrivilege(req, contest_id) {
-	if (req.session.isadmin || req.session.contest[`c${contest_id}`] || req.session.contest_maker[`c${contest_id}`] || req.session.contest_manager) {
+	if (judgeContestPrivilege(req, contest_id)) {
+		return true;
+	}
+	await login_action(req, req.session.user_id);
+	if (judgeContestPrivilege(req, contest_id)) {
 		return true;
 	}
 	const data = await cache_query("select private,defunct from contest where contest_id = ?", [contest_id]);
@@ -222,7 +230,6 @@ async function prepareRequest(req, cookie) {
 		let token = cookie["token"];
 		const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
 		if (original_token.indexOf(token) !== -1) {
-			const login_action = require("./login_action");
 			await login_action(obj, user_id);
 		}
 		Object.assign(req, obj);
