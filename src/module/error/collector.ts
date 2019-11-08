@@ -1,11 +1,12 @@
-const dayjs = require("dayjs");
+import dayjs from "dayjs";
 
 class ErrorCollector {
+	private readonly __error__: any;
 	constructor() {
 		this.__error__ = {};
 	}
 
-	push(fileName, error) {
+	push(fileName: string, error: any) {
 		const errorObject = {
 			time: dayjs().format("YYYY-MM-DD HH:mm:ss"),
 			content: error
@@ -15,7 +16,7 @@ class ErrorCollector {
 		return this;
 	}
 
-	getErrorByFileName(fileName) {
+	getErrorByFileName(fileName: string) {
 		return this.__error__[fileName] || [];
 	}
 

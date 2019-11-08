@@ -1,10 +1,28 @@
-const redis = require("redis");
-const bluebird = require("bluebird");
+import bluebird from "bluebird";
+import * as redis from "redis";
+import {Worker} from "cluster";
+import {RedisClient} from "redis";
+
+declare global {
+	namespace NodeJS {
+		interface Global {
+			unit_test: string | undefined
+		}
+	}
+}
+
+export interface IRedis extends RedisClient {
+	[x: string]: any
+}
+
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
+let redisClient: IRedis;
+
+
 if (global.unit_test === "autotest") {
-	module.exports = {
+	redisClient = {
 		lrangeAsync: function () {
 			return ["test"];
 		},
@@ -16,10 +34,14 @@ if (global.unit_test === "autotest") {
 		hmset: function () {
 			// do nothing
 		}
-	};
+	} as unknown as IRedis;
 } else {
-	module.exports = redis.createClient();
+	redisClient = redis.createClient() as IRedis;
 }
+
+module.exports = redisClient;
+
+export default redisClient;
 /*
 exports.lrange=(key,start,end)=>{
     return new Promise((resolve,reject)=>{

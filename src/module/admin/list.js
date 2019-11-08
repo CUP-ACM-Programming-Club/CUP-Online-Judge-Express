@@ -1,6 +1,6 @@
 const express = require("express");
 const query = require("../../module/mysql_query");
-const {error, ok} = require("../../module/constants/state");
+const {error, ok} = require("../constants/state");
 
 module.exports = function (target, opts = {}) {
 	const router = express.Router();

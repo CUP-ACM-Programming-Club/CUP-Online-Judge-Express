@@ -1,5 +1,5 @@
 const query = require("../mysql_cache");
-const [error, ok] = require("../const_var");
+const {error, ok} = require("../constants/state");
 module.exports = async function (req, database, solution_id, own_watch = false) {
 	const user_id = req.session.user_id;
 	const infoPromise = query(`select error from ${database} where solution_id = ?`, [solution_id]);

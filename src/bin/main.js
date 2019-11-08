@@ -4,7 +4,8 @@ const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
 const config = global.config;
-
+import UserValidatorMiddleware from "../module/websocket/UserValidatorMiddleware";
+import BindUserInfo from "../module/websocket/BindUserInfo";
 // const easyMonitor = require("easy-monitor");
 // easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
@@ -30,14 +31,10 @@ if (process.env.MODE === "websocket") {
 	const dashConfig = require("../module/init/dash-config");
 	dash.monitor(dashConfig);
 }
-
-const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
-const cachePool = require("../module/cachePool");
 const submitControl = require("../module/submitControl");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-const client = require("../module/redis");
 const WebSocket = require("ws");
 
 const BanCheaterModel = require("../module/contest/cheating_ban");
@@ -342,60 +339,13 @@ io.use((socket, next) => {
  * 验证用户身份合法性
  */
 
-io.use(async (socket, next) => {
-	const parse_cookie = cookie.parse(socket.handshake.headers.cookie);
-	const user_id = socket.user_id = parse_cookie["user_id"] || socket.request.session.user_id;
-	const newToken = parse_cookie["newToken"];
-	const token = parse_cookie["token"];
-	if (!socket.user_id) {
-		next(new Error("Auth failed"));
-		return;
-	}
-	if (socket.request.session && socket.request.session.user_id) {
-		socket.auth = true;
-		next();
-		return;
-	}
-	const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
-	const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
-	if (new_token_list.indexOf(newToken) !== -1 || original_token.indexOf(token) !== -1) {
-		Object.assign(socket, {auth: true});
-		next();
-	} else {
-		next(new Error("Token Expired."));
-	}
-});
+io.use(UserValidatorMiddleware);
 
 /**
  * 查询用户权限
  */
 
-io.use(async (socket, next) => {
-	if (socket.privilege === undefined) {
-		let _privilege;
-		if ((_privilege = cachePool.get(`${socket.user_id}privilege`))) {
-			socket.privilege = parseInt(_privilege) > 0;
-		} else {
-			const privilege = await
-			query("SELECT count(1) as cnt FROM privilege WHERE rightstr='administrator' and " +
-                    "user_id=?", [socket.user_id]);
-			socket.privilege = parseInt(privilege[0].cnt) > 0;
-			cachePool.set(`${socket.user_id}privilege`, socket.privilege ? "1" : "0", 60);
-		}
-	}
-	if (socket.user_nick === undefined) {
-		let _nick;
-		if ((_nick = cachePool.get(`${socket.user_id}nick`)) && _nick.length) {
-			socket.user_nick = _nick;
-		} else {
-			const nick = await
-			query("SELECT nick FROM users WHERE user_id=?", [socket.user_id]);
-			socket.user_nick = nick[0].nick;
-			cachePool.set(`${socket.user_id}nick`, socket.user_nick, 60);
-		}
-	}
-	next();
-});
+io.use(BindUserInfo);
 
 /**
  * 分离URL,根据权限分离用户

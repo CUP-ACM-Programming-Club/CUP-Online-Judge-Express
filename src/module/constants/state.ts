@@ -1,5 +1,5 @@
-const error = {};
-const ok = {};
+const error: any = {};
+const ok: any = {};
 error.database = {
 	status: "error",
 	statement: "database error"
@@ -93,7 +93,7 @@ error.unavailable = {
 	rule: -1
 };
 
-error.errorMaker = function(statement) {
+error.errorMaker = function(statement: string) {
 	return {
 		status: "error",
 		statement
@@ -104,7 +104,7 @@ error.base = {
 	status: "error"
 };
 
-error.attributeMaker = function(source) {
+error.attributeMaker = function(source: object) {
 	let target = Object.assign({}, error.base);
 	return Object.assign(target, source);
 };
@@ -122,7 +122,7 @@ ok.serverReceived = {
 	statement:"server has receive your post"
 };
 
-ok.okMaker = function(data) {
+ok.okMaker = function(data: any) {
 	return {
 		status: "OK",
 		data
