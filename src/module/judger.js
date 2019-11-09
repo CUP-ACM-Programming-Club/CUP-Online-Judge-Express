@@ -182,5 +182,6 @@ class localJudger extends eventEmitter {
 	}
 }
 
+const config = global.config;
 
-module.exports = localJudger;
+module.exports = new localJudger(config.judger.oj_home, config.judger.oj_judge_num);

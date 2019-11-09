@@ -12,10 +12,9 @@ require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 let port, wsport;
-let localJudge, dockerRunner;
-const LocalJudge = require("../module/judger");
+let dockerRunner;
+const localJudge = require("../module/judger");
 const _dockerRunner = require("../module/docker_runner");
-localJudge = new LocalJudge(config.judger.oj_home, config.judger.oj_judge_num);
 dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
@@ -47,6 +46,9 @@ const wss = new WebSocket.Server({port: wsport});
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
 const OnlineUserSet = require("../module/websocket/OnlineUserSet");
+const NormalUserSet = require("../module/websocket/NormalUserSet");
+const AdminUserSet = require("../module/websocket/AdminUserSet");
+const SubmissionSet = require("../module/websocket/SubmissionSet");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
 
@@ -62,21 +64,6 @@ require("../module/init/express_loader")(app, io);
 let user_socket = {};
 
 let socketSet = {};
-/**
- *
- * @type {{Socket}} 记录管理员用户的Socket连接
- */
-let admin_user = {};
-/**
- *
- * @type {{Socket}} 记录普通用户的Socket连接
- */
-let normal_user = {};
-/**
- *
- * @type {{Socket}} 记录solution_id对应的Socket连接
- */
-let submissions = {};
 
 /**
  * 记录打开状态页面的Socket连接
@@ -104,7 +91,7 @@ let problemFromSpecialSubject = {};
 let submitUserInfo = {};
 let solutionContext = {};
 
-global.submissions = submissions;
+global.submissions = SubmissionSet.getInnerStorage();
 global.contest_mode = false;
 
 function clearBinding(solution_id) {
@@ -118,7 +105,7 @@ function clearBinding(solution_id) {
 		delete submissionOrigin[solution_id];
 	}
 	delete submitUserInfo[solution_id];
-	delete submissions[solution_id];
+	SubmissionSet.remove(solution_id);
 	delete solutionContext[solution_id];
 }
 
@@ -152,13 +139,14 @@ wss.on("connection", function (ws) {
 			await storeSubmission(solutionPack);
 		}
 
-		if (submissions[solutionId]) {
-			submissions[solutionId].emit("result", solutionPack);
+		if (SubmissionSet.has(solutionId)) {
+			SubmissionSet.get(solutionId).emit("result", solutionPack);
 			sendMessage(pagePush.status, "result", solutionPack, 1, !!problemFromContest[solutionId]);
 			if (submissionOrigin[solutionId]) {
 				sendMessage(pagePush.contest_status[submissionOrigin[solutionId]], "result", solutionPack, 1);
 			}
 		}
+
 		if (finished) {
 			clearBinding(solutionId);
 		}
@@ -272,8 +260,8 @@ function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
 }
 
 localJudge.on("change", (freeJudger) => {
-	sendMessage(normal_user, "judgerChange", freeJudger);
-	sendMessage(admin_user, "judgerChange", freeJudger);
+	sendMessage(NormalUserSet.getInnerStorage(), "judgerChange", freeJudger);
+	sendMessage(AdminUserSet.getInnerStorage(), "judgerChange", freeJudger);
 });
 
 /**
@@ -290,11 +278,11 @@ function onlineUserBroadcast() {
 			};
 		})
 	};
-	sendMessage(normal_user, "user", {
+	sendMessage(NormalUserSet.getInnerStorage(), "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
 	userArr.user = online;
-	sendMessage(admin_user, "user", {
+	sendMessage(NormalUserSet.getInnerStorage(), "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
 }
@@ -356,6 +344,8 @@ io.use((socket, next) => {
 	const referer = socket.handshake.headers.referer || "";
 	const origin = socket.handshake.headers.origin || "";
 	const _url = referer.substring(origin.length || referer.indexOf("/", 9));
+	const userId = socket.user_id;
+
 	if (_url.length && _url.length > 0) {
 		socket.url = _url;
 	}
@@ -363,11 +353,11 @@ io.use((socket, next) => {
 		if (_url.length > 0) {
 			pos.url.push(_url);
 		}
-		user_socket[socket.user_id].push(socket);
+		user_socket[userId].push(socket);
 		if (socket.privilege) {
-			admin_user[socket.user_id].push(socket);
+			AdminUserSet.get(userId).push(socket);
 		} else {
-			normal_user[socket.user_id].push(socket);
+			NormalUserSet.get(userId).push(socket);
 		}
 	} else {
 		let user = {
@@ -387,12 +377,12 @@ io.use((socket, next) => {
 		if (_url.length && _url.length > 0) {
 			user.url.push(_url);
 		}
-		user_socket[socket.user_id] = [socket];
-		OnlineUserSet.set(socket.user_id, user);
+		user_socket[userId] = [socket];
+		OnlineUserSet.set(userId, user);
 		if (socket.privilege) {
-			admin_user[socket.user_id] = [socket];
+			AdminUserSet.set(userId, [socket]);
 		} else {
-			normal_user[socket.user_id] = [socket];
+			NormalUserSet.set(userId, [socket]);
 		}
 	}
 	onlineUserBroadcast();
@@ -549,7 +539,7 @@ io.on("connection", async function (socket) {
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
-		submissions[submission_id] = socket;
+		SubmissionSet.set(submission_id, socket);
 		const avatar = await cache_query("select avatar,avatarUrl from users where user_id = ?", [data.user_id]);
 		submitUserInfo[submission_id] = {
 			nick: data.nick,
@@ -602,7 +592,7 @@ io.on("connection", async function (socket) {
 		default:
 			localJudge.addTask(data.submission_id, socket.privilege);
 		}
-		sendMessage(admin_user, "judger", localJudge.getStatus());
+		sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 	});
 	/**
      * 全局推送功能
@@ -664,23 +654,21 @@ io.on("connection", async function (socket) {
 			removeStatus(socket);
 			let socket_pos;
 			if (socket.privilege) {
-				socket_pos = admin_user[user_id].indexOf(socket);
-				if (~socket_pos)
-					admin_user[user_id].splice(socket_pos, 1);
+				socket_pos = AdminUserSet.get(user_id).indexOf(socket);
+				if (~socket_pos) {
+					AdminUserSet.get(user_id).splice(socket_pos, 1);
+				}
 			} else {
-				socket_pos = normal_user[user_id].indexOf(socket);
-				if (~socket_pos)
-					normal_user[user_id].splice(socket_pos, 1);
+				socket_pos = NormalUserSet.get(user_id).indexOf(socket);
+				if (~socket_pos) {
+					NormalUserSet.get(user_id).splice(socket_pos, 1);
+				}
 			}
 			if (!pos.url.length) {
 				delete user_socket[user_id];
 				OnlineUserSet.remove(user_id);
-				if (admin_user[user_id]) {
-					delete admin_user[user_id];
-				}
-				if (normal_user[user_id]) {
-					delete normal_user[user_id];
-				}
+				AdminUserSet.remove(user_id);
+				NormalUserSet.remove(user_id);
 			}
 			onlineUserBroadcast();
 		}
