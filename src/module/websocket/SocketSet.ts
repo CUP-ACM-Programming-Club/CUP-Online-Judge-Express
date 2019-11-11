@@ -2,7 +2,7 @@ interface SocketMap {
 	[id: string]: any
 }
 
-class SocketSet {
+export class SocketSet {
 	private readonly __socket__: SocketMap;
 	constructor () {
 		this.__socket__ = {};
@@ -15,6 +15,20 @@ class SocketSet {
 	setSocket(id: string, payload: any) {
 		this.__socket__[id] = payload;
 	}
+
+	remove(id: string) {
+		if (Object.prototype.hasOwnProperty.call(this.__socket__, id)) {
+			delete this.__socket__[id];
+		}
+	}
+
+	getInnerStorage() {
+		return this.__socket__;
+	}
+
+	toArray() {
+		return Object.values(this.__socket__);
+	}
 }
 
-module.exports = SocketSet;
+module.exports = new SocketSet();

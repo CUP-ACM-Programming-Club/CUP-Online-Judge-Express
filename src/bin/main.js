@@ -49,6 +49,8 @@ const OnlineUserSet = require("../module/websocket/OnlineUserSet");
 const NormalUserSet = require("../module/websocket/NormalUserSet");
 const AdminUserSet = require("../module/websocket/AdminUserSet");
 const SubmissionSet = require("../module/websocket/SubmissionSet");
+const SocketSet = require("../module/websocket/SocketSet");
+const UserSocketSet = require("../module/websocket/UserSocketSet");
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
 
@@ -57,13 +59,6 @@ ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 const {app, server} = require("../module/init/http-server");
 const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
-/**
- *
- * @type {{Socket}} 记录在线用户的Socket连接
- */
-let user_socket = {};
-
-let socketSet = {};
 
 /**
  * 记录打开状态页面的Socket连接
@@ -353,7 +348,7 @@ io.use((socket, next) => {
 		if (_url.length > 0) {
 			pos.url.push(_url);
 		}
-		user_socket[userId].push(socket);
+		UserSocketSet.get(userId).push(socket);
 		if (socket.privilege) {
 			AdminUserSet.get(userId).push(socket);
 		} else {
@@ -377,7 +372,7 @@ io.use((socket, next) => {
 		if (_url.length && _url.length > 0) {
 			user.url.push(_url);
 		}
-		user_socket[userId] = [socket];
+		UserSocketSet.set(userId, [socket]);
 		OnlineUserSet.set(userId, user);
 		if (socket.privilege) {
 			AdminUserSet.set(userId, [socket]);
@@ -436,7 +431,7 @@ function buildStatusSocket(socket) {
 io.use((socket, next) => {
 	buildStatusSocket(socket);
 	socket.currentTimeStamp = (new Date() - 0);
-	socketSet[socket.currentTimeStamp] = socket;
+	SocketSet.setSocket(socket.currentTimeStamp, socket);
 	next();
 });
 /**
@@ -455,6 +450,7 @@ io.on("connection", async function (socket) {
 			pos.browser_core = data["browser_core"] || "";
 			pos.useragent = data["useragent"] || "";
 			pos.screen = data["screen"] || "";
+			pos.frontend_version = data.frontend_version || "1.0.0-default";
 			pos.nick = pos.nick || socket.user_nick || data["nick"];
 			pos.lastUpdated = Date.now();
 			if ((!socket.url || (socket.url.length && socket.url.length === 0)) && data["url"]) {
@@ -599,7 +595,7 @@ io.on("connection", async function (socket) {
      */
 	socket.on("msg", function (data) {
 		if (data.to) {
-			for (let soc of socketSet) {
+			for (const soc of SocketSet.toArray()) {
 				if (soc.url.indexOf(data.to) === 0) {
 					soc.emit("msg", data);
 				}
@@ -615,8 +611,9 @@ io.on("connection", async function (socket) {
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data.to;
-		if (user_socket[toPersonUser_id] && user_socket[toPersonUser_id].emit) {
-			sendMessage(user_socket[toPersonUser_id], "chat", {
+		const userSocketList = UserSocketSet.get(toPersonUser_id);
+		if (userSocketList && userSocketList.length && userSocketList.length > 0 && userSocketList[0].emit) {
+			sendMessage(userSocketList, "chat", {
 				from: data.from,
 				content: data.content,
 				time: Date.now().toString()
@@ -642,33 +639,33 @@ io.on("connection", async function (socket) {
      * 断开连接销毁所有保存的数据
      */
 	socket.on("disconnect", function () {
-		const user_id = socket.user_id;
-		let pos = OnlineUserSet.get(user_id);
+		const userId = socket.user_id;
+		let pos = OnlineUserSet.get(userId);
 		if (pos && !socket.hasClosed) {
 			socket.hasClosed = true;
 			removeWhiteboardRecord();
-			delete socketSet[socket.currentTimeStamp];
+			SocketSet.remove(socket.currentTimeStamp);
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
 				pos.url.splice(url_pos, 1);
 			removeStatus(socket);
 			let socket_pos;
 			if (socket.privilege) {
-				socket_pos = AdminUserSet.get(user_id).indexOf(socket);
+				socket_pos = AdminUserSet.get(userId).indexOf(socket);
 				if (~socket_pos) {
-					AdminUserSet.get(user_id).splice(socket_pos, 1);
+					AdminUserSet.get(userId).splice(socket_pos, 1);
 				}
 			} else {
-				socket_pos = NormalUserSet.get(user_id).indexOf(socket);
+				socket_pos = NormalUserSet.get(userId).indexOf(socket);
 				if (~socket_pos) {
-					NormalUserSet.get(user_id).splice(socket_pos, 1);
+					NormalUserSet.get(userId).splice(socket_pos, 1);
 				}
 			}
 			if (!pos.url.length) {
-				delete user_socket[user_id];
-				OnlineUserSet.remove(user_id);
-				AdminUserSet.remove(user_id);
-				NormalUserSet.remove(user_id);
+				UserSocketSet.remove(userId);
+				OnlineUserSet.remove(userId);
+				AdminUserSet.remove(userId);
+				NormalUserSet.remove(userId);
 			}
 			onlineUserBroadcast();
 		}
