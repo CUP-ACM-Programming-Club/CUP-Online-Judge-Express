@@ -277,7 +277,7 @@ function onlineUserBroadcast() {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
 	userArr.user = online;
-	sendMessage(NormalUserSet.getInnerStorage(), "user", {
+	sendMessage(AdminUserSet.getInnerStorage(), "user", {
 		user: userArr, judger: localJudge.getStatus().free_judger
 	});
 }
