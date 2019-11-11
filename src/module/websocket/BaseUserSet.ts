@@ -41,5 +41,4 @@ export class BaseUserSet {
 
 const baseUserSet = new BaseUserSet();
 
-module.exports = baseUserSet;
 export default baseUserSet;

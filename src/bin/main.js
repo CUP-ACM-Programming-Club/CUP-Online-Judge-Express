@@ -46,11 +46,11 @@ const wss = new WebSocket.Server({port: wsport});
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
 const OnlineUserSet = require("../module/websocket/OnlineUserSet");
-const NormalUserSet = require("../module/websocket/NormalUserSet");
-const AdminUserSet = require("../module/websocket/AdminUserSet");
-const SubmissionSet = require("../module/websocket/SubmissionSet");
-const SocketSet = require("../module/websocket/SocketSet");
-const UserSocketSet = require("../module/websocket/UserSocketSet");
+import NormalUserSet from "../module/websocket/NormalUserSet";
+import AdminUserSet from "../module/websocket/AdminUserSet";
+import SubmissionSet from "../module/websocket/SubmissionSet";
+import SocketSet from "../module/websocket/SocketSet";
+import UserSocketSet from "../module/websocket/UserSocketSet";
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
 

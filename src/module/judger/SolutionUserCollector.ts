@@ -18,5 +18,5 @@ class SolutionUserCollector {
 }
 
 const solutionUserCollector =  new SolutionUserCollector();
-module.exports = solutionUserCollector;
+
 export default solutionUserCollector;

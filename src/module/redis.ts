@@ -40,8 +40,6 @@ if (global.unit_test === "autotest") {
 }
 
 module.exports = redisClient;
-
-export default redisClient;
 /*
 exports.lrange=(key,start,end)=>{
     return new Promise((resolve,reject)=>{

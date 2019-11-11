@@ -1,7 +1,7 @@
 import cookie from "cookie";
 import {Socket} from "socket.io"
-import client from "../redis";
 import {UserSocket} from "./Socket";
+const client = require("../redis");
 
 export default async function userValidator(socket: UserSocket, next: (err?: any) => void) {
 
