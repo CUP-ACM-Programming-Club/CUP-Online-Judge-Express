@@ -2,7 +2,7 @@ const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
 const {ConfigManager} = require("../config/config-manager");
 const DEFAULT_LOOP_SECONDS = 3000;
-const localJudger = require("../judger");
+const localJudger = require("../judger").localJudger;
 
 function isJudgerGraySolutionId (solutionId) {
 	solutionId = parseInt(solutionId);
