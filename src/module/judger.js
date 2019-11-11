@@ -8,7 +8,7 @@ const os = require("os");
 const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
 
-export class localJudger extends eventEmitter {
+class localJudger extends eventEmitter {
 	/**
      * 构造判题机
      * @param {String} home_dir 评测机所在的目录
@@ -183,5 +183,5 @@ export class localJudger extends eventEmitter {
 }
 
 const config = global.config;
-
+export default localJudger;
 module.exports = new localJudger(config.judger.oj_home, config.judger.oj_judge_num);

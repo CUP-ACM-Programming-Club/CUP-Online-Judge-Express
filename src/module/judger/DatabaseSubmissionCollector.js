@@ -2,7 +2,6 @@ const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
 const {ConfigManager} = require("../config/config-manager");
 const DEFAULT_LOOP_SECONDS = 3000;
-const localJudger = require("../judger").localJudger;
 
 function isJudgerGraySolutionId (solutionId) {
 	solutionId = parseInt(solutionId);
@@ -43,13 +42,8 @@ function DatabaseSubmissionCollector () {
 }
 
 DatabaseSubmissionCollector.prototype.setJudger = function (judger) {
-	if (judger instanceof localJudger) {
-		this.judger = judger;
-		return this;
-	}
-	else {
-		return null;
-	}
+	this.judger = judger;
+	return this;
 };
 
 DatabaseSubmissionCollector.prototype.start = function () {
