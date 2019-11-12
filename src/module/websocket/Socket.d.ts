@@ -5,5 +5,6 @@ export interface UserSocket extends Socket {
     auth: boolean | undefined,
     privilege: boolean | undefined,
     user_nick: string | undefined,
-    request: any
+    request: any,
+    url?: string
 }

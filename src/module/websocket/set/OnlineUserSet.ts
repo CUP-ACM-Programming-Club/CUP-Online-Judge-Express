@@ -1,7 +1,7 @@
 interface UserMap {
 	[id: string]: any
 }
-class OnlineUserSet {
+export class OnlineUserSet {
 	private readonly __user__: UserMap;
 	constructor() {
 		this.__user__ = {};
@@ -28,4 +28,4 @@ class OnlineUserSet {
 	}
 }
 
-module.exports = new OnlineUserSet();
+export default new OnlineUserSet();

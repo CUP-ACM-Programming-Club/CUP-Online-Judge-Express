@@ -13,7 +13,7 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 let port, wsport;
 let dockerRunner;
-const localJudge = require("../module/judger");
+import localJudge from "../module/judger";
 const _dockerRunner = require("../module/docker_runner");
 dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 if (process.env.MODE === "websocket") {
@@ -45,12 +45,16 @@ const {ConfigManager} = require("../module/config/config-manager");
 const wss = new WebSocket.Server({port: wsport});
 const banCheaterModel = new BanCheaterModel();
 const ErrorCollector = require("../module/error/collector");
-const OnlineUserSet = require("../module/websocket/OnlineUserSet");
-import NormalUserSet from "../module/websocket/NormalUserSet";
-import AdminUserSet from "../module/websocket/AdminUserSet";
-import SubmissionSet from "../module/websocket/SubmissionSet";
-import SocketSet from "../module/websocket/SocketSet";
-import UserSocketSet from "../module/websocket/UserSocketSet";
+import OnlineUserSet from "../module/websocket/set/OnlineUserSet";
+import NormalUserSet from "../module/websocket/set/NormalUserSet";
+import AdminUserSet from "../module/websocket/set/AdminUserSet";
+import SubmissionSet from "../module/websocket/set/SubmissionSet";
+import SocketSet from "../module/websocket/set/SocketSet";
+import UserSocketSet from "../module/websocket/set/UserSocketSet";
+import SubmissionOriginSet from "../module/websocket/set/SubmissionOriginSet";
+import BroadcastManager from "../module/websocket/BroadcastManager";
+import UserSetCollector from "../module/websocket/UserSetCollector";
+import onlineUserBroadcast from "../module/websocket/OnlineUserBroadcast";
 const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
 const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
 
@@ -71,12 +75,7 @@ let pagePush = {
 
 let whiteboard = new Set();
 
-/**
- * 根据submission类型绑定对应的contest_id
- * @type {{Number}}
- */
 
-let submissionOrigin = {};
 /**
  * 本地判题WebSocket服务器建立连接
  */
@@ -96,9 +95,7 @@ function clearBinding(solution_id) {
 	if (problemFromSpecialSubject[solution_id]) {
 		delete problemFromSpecialSubject[solution_id];
 	}
-	if (submissionOrigin[solution_id]) {
-		delete submissionOrigin[solution_id];
-	}
+	SubmissionOriginSet.remove(solution_id);
 	delete submitUserInfo[solution_id];
 	SubmissionSet.remove(solution_id);
 	delete solutionContext[solution_id];
@@ -136,9 +133,9 @@ wss.on("connection", function (ws) {
 
 		if (SubmissionSet.has(solutionId)) {
 			SubmissionSet.get(solutionId).emit("result", solutionPack);
-			sendMessage(pagePush.status, "result", solutionPack, 1, !!problemFromContest[solutionId]);
-			if (submissionOrigin[solutionId]) {
-				sendMessage(pagePush.contest_status[submissionOrigin[solutionId]], "result", solutionPack, 1);
+			BroadcastManager.sendMessage(pagePush.status, "result", solutionPack, 1, !!problemFromContest[solutionId]);
+			if (SubmissionOriginSet.has(solutionId)) {
+				BroadcastManager.sendMessage(pagePush.contest_status[SubmissionOriginSet.get(solutionId)], "result", solutionPack, 1);
 			}
 		}
 
@@ -193,94 +190,11 @@ process.on("message", function (message, connection) {
 	connection.resume();
 });
 
-/**
- * 广播信息
- * @param userArr 用户Socket数组
- * @param type 发送信息类型
- * @param value 发送对象
- * @param dimension 数组维度
- * @param privilege 权限限制
- */
-
-function sendMessage(userArr, type, value, dimension = 2, privilege = false) {
-	if (dimension === 2) {
-		for (let i in userArr) {
-			try {
-				if (!Object.prototype.hasOwnProperty.call(userArr, i) || null === userArr[i]) {
-					continue;
-				}
-				if (userArr[i] === undefined) {
-					delete userArr[i];
-					continue;
-				}
-			} catch (e) {
-				ErrorCollector.push(__filename, {error: e, i, userArr});
-				console.log("i in userArr");
-				console.log("i", i);
-				console.log("userArr", userArr);
-			}
-			for (let j in userArr[i]) {
-				try {
-					if (!Object.prototype.hasOwnProperty.call(userArr[i], j) || null === userArr[i][j]) {
-						continue;
-					}
-					if (userArr[i][j] === undefined) {
-						delete userArr[i][j];
-						continue;
-					}
-					if (userArr[i][j].url && userArr[i][j].url.indexOf("monitor") !== -1) {
-						continue;
-					}
-					if (!privilege || userArr[i][j].privilege) {
-						userArr[i][j].emit(type, value);
-					}
-				} catch (e) {
-					ErrorCollector.push(__filename, j, userArr[i]);
-					console.log("j in userArr[i]");
-					console.log("j", j);
-					console.log("userArr[i]", userArr[i]);
-				}
-			}
-		}
-	} else if (dimension === 1) {
-		for (let i in userArr) {
-			if (!Object.prototype.hasOwnProperty.call(userArr, i) || null === userArr[i] || (userArr[i].url && userArr[i].url.indexOf("monitor") !== -1)) {
-				continue;
-			}
-			if (!privilege || userArr[i].privilege) {
-				userArr[i].emit(type, value);
-			}
-		}
-	}
-}
 
 localJudge.on("change", (freeJudger) => {
-	sendMessage(NormalUserSet.getInnerStorage(), "judgerChange", freeJudger);
-	sendMessage(AdminUserSet.getInnerStorage(), "judgerChange", freeJudger);
+	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "judgerChange", freeJudger);
+	BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judgerChange", freeJudger);
 });
-
-/**
- * 向不同权限的用户广播用户信息
- */
-
-function onlineUserBroadcast() {
-	let online = OnlineUserSet.getAllValues();
-	let userArr = {
-		user_cnt: online.length,
-		user: online.map(e => {
-			return {
-				user_id: (e && e.user_id) ? e.user_id : ""
-			};
-		})
-	};
-	sendMessage(NormalUserSet.getInnerStorage(), "user", {
-		user: userArr, judger: localJudge.getStatus().free_judger
-	});
-	userArr.user = online;
-	sendMessage(AdminUserSet.getInnerStorage(), "user", {
-		user: userArr, judger: localJudge.getStatus().free_judger
-	});
-}
 
 function removeStatus(socket) {
 	const contest_id = socket.contest_id;
@@ -334,55 +248,7 @@ io.use(BindUserInfo);
  * 分离URL,根据权限分离用户
  */
 
-io.use((socket, next) => {
-	const pos = OnlineUserSet.get(socket.user_id);
-	const referer = socket.handshake.headers.referer || "";
-	const origin = socket.handshake.headers.origin || "";
-	const _url = referer.substring(origin.length || referer.indexOf("/", 9));
-	const userId = socket.user_id;
-
-	if (_url.length && _url.length > 0) {
-		socket.url = _url;
-	}
-	if (pos !== null && pos !== undefined && pos && pos.url) {
-		if (_url.length > 0) {
-			pos.url.push(_url);
-		}
-		UserSocketSet.get(userId).push(socket);
-		if (socket.privilege) {
-			AdminUserSet.get(userId).push(socket);
-		} else {
-			NormalUserSet.get(userId).push(socket);
-		}
-	} else {
-		let user = {
-			user_id: socket.user_id,
-			url: [],
-			nick: socket.user_nick,
-			useragent: socket.handshake.headers["user-agent"]
-		};
-		if (socket.handshake.headers["x-forwarded-for"]) {
-			const iplist = socket.handshake.headers["x-forwarded-for"].split(",");
-			user.ip = iplist[0];
-			user.intranet_ip = iplist[1];
-		} else {
-			user.intranet_ip = socket.handshake.address;
-			user.ip = "";
-		}
-		if (_url.length && _url.length > 0) {
-			user.url.push(_url);
-		}
-		UserSocketSet.set(userId, [socket]);
-		OnlineUserSet.set(userId, user);
-		if (socket.privilege) {
-			AdminUserSet.set(userId, [socket]);
-		} else {
-			NormalUserSet.set(userId, [socket]);
-		}
-	}
-	onlineUserBroadcast();
-	next();
-});
+io.use(UserSetCollector);
 
 /**
  * 处理URL包含的信息
@@ -571,12 +437,12 @@ io.on("connection", async function (socket) {
 		if ((data.val && data.val.cid)) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
-				sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
-				sendMessage(pagePush.status, "submit", data, 1, !!problemFromContest[submission_id]);
-				submissionOrigin[submission_id] = contest_id;
+				BroadcastManager.sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
+				BroadcastManager.sendMessage(pagePush.status, "submit", data, 1, !!problemFromContest[submission_id]);
+				SubmissionOriginSet.set(submission_id, contest_id);
 			}
 		} else {
-			sendMessage(pagePush.status, "submit", data, 1);
+			BroadcastManager.sendMessage(pagePush.status, "submit", data, 1);
 		}
 		const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);
@@ -588,7 +454,7 @@ io.on("connection", async function (socket) {
 		default:
 			localJudge.addTask(data.submission_id, socket.privilege);
 		}
-		sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
+		BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 	});
 	/**
      * 全局推送功能
@@ -613,7 +479,7 @@ io.on("connection", async function (socket) {
 		const toPersonUser_id = data.to;
 		const userSocketList = UserSocketSet.get(toPersonUser_id);
 		if (userSocketList && userSocketList.length && userSocketList.length > 0 && userSocketList[0].emit) {
-			sendMessage(userSocketList, "chat", {
+			BroadcastManager.sendMessage(userSocketList, "chat", {
 				from: data.from,
 				content: data.content,
 				time: Date.now().toString()
