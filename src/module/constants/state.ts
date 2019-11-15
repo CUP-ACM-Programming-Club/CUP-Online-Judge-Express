@@ -1,5 +1,5 @@
-const error: any = {};
-const ok: any = {};
+export const error: any = {};
+export const ok: any = {};
 error.database = {
 	status: "error",
 	statement: "database error"
@@ -128,5 +128,3 @@ ok.okMaker = function(data: any) {
 		data
 	};
 };
-
-module.exports = {error, ok};

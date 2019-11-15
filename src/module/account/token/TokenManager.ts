@@ -1,10 +1,11 @@
-const client = require("../../redis");
+import * as _redis from "../../redis";
+const client: any = _redis;
 const ListSize = 50;
 
 class TokenManager {
 	constructor () {}
 
-	async removeToken(userId) {
+	async removeToken(userId: string) {
 		let size = await client.llenAsync(`${userId}newToken`);
 		while(size-- > 0) {
 			await client.lpopAsync(`${userId}newToken`);
@@ -15,7 +16,7 @@ class TokenManager {
 		}
 	}
 
-	async storeToken (userId, hash) {
+	async storeToken (userId: string, hash: string) {
 		await client.rpushAsync(`${userId}newToken`, hash);
 		let size = await client.llenAsync(`${userId}newToken`);
 		size -= ListSize;
