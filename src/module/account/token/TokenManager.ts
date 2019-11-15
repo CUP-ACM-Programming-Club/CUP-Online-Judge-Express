@@ -1,5 +1,4 @@
-import * as _redis from "../../redis";
-const client: any = _redis;
+const client = require("../../redis");
 const ListSize = 50;
 
 class TokenManager {

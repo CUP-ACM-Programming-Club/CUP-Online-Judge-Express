@@ -1,4 +1,5 @@
 interface UserMap {
+	[id: string]: any
 }
 class Pool {
     map: UserMap;
