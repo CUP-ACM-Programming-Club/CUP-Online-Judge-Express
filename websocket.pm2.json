@@ -1,6 +1,6 @@
 {
   "name"        : "CUP Online Judge Express -- WebSocket",
-  "script"      : "./dist/bin/main.js",
+  "script"      : "./dist/src/bin/main.js",
   "exec_mode"   : "fork",
   "cwd"         : "./",
   "watch": [

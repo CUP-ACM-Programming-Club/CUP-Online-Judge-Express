@@ -1,6 +1,6 @@
 {
   "name"        : "CUP Online Judge Express",
-  "script"      : "./dist/bin/master.js",
+  "script"      : "./dist/src/bin/master.js",
   "exec_mode"   : "fork",
   "cwd"         : "./",
   "watch": [
