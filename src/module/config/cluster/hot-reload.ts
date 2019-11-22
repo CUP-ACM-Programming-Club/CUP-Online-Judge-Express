@@ -1,6 +1,8 @@
 import {Cluster, default as cluster, Worker} from "cluster";
 import AwaitLock from "await-lock";
 import {Dayjs, default as dayjs} from "dayjs";
+import {IReload} from "./reload";
+import {BaseReload} from "./BaseReload";
 const lock = new AwaitLock();
 declare global {
 	namespace NodeJS {
@@ -20,7 +22,7 @@ interface ClusterVersion {
 		result: boolean
 }
 
-class HotReloadManager {
+class HotReloadManager extends BaseReload implements IReload{
 	get _cluster__(): ClusterVersion | {} | undefined {
 		return this.__cluster__;
 	}
@@ -32,6 +34,7 @@ class HotReloadManager {
 	protected __cluster__: ClusterVersion | {} | undefined;
 
 	constructor() {
+		super();
 		const method: HotReloadMethod = {
 			"restart": this.restart
 		};
@@ -96,7 +99,7 @@ class HotReloadManager {
 	}
 
 	restartNotify() {
-		(<any>process).send({
+		process.send!({
 			hotReload: true,
 			method: "restart"
 		});
