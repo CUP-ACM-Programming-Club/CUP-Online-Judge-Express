@@ -6,6 +6,9 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const app = express();
 const performance = require("./middleware/http_header");
+const GithubWebHook = require("express-github-webhook");
+const config = require("../config.json");
+const webhookHandler = GithubWebHook({ path: "/webhook", secret: config.webhook.secret });
 const helmet = require("helmet");
 const log4js = require("./module/logger");
 const log = log4js.logger("cheese", "info");
@@ -40,6 +43,7 @@ app.use(require("request-ip").mw());
 app.use(bodyParser.json({limit: "50mb"}));
 app.use(bodyParser.urlencoded({limit: "50mb", extended: true}));
 app.use(cookieParser());
+app.use(webhookHandler);
 app.use(sessionMiddleware);
 // app.use("/",epf(options));
 

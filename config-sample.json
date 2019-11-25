@@ -14,6 +14,9 @@
     "websocket_client_port": 3300,
     "judger_port": 5100
   },
+  "webhook": {
+    "secret": "yoursecret"
+  },
   "judger": {
     "oj_home": "/home/judge",
     "oj_judge_num": 8
