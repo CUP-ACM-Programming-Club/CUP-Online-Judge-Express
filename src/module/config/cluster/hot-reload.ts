@@ -75,27 +75,34 @@ class HotReloadManager extends BaseReload implements IReload{
 	}
 
 	async restart() {
-		await lock.acquireAsync();
-		const forkTest = await this.tryFork();
-		const workerList = global.workers;
-		const num = global.workers.length;
-		if (!forkTest) {
-			return;
-		}
-		global.restart = false;
+		try {
+			await lock.acquireAsync();
+			const forkTest = await this.tryFork();
+			const workerList = global.workers;
+			const num = global.workers.length;
+			if (!forkTest) {
+				return;
+			}
+			global.restart = false;
 
-		for (let i = 0; i < num; ++i) {
-			const destroyWorker: Worker = <Worker>workerList.shift();
-			const forkWorker = cluster.fork();
-			const bootstrap = new Promise(resolve => {
-				forkWorker.on("online", resolve);
-			});
-			await bootstrap;
-			workerList.push(forkWorker);
-			destroyWorker.destroy();
+			for (let i = 0; i < num; ++i) {
+				const destroyWorker: Worker = <Worker>workerList.shift();
+				const forkWorker = cluster.fork();
+				const bootstrap = new Promise(resolve => {
+					forkWorker.on("online", resolve);
+				});
+				await bootstrap;
+				workerList.push(forkWorker);
+				destroyWorker.destroy();
+			}
+			global.restart = true;
 		}
-		lock.release();
-		global.restart = true;
+		catch (e) {
+
+		}
+		finally {
+			lock.release();
+		}
 	}
 
 	restartNotify() {
