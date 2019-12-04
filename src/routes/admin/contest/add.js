@@ -25,7 +25,7 @@ router.post("/", async (req, res) => {
 		let sql = `insert into contest(title, start_time, end_time, private, langmask, description, password, vjudge,
     ip_policy, cmod_visible, limit_hostname,defunct) values(?,?,?,?,?,?,?,?,?,?,?,?)`;
 		await query(sql, [title, startTime, endTime, Public, langmask, description, password, 0, classroomSelected, ContestMode,
-			hostname]);
+			hostname, defunct]);
 		await removeAllContestProblem(contest_id);
 		await addContestProblem(contest_id, problemSelected);
 		await removeAllCompetitorPrivilege(contest_id);
