@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
 		let {startTime, endTime, password, problemSelected, userList} = trimProperty(req.body);
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
-		if (hostname.length === 0) {
+		if (hostname.length === 0 || hostname === "null") {
 			hostname = "";
 		}
 		if (defunct) {
