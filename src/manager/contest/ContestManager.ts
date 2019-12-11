@@ -2,6 +2,7 @@ import AwaitLock from "await-lock";
 import Cacheable from "../../decorator/Cacheable";
 import {Request} from "express";
 import "express-session";
+import Timer from "../../decorator/Timer";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 function safeArrayParse(array: any[] | any) {
@@ -11,6 +12,7 @@ function safeArrayParse(array: any[] | any) {
     return array.length ? array : Object.keys(array);
 }
 class ContestManager {
+    @Timer
     @Cacheable(ContestCachePool, 10, "minute")
     async getContestListByConditional(admin_str: String, myContest: string) {
         const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
@@ -20,6 +22,7 @@ class ContestManager {
 
     }
 
+    @Timer
     getMyContestList(req: Request) {
         let myContest = " 1 = 1 ";
         if (req.query.myContest) {
@@ -33,10 +36,12 @@ class ContestManager {
         return myContest;
     }
 
+    @Timer
     async getContestList(req: Request) {
         return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req))
     }
 
+    @Timer
     private buildPrivilegeStr(req: Request) {
         let admin_str = " 1 = 1 ";
         if (!req.session!.isadmin && !req.session!.contest_manager) {
