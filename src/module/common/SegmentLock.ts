@@ -1,10 +1,11 @@
 import AwaitLock from "await-lock";
+import {ILock} from "./Lock";
 
 interface Lock {
 	[id: string]: AwaitLock
 }
 
-class SegmentLock {
+class SegmentLock implements ILock{
 	private readonly __lock__: Lock;
 	constructor() {
 		this.__lock__ = {};
