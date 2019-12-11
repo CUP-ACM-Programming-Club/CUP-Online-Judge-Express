@@ -23,6 +23,16 @@ interface Cache {
     [id: string]: CacheValue | undefined
 }
 
+function InitCache(target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
+    const method = propertyDescriptor.value;
+    propertyDescriptor.value = function (this: any, ...args: any[]) {
+        if (typeof this.__cache__ === "undefined" || this.__cache__ === null) {
+            this.__cache__ = {};
+        }
+        return method.apply(this, args);
+    }
+}
+
 class CachePool implements ICachePool{
     private __cache__: Cache;
 
@@ -30,6 +40,7 @@ class CachePool implements ICachePool{
         this.__cache__ = {};
     }
 
+    @InitCache
     @Lock(segLock)
     async get(key: string) {
         if (this.__cache__ && Object.prototype.hasOwnProperty.call(this.__cache__, key) && this.__cache__[key]) {
@@ -39,10 +50,12 @@ class CachePool implements ICachePool{
         }
     }
 
+    @InitCache
     getAllKey() {
         return Object.keys(this.__cache__);
     }
 
+    @InitCache
     async setWithTimestamp(key: string, value: any, timestamp: number) {
         const prevPayload = this.__cache__[key];
         if (!prevPayload || (timestamp && prevPayload.time.isBefore(dayjs(timestamp)))) {
@@ -50,6 +63,7 @@ class CachePool implements ICachePool{
         }
     }
 
+    @InitCache
     @Lock(segLock)
     async set(key: string, value: any) {
         this.__cache__[key] = {
@@ -58,12 +72,14 @@ class CachePool implements ICachePool{
         };
     }
 
+    @InitCache
     remove(key: string) {
         if (this.__cache__ && Object.prototype.hasOwnProperty.call(this.__cache__, key) && this.__cache__[key]) {
             this.__cache__[key] = undefined;
         }
     }
 
+    @InitCache
     removeAll() {
         this.__cache__ = {};
     }
