@@ -8,7 +8,7 @@ function main() {
 	cluster.on("online", (worker) => {
 		worker.on("message", (data) => {
 			for (let i = 0; i < workers.length; ++i) {
-				if (workers[i].id !== worker.id) {
+				if (workers[i].process.pid !== worker.process.pid) {
 					workers[i].send(data);
 				}
 			}
