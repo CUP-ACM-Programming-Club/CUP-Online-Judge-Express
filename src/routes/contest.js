@@ -2,8 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const ContestCachePool = require("../module/contest/ContestCachePool");
-const AwaitLock = require("await-lock").default;
-const cacheLock = new AwaitLock();
+import ContestManager from "../manager/contest/ContestManager";
 const dayjs = require("dayjs");
 const md = require("markdown-it")({
 	html: true,
@@ -24,52 +23,6 @@ router.use(...require("./contest/rest_problem"));
 router.use(...require("./contest/problem_info"));
 const check = require("../module/contest/check");
 
-function safeArrayParse(array) {
-	if (typeof array !== "object" && !array.length) {
-		return [];
-	}
-	return array.length ? array : Object.keys(array);
-}
-
-async function generateContestList(req) {
-	let myContest = " 1 = 1 ";
-	if (req.query.myContest) {
-		myContest = `(${safeArrayParse(req.session.contest_maker).concat(safeArrayParse(req.session.contest)).map(el => el.substring(1)).join(",")})`;
-		if (myContest === "()") {
-			myContest = " 1 = 1 ";
-		} else {
-			myContest = `contest_id in ${myContest}`;
-		}
-	}
-	let admin_str = " 1 = 1 ";
-	if (!req.session.isadmin && !req.session.contest_manager) {
-		admin_str += " and ctest.defunct = 'N' ";
-	}
-	if (global.contest_mode) {
-		admin_str = `${admin_str} and ctest.cmod_visible = '${!req.session.isadmin ? 1 : 0}'`;
-	}
-	const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
-	const runningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`;
-	try {
-		await cacheLock.acquireAsync();
-		const cacheKey = `${notRunningSql}${runningSql}`;
-		const cache = await ContestCachePool.get(cacheKey);
-		if (cache && dayjs().subtract(10, "minute").isBefore(cache.time)) {
-			cacheLock.release();
-			return cache.data;
-		} else {
-			const promiseArray = [cache_query(notRunningSql), cache_query(runningSql)];
-			const response = (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
-			ContestCachePool.set(cacheKey, response);
-			cacheLock.release();
-			return response;
-		}
-	} catch (e) {
-		console.log("contest.js generateContestList: ");
-		console.log(e);
-		cacheLock.release();
-	}
-}
 
 router.get("/general/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
@@ -156,7 +109,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 router.get("/list", async (req, res) => {
 	res.json({
 		status: "OK",
-		data: await generateContestList(req)
+		data: await ContestManager.getContestList(req)
 	});
 });
 
