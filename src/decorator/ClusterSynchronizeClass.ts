@@ -11,9 +11,7 @@ export default function ClusterSynchronizeClass<T extends { new(...constructorAr
             if (!data.className || data.className !== className) {
                 return;
             }
-            console.log(`Message: className:${className}`);
-            console.log(`Message payload: `, data);
-            // this.setWithTimestamp(...data.arguments, data.timestamp);
+            this.setWithTimestamp(...data.arguments, data.timestamp);
         });
         return result;
     };

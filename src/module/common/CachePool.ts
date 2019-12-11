@@ -56,20 +56,25 @@ class CachePool implements ICachePool{
     }
 
     @InitCache
+    async _set(key: string, value: any) {
+        this.__cache__[key] = {
+            data: value,
+            time: dayjs()
+        };
+    }
+
+    @InitCache
     async setWithTimestamp(key: string, value: any, timestamp: number) {
         const prevPayload = this.__cache__[key];
         if (!prevPayload || (timestamp && prevPayload.time.isBefore(dayjs(timestamp)))) {
-            await this.set(key, value);
+            return this._set(key, value);
         }
     }
 
     @InitCache
     @Lock(segLock)
     async set(key: string, value: any) {
-        this.__cache__[key] = {
-            data: value,
-            time: dayjs()
-        };
+        this._set(key, value);
     }
 
     @InitCache
