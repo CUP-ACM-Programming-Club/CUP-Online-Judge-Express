@@ -2,6 +2,7 @@ import AwaitLock from "await-lock";
 import Cacheable from "../../decorator/Cacheable";
 import {Request} from "express";
 import "express-session";
+const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 function safeArrayParse(array: any[] | any) {
     if (typeof array !== "object" && !array.length) {
