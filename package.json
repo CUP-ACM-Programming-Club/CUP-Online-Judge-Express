@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "engines": {
     "node": ">=10.0.0"
   },
@@ -16,6 +16,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@alicloud/opentracing": "^0.1.1",
     "@ryanlee2014/markdown-it-katex": "^1.0.4",
     "@types/bluebird": "^3.5.28",
     "@types/cookie": "^0.3.3",

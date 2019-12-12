@@ -1,4 +1,5 @@
-const express = require("express");
+import express from "express";
+import tracer from "./middleware/tracer";
 const compression = require("compression");
 const path = require("path");
 const logger = require("morgan");
@@ -45,6 +46,7 @@ app.use(bodyParser.urlencoded({limit: "50mb", extended: true}));
 app.use(cookieParser());
 app.use(webhookHandler);
 app.use(sessionMiddleware);
+app.use(tracer);
 // app.use("/",epf(options));
 
 module.exports = app;
