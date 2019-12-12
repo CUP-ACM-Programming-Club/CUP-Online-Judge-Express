@@ -53,6 +53,9 @@ export class OnlineUserSet {
 		if (Object.prototype.hasOwnProperty.call(this.__user__, userId)) {
 			delete this.__user__[userId];
 		}
+		if (Object.prototype.hasOwnProperty.call(this.__normal_user__, userId)) {
+			delete this.__normal_user__[userId];
+		}
 		return this;
 	}
 }
