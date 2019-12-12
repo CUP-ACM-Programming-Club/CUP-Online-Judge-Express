@@ -3,7 +3,7 @@ import UserSocketSet from "./set/UserSocketSet";
 import AdminUserSet from "./set/AdminUserSet";
 import NormalUserSet from "./set/NormalUserSet";
 import OnlineUserSet from "./set/OnlineUserSet";
-import onlineUserBroadcast from "./OnlineUserBroadcast";
+import OnlineUserBroadcast from "./OnlineUserBroadcast";
 interface IUser {
     user_id: string,
     url: string[],
@@ -58,6 +58,6 @@ export default function (socket: UserSocket, next: (err?: any) => void) {
             NormalUserSet.set(userId, [socket]);
         }
     }
-    onlineUserBroadcast();
+    OnlineUserBroadcast.broadcast();
     next();
 }

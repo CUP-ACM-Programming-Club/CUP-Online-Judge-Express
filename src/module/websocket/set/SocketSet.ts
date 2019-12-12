@@ -31,4 +31,4 @@ export class SocketSet {
 	}
 }
 
-module.exports = new SocketSet();
+export default new SocketSet();

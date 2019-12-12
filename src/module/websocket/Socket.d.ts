@@ -5,6 +5,9 @@ export interface UserSocket extends Socket {
     auth: boolean | undefined,
     privilege: boolean | undefined,
     user_nick: string | undefined,
+    contest_id?: number,
+    status?: boolean,
+    currentTimeStamp?: number
     request: any,
     url?: string
 }

@@ -6,8 +6,6 @@ require("../module/init/build_env")();
 const config = global.config;
 import UserValidatorMiddleware from "../module/websocket/UserValidatorMiddleware";
 import BindUserInfo from "../module/websocket/BindUserInfo";
-// const easyMonitor = require("easy-monitor");
-// easyMonitor("CUP Online Judge Express");
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
@@ -37,7 +35,6 @@ const sessionMiddleware = require("../module/session").sessionMiddleware;
 const WebSocket = require("ws");
 
 const BanCheaterModel = require("../module/contest/cheating_ban");
-const querystring = require("querystring");
 const {storeSubmission} = require("../module/judger/recorder");
 const {solutionContainContestId, getSolutionInfo} = require("../module/solution/solution");
 const {ConfigManager} = require("../module/config/config-manager");
@@ -54,27 +51,20 @@ import UserSocketSet from "../module/websocket/set/UserSocketSet";
 import SubmissionOriginSet from "../module/websocket/set/SubmissionOriginSet";
 import BroadcastManager from "../module/websocket/BroadcastManager";
 import UserSetCollector from "../module/websocket/UserSetCollector";
-import onlineUserBroadcast from "../module/websocket/OnlineUserBroadcast";
-const initExternalEnvironment = require("../module/init/InitExternalEnvironment");
-const SolutionUserCollector = require("../module/judger/SolutionUserCollector").default;
+import OnlineUserBroadcast from "../module/websocket/OnlineUserBroadcast";
+import SolutionUserCollector from "../module/judger/SolutionUserCollector";
+import BuildSocketStatus, {buildSocket} from "../module/websocket/BuildSocketStatus";
+import ContestPagePushSet from "../module/websocket/set/ContestPagePushSet";
+import StatusSet from "../module/websocket/singleton/StatusSet";
+import InitExternalEnvironment from "../module/init/InitExternalEnvironment";
 
-initExternalEnvironment.run();
+InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 const {app, server} = require("../module/init/http-server");
 const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
 
-/**
- * 记录打开状态页面的Socket连接
- * @type {{status: Array, contest_status: {}}}
- */
-let pagePush = {
-	status: [],
-	contest_status: {}
-};
-
 let whiteboard = new Set();
-
 
 /**
  * 本地判题WebSocket服务器建立连接
@@ -133,9 +123,9 @@ wss.on("connection", function (ws) {
 
 		if (SubmissionSet.has(solutionId)) {
 			SubmissionSet.get(solutionId).emit("result", solutionPack);
-			BroadcastManager.sendMessage(pagePush.status, "result", solutionPack, 1, !!problemFromContest[solutionId]);
+			BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!problemFromContest[solutionId]);
 			if (SubmissionOriginSet.has(solutionId)) {
-				BroadcastManager.sendMessage(pagePush.contest_status[SubmissionOriginSet.get(solutionId)], "result", solutionPack, 1);
+				BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
 			}
 		}
 
@@ -199,16 +189,10 @@ localJudge.on("change", (freeJudger) => {
 function removeStatus(socket) {
 	const contest_id = socket.contest_id;
 	if (contest_id) {
-		const socket_pos = pagePush.contest_status[contest_id].indexOf(socket);
-		if (~socket_pos) {
-			pagePush.contest_status[contest_id].splice(socket_pos, 1);
-		}
+		ContestPagePushSet.removeFromList(contest_id);
 	}
 	if (socket.status) {
-		const socket_pos = pagePush.status.indexOf(socket);
-		if (~socket_pos) {
-			pagePush.status.splice(socket_pos, 1);
-		}
+		StatusSet.remove(socket);
 	}
 }
 
@@ -253,53 +237,8 @@ io.use(UserSetCollector);
 /**
  * 处理URL包含的信息
  */
-function buildStatusSocket(socket) {
-	if (socket.url && (~socket.url.indexOf("status") || ~socket.url.indexOf("rank"))) {
-		if (~socket.url.indexOf("cid")) {
-			const parseObj = querystring.parse(socket.url.substring(socket.url.indexOf("?") + 1, socket.url.length));
-			const contest_id = parseInt(parseObj.cid) || 0;
-			if (contest_id >= 1000) {
-				if (!pagePush.contest_status[contest_id]) {
-					pagePush.contest_status[contest_id] = [];
-				}
-				socket.contest_id = contest_id;
-				pagePush.contest_status[contest_id].push(socket);
-			}
-		} else {
-			const url_split = socket.url.split("/");
-			if (url_split.includes("contest")) {
-				const idx = url_split.indexOf("contest");
-				if (idx < url_split.length - 1) {
-					if (!isNaN(url_split[idx + 1])) {
-						const contest_id = parseInt(url_split[idx + 1]);
-						if (!pagePush.contest_status[contest_id]) {
-							pagePush.contest_status[contest_id] = [];
-						}
-						socket.contest_id = contest_id;
-						pagePush.contest_status[contest_id].push(socket);
-					} else if (url_split[idx + 1] === "rank" && !isNaN(url_split[idx + 2])) {
-						const contest_id = parseInt(url_split[idx + 2]);
-						if (!pagePush.contest_status[contest_id]) {
-							pagePush.contest_status[contest_id] = [];
-						}
-						socket.contest_id = contest_id;
-						pagePush.contest_status[contest_id].push(socket);
-					}
-				}
-			} else {
-				pagePush.status.push(socket);
-				socket.status = true;
-			}
-		}
-	}
-}
 
-io.use((socket, next) => {
-	buildStatusSocket(socket);
-	socket.currentTimeStamp = (new Date() - 0);
-	SocketSet.setSocket(socket.currentTimeStamp, socket);
-	next();
-});
+io.use(BuildSocketStatus);
 /**
  * Socket获得连接
  */
@@ -327,7 +266,7 @@ io.on("connection", async function (socket) {
 				socket.url = url;
 				pos.url.push(url);
 			}
-			onlineUserBroadcast();
+			OnlineUserBroadcast.broadcast();
 		}
 	});
 
@@ -335,7 +274,7 @@ io.on("connection", async function (socket) {
      * 获取状态信息
      */
 	socket.on("getUser", function () {
-		onlineUserBroadcast();
+		OnlineUserBroadcast.broadcast();
 	});
 
 	socket.on("updateURL", function (data) {
@@ -347,8 +286,8 @@ io.on("connection", async function (socket) {
 			user.url[pos] = data.url;
 		}
 		socket.url = data.url;
-		buildStatusSocket(socket);
-		onlineUserBroadcast();
+		buildSocket(socket);
+		OnlineUserBroadcast.broadcast();
 	});
 
 	socket.on("status", function (data) {
@@ -437,12 +376,12 @@ io.on("connection", async function (socket) {
 		if ((data.val && data.val.cid)) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
-				BroadcastManager.sendMessage(pagePush.contest_status[contest_id], "submit", data, 1);
-				BroadcastManager.sendMessage(pagePush.status, "submit", data, 1, !!problemFromContest[submission_id]);
+				BroadcastManager.sendMessage(ContestPagePushSet.get(contest_id), "submit", data, 1);
+				BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1, !!problemFromContest[submission_id]);
 				SubmissionOriginSet.set(submission_id, contest_id);
 			}
 		} else {
-			BroadcastManager.sendMessage(pagePush.status, "submit", data, 1);
+			BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1);
 		}
 		const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);
@@ -533,7 +472,7 @@ io.on("connection", async function (socket) {
 				AdminUserSet.remove(userId);
 				NormalUserSet.remove(userId);
 			}
-			onlineUserBroadcast();
+			OnlineUserBroadcast.broadcast();
 		}
 	});
 });
