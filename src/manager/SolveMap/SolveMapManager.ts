@@ -4,6 +4,7 @@ import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
+import _ from "lodash";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -76,6 +77,7 @@ export class SolveMapManager {
     async getSolveMap(problem_id?: number | string) {
         const userList = await this.getUserList();
         const ACLists = await Promise.all(userList.map((user: any) => this.getUserACListByUserId(user.user_id)));
+        _.filter((e: any)=> Array.isArray(e) && e.length > 0);
         const formattedEdges = await Promise.all(ACLists.map(list => this.formatAcceptProblemToEdges(list, problem_id)));
         const edges: any = [];
         formattedEdges.forEach(edgeList => edges.push(...edgeList));
