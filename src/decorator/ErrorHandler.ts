@@ -1,5 +1,5 @@
 import {error} from "../module/constants/state";
-
+import isPromise from "is-promise";
 function errorHandle(err: any) {
     console.error(err);
     return error.internalError;
@@ -14,8 +14,8 @@ export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any) {
         propertyDescriptor.value = function (...args: any[]) {
             try {
                 const result = method.apply(this, args);
-                if (result instanceof Promise) {
-                    return result.then(e => wrapper!(e)).catch(errorHandle);
+                if (isPromise(result)) {
+                    return (result as Promise<any>).then(e => wrapper!(e)).catch(errorHandle);
                 }
                 else {
                     return wrapper!(result);
