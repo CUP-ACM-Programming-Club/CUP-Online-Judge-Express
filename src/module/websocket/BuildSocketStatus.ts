@@ -11,10 +11,10 @@ export function buildSocket(socket: UserSocket) {
             const contest_id = parseInt(parseObj.cid) || 0;
             if (contest_id >= 1000) {
                 socket.contest_id = contest_id;
-                ContestPagePushSet.get(contest_id).push(socket);
                 if (!ContestPagePushSet.has(contest_id)) {
-                    ContestPagePushSet.set(contest_id, [socket]);
+                    ContestPagePushSet.set(contest_id, []);
                 }
+                ContestPagePushSet.get(contest_id).push(socket);
             }
         } else {
             const url_split = socket.url.split("/");
@@ -29,8 +29,9 @@ export function buildSocket(socket: UserSocket) {
                     }
                     socket.contest_id = contest_id;
                     if (!ContestPagePushSet.has(contest_id)) {
-                        ContestPagePushSet.set(contest_id, [socket]);
+                        ContestPagePushSet.set(contest_id, []);
                     }
+                    ContestPagePushSet.get(contest_id).push(socket);
                 }
             } else {
                 StatusSet.push(socket);
