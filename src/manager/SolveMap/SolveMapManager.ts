@@ -36,7 +36,7 @@ export class SolveMapManager {
         if (user_id === "") {
             return [];
         }
-        return await query("select problem_id from solution where user_id = ? and result = 4 order by in_date asc", [user_id]);
+        return await cache_query("select problem_id from solution where user_id = ? and result = 4 order by in_date asc", [user_id]);
     }
 
     async formatAcceptProblemToEdges(problem_list: any = [], problem_id: any) {

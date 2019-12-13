@@ -6,6 +6,9 @@ export default function Cacheable(cachePool: CachePool, timeDelta: number, timeU
     return function (target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
         const method = propertyDescriptor.value;
         propertyDescriptor.value = async function (...args: any[]) {
+            if (!Array.isArray(args) || args.length === 0) {
+                args = [""];
+            }
             const cacheKey = args.map(e => e.toString()).reduce((accumulator, currentValue) => accumulator + currentValue);
             const cache = await cachePool.get(cacheKey);
             if (cache && dayjs().subtract(timeDelta, timeUnit).isBefore(cache.time)) {
