@@ -5,6 +5,7 @@ import CachePool from "../../module/common/CachePool";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import _ from "lodash";
+import isNumber from "../../module/util/isNumber";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -42,7 +43,7 @@ export class SolveMapManager {
 
     async formatAcceptProblemToEdges(problem_list: any = [], problem_id: any) {
         let specific_problem = false;
-        if (!isNaN(problem_id)) {
+        if (isNumber(problem_id)) {
             specific_problem = true;
             problem_id = parseInt(problem_id);
         }
