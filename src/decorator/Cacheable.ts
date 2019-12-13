@@ -12,11 +12,11 @@ export default function Cacheable(cachePool: CachePool, timeDelta: number, timeU
             const cacheKey = args.map(e => e.toString()).reduce((accumulator, currentValue) => accumulator + currentValue);
             const cache = await cachePool.get(cacheKey);
             if (cache && dayjs().subtract(timeDelta, timeUnit).isBefore(cache.time)) {
-                console.log(`Hit cache data: ${propertyName}`);
+                // console.log(`Hit cache data: ${propertyName}`);
                 return cache.data;
             }
             else {
-                console.log(`Miss cache data: ${propertyName}`);
+                // console.log(`Miss cache data: ${propertyName}`);
                 const response = await method.apply(this, args);
                 try {
                     await cacheLock.acquireAsync();
