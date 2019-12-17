@@ -10,7 +10,7 @@ router.get("/:problemId", async (req, res) => {
 	try {
 		const contestList = await ContestFinder.newInstance().setProblemId(parseInt(req.params.problemId)).find();
 		const contestInfoList = await Promise.all(contestList.map(el => ContestInfoManager.newInstance().setContestId(el.contest_id).find()));
-		res.json(ok.okMaker(contestInfoList.map(e => e.get())));
+		res.json(ok.okMaker(contestInfoList.filter(e => e && e.get && typeof e.get === "function").map(e => e.get())));
 	}
 	catch (e) {
 		console.log(__filename, e);
