@@ -110,6 +110,10 @@ router.get("/list", async (req, res) => {
 	res.json(await ContestManager.getContestList(req));
 });
 
+router.get("/total", async (req, res) => {
+	res.json(await ContestManager.getTotalNumber(req));
+});
+
 router.get("/statistics/:cid", async (req, res) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && cid >= 1000) {

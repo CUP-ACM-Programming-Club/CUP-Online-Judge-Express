@@ -15,13 +15,40 @@ function safeArrayParse(array: any[] | any) {
     }
     return array.length ? array : Object.keys(array);
 }
+
 class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 10, "minute")
-    getContestListByConditional(admin_str: String, myContest: string, limit: number) {
+    getContestListByConditional(admin_str: string, myContest: string, limit: number) {
+        const {currentRunningSql, notRunningSql} = this.buildSqlStructure(admin_str, myContest);
+        return cache_query(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2 limit ?, ?`, [limit, PAGE_SIZE]);
+    }
+
+    buildSqlStructure (admin_str: string, myContest: string) {
         const currentRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc`;
         const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc`;
-        return cache_query(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2 limit ?, ?`, [limit, PAGE_SIZE]);
+        return {
+            currentRunningSql,
+            notRunningSql
+        }
+    }
+
+    @Timer
+    @Cacheable(ContestCachePool, 10, "minute")
+    async countTotalNumber(sql: string) {
+        const response = await cache_query(`select count(1) as cnt from (${sql})t3`);
+        if (response && response.length && response.length > 0) {
+            return response[0].cnt;
+        }
+        else {
+            return 0;
+        }
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async getTotalNumber(req: Request) {
+        const {currentRunningSql, notRunningSql} = this.buildSqlStructure(this.buildPrivilegeStr(req), this.getMyContestList(req));
+        return await this.countTotalNumber(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2`);
     }
 
     @Timer
