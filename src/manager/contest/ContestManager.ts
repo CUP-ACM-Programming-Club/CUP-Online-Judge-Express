@@ -3,6 +3,8 @@ import Cacheable from "../../decorator/Cacheable";
 import {Request} from "express";
 import "express-session";
 import Timer from "../../decorator/Timer";
+import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import {ok} from "../../module/constants/state";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 function safeArrayParse(array: any[] | any) {
@@ -14,12 +16,10 @@ function safeArrayParse(array: any[] | any) {
 class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 10, "minute")
-    async getContestListByConditional(admin_str: String, myContest: string) {
-        const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc limit 1000;`;
-        const runningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc limit 1000;`;
-        const promiseArray = [cache_query(notRunningSql), cache_query(runningSql)];
-        return (await Promise.all(promiseArray)).reduce((accumulator, currentValue) => accumulator.concat(currentValue));
-
+    getContestListByConditional(admin_str: String, myContest: string) {
+        const currentRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc`;
+        const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc`;
+        return cache_query(`${currentRunningSql} union all ${notRunningSql}`);
     }
 
     @Timer
@@ -36,6 +36,7 @@ class ContestManager {
         return myContest;
     }
 
+    @ErrorHandlerFactory(ok.okMaker)
     @Timer
     async getContestList(req: Request) {
         return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req))

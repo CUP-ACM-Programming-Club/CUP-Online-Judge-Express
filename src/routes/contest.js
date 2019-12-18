@@ -107,10 +107,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 });
 
 router.get("/list", async (req, res) => {
-	res.json({
-		status: "OK",
-		data: await ContestManager.getContestList(req)
-	});
+	res.json(ContestManager.getContestList(req));
 });
 
 router.get("/statistics/:cid", async (req, res) => {
