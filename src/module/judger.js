@@ -2,6 +2,12 @@
 /**
  * Class LocalJudger
  */
+import fs from "fs";
+import path from "path";
+import Promise from "bluebird";
+import {mkdirAsync} from "./file/mkdir";
+import SubmissionManager from "../manager/submission/SubmissionManager";
+fs = Promise.promisifyAll(fs);
 const {spawn} = require("child_process");
 const PriorityQueue = require("tinyqueue");
 const os = require("os");
@@ -9,6 +15,7 @@ const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
 
 export class localJudger extends eventEmitter {
+
 	/**
      * 构造判题机
      * @param {String} home_dir 评测机所在的目录
@@ -33,6 +40,7 @@ export class localJudger extends eventEmitter {
 		this.CPUSpeed = CPUDetails[0].speed;
 		this.platform = os.platform();
 		this.errorHandler = null;
+		this.SUBMISSION_INFO_PATH = path.join(global.config.judger.oj_home, "submission");
 		if (this.platform !== "linux" && this.platform !== "darwin") {
 			return new Error("Your platform doesn't support right now");
 		}
@@ -87,11 +95,48 @@ export class localJudger extends eventEmitter {
 		this.latestSolutionID = Math.max(this.latestSolutionID, solutionId);
 	}
 
-	addTask(solution_id, admin, no_sim = false, priority = 1, gray_task = false) {
+	async makeShareMemoryDirectory () {
+		try {
+			await fs.accessAsync("/dev/shm/cupoj/submission");
+		}
+		catch (e) {
+			await mkdirAsync("/dev/shm/cupoj/submission");
+		}
+		await fs.symlinkAsync("/dev/shm/cupoj/submission", this.SUBMISSION_INFO_PATH);
+	}
+
+	async writeSubmissionInfoToDisk (solutionId) {
+		await this.makeShareMemoryDirectory();
+		const submissionInfo = {
+			source: "",
+			custom_input: "",
+			test_run: false,
+			language: 0,
+			user_id: "",
+			problem_id: 0,
+			spj: false,
+			time_limit: 0,
+			memory_limit: 0
+		};
+		let payload;
+		const {problem_id} = payload = await SubmissionManager.getSolutionInfo(solutionId);
+		Object.assign(submissionInfo, payload);
+		if (problem_id <= 0) {
+			submissionInfo.test_run = true;
+			submissionInfo.custom_input = await SubmissionManager.getCustomInput(solutionId);
+		}
+		payload = await SubmissionManager.getProblemInfo(solutionId);
+		Object.assign(submissionInfo, payload);
+		submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
+		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${solutionId}.json`, JSON.stringify(submissionInfo), { mode: 0o777 }));
+	}
+
+	async addTask(solution_id, admin, no_sim = false, priority = 1, gray_task = false) {
 		solution_id = localJudger.formatSolutionId(solution_id);
 		if (!this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
 			this.updateLatestSolutionId(solution_id);
+			await this.writeSubmissionInfoToDisk(solution_id);
 			if (!this.judge_queue.isEmpty()) {
 				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
 				this.judging_queue.push(solution_id);
