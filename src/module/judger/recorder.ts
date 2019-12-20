@@ -102,7 +102,7 @@ async function storeSubmission(payload: SubmissionPayload) {
 	console.log("storeSubmission: ", payload);
 	if (payload.state === 11) {
 		await storeCompileErrorSubmission(payload);
-	} else if (payload.state === 10) {
+	} else if (payload.state === 10 || payload.state === 13) {
 		await storeRuntimeErrorSubmission(payload);
 	} else {
 		await storeNormalSubmission(payload);
