@@ -52,8 +52,8 @@ async function isAdministrator(solutionId: string | number) {
 async function baseSubmissionStore(payload: SubmissionPayload) {
 	payload.result = payload.state;
 	let {time, memory, result, pass_point, pass_rate, judger, solution_id, sim, sim_s_id} = payload;
-	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result >= 4",
-		[time, memory, result, pass_point, pass_rate, judger, solution_id, result]);
+	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result < 4",
+		[time, memory, result, pass_point, pass_rate, judger, solution_id]);
 	if (isNumber(sim) && parseInt(<string>sim) > 0 && await checkValidSim(solution_id, sim_s_id) && !(await isAdministrator(solution_id))) {
 		await query("insert into sim(s_id,sim_s_id,sim) values(?,?,?) on duplicate key update  sim_s_id=?,sim=?", [solution_id, sim_s_id, sim, sim_s_id, sim]);
 	}
