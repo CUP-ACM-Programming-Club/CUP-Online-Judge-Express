@@ -138,7 +138,7 @@ export class localJudger extends eventEmitter {
 		Object.assign(submissionInfo, payload);
 		submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
 		// @ts-ignore
-		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${solutionId}.json`, JSON.stringify(submissionInfo), { mode: 0o777 }));
+		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${solutionId}.json`), JSON.stringify(submissionInfo), { mode: 0o777 });
 	}
 
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
