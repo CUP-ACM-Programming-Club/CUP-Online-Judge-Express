@@ -98,11 +98,17 @@ export class localJudger extends eventEmitter {
 	async makeShareMemoryDirectory () {
 		try {
 			await fs.accessAsync("/dev/shm/cupoj/submission");
-		}
-		catch (e) {
 			await mkdirAsync("/dev/shm/cupoj/submission");
 		}
-		await fs.symlinkAsync("/dev/shm/cupoj/submission", this.SUBMISSION_INFO_PATH);
+		catch (e) {
+			// do nothing
+		}
+		try {
+			await fs.symlinkAsync("/dev/shm/cupoj/submission", this.SUBMISSION_INFO_PATH);
+		}
+		catch (e) {
+			// do nothing
+		}
 	}
 
 	async writeSubmissionInfoToDisk (solutionId) {
