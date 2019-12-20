@@ -9,7 +9,7 @@ interface SolutionInfo {
 interface ProblemInfo {
     time_limit: number,
     memory_limit: number,
-    spj: number
+    spj: boolean | string | number
 }
 
 class SubmissionManager {
@@ -34,6 +34,7 @@ class SubmissionManager {
         if (problemInfo.time_limit <= 0) {
             problemInfo.time_limit = 1;
         }
+        problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         return problemInfo;
     }
 }

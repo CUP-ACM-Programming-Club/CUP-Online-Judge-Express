@@ -193,9 +193,7 @@ export class localJudger extends eventEmitter {
 	async runJudger(solution_id: number, runner_id: number, admin = false, no_sim = false, gray_task = false) {
 		const stderrBuilder: any = [], stdoutBuilder: any = [];
 		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
-		if (gray_task) {
-			args.push("-no-mysql");
-		}
+		args.push("-no-mysql");
 		if (admin) {
 			args.push("-admin");
 		}

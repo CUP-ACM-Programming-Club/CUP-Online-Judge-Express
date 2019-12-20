@@ -1,4 +1,7 @@
+import {getUserIdBySolutionId} from "../user/user";
+
 const query = require("../mysql_query");
+const cache_query = require("../mysql_cache");
 const isNumber = require("../util/isNumber").default;
 const SolutionUserCollector = require("./SolutionUserCollector").default;
 const {getSolutionInfo} = require("../solution/solution");
@@ -33,12 +36,25 @@ interface SubmissionPayload {
 }
 
 
+async function checkValidSim(simId: any, simSourceId: any) {
+	const source = await getUserIdBySolutionId(simSourceId);
+	const current = await getUserIdBySolutionId(simId);
+	return source[0].user_id !== current[0].user_id;
+}
+
+async function isAdministrator(solutionId: string | number) {
+	const userId = await getUserIdBySolutionId(solutionId);
+	const response = await cache_query(`select rightstr from privilege where user_id = ? and rightstr = 'administrator'`, [userId]);
+	return !!(response && response.length && response.length > 0);
+
+}
+
 async function baseSubmissionStore(payload: SubmissionPayload) {
 	payload.result = payload.state;
 	let {time, memory, result, pass_point, pass_rate, judger, solution_id, sim, sim_s_id} = payload;
-	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result <= ?",
+	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result >= 4",
 		[time, memory, result, pass_point, pass_rate, judger, solution_id, result]);
-	if (isNumber(sim) && parseInt(<string>sim) > 0) {
+	if (isNumber(sim) && parseInt(<string>sim) > 0 && await checkValidSim(solution_id, sim_s_id) && !(await isAdministrator(solution_id))) {
 		await query("insert into sim(s_id,sim_s_id,sim) values(?,?,?) on duplicate key update  sim_s_id=?,sim=?", [solution_id, sim_s_id, sim, sim_s_id, sim]);
 	}
 }
