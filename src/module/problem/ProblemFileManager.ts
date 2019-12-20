@@ -1,6 +1,7 @@
 import path from "path";
 interface JudgerConfig {
-	oj_home: string
+	oj_home: string,
+	oj_judge_num: number
 }
 interface Config {
 	judger: JudgerConfig

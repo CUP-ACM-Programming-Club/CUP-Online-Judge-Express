@@ -2,12 +2,13 @@
 /**
  * Class LocalJudger
  */
-import fs from "fs";
+import fsDefault from "fs";
 import path from "path";
 import Promise from "bluebird";
 import {mkdirAsync} from "./file/mkdir";
 import SubmissionManager from "../manager/submission/SubmissionManager";
-fs = Promise.promisifyAll(fs);
+import Tolerable from "../decorator/Tolerable";
+const fs: any = Promise.promisifyAll(fsDefault);
 const {spawn} = require("child_process");
 const PriorityQueue = require("tinyqueue");
 const os = require("os");
@@ -21,11 +22,11 @@ export class localJudger extends eventEmitter {
      * @param {String} home_dir 评测机所在的目录
      * @param {Number} judger_num 评测机数量
      */
-	constructor(home_dir, judger_num) {
+	constructor(home_dir: string, judger_num: number) {
 		super();
 		this.oj_home = home_dir;
 		this.judge_queue = [...Array(judger_num).keys()].map(x => x + 1);
-		this.waiting_queue = new PriorityQueue([], function (a, b) {
+		this.waiting_queue = new PriorityQueue([], function (a: any, b: any) {
 			if (a.priority !== b.priority) {
 				return b.priority - a.priority;
 			} else {
@@ -42,17 +43,17 @@ export class localJudger extends eventEmitter {
 		this.errorHandler = null;
 		this.SUBMISSION_INFO_PATH = path.join(global.config.judger.oj_home, "submission");
 		if (this.platform !== "linux" && this.platform !== "darwin") {
-			return new Error("Your platform doesn't support right now");
+			throw new Error("Your platform doesn't support right now");
 		}
 	}
 
-	errorHandle(solutionId, runnerId) {
+	errorHandle(solutionId: number, runnerId: number) {
 		if (this.errorHandler !== null) {
 			this.errorHandler.record(solutionId, runnerId);
 		}
 	}
 
-	setErrorHandler(errorHandler) {
+	setErrorHandler(errorHandler: any) {
 		this.errorHandler = errorHandler;
 	}
 
@@ -76,7 +77,7 @@ export class localJudger extends eventEmitter {
 		};
 	}
 
-	static formatSolutionId(solution_id) {
+	static formatSolutionId(solution_id: any) {
 		if (typeof solution_id === "object" && solution_id !== null) {
 			if (!isNaN(solution_id.submission_id)) {
 				solution_id = solution_id.submission_id;
@@ -91,13 +92,14 @@ export class localJudger extends eventEmitter {
 		return solution_id;
 	}
 
-	updateLatestSolutionId(solutionId) {
+	updateLatestSolutionId(solutionId: number) {
 		this.latestSolutionID = Math.max(this.latestSolutionID, solutionId);
 	}
 
 	async makeShareMemoryDirectory () {
 		try {
 			await fs.accessAsync("/dev/shm/cupoj/submission");
+			// @ts-ignore
 			await mkdirAsync("/dev/shm/cupoj/submission");
 		}
 		catch (e) {
@@ -111,7 +113,8 @@ export class localJudger extends eventEmitter {
 		}
 	}
 
-	async writeSubmissionInfoToDisk (solutionId) {
+	@Tolerable
+	async writeSubmissionInfoToDisk (solutionId: number) {
 		await this.makeShareMemoryDirectory();
 		const submissionInfo = {
 			source: "",
@@ -131,13 +134,14 @@ export class localJudger extends eventEmitter {
 			submissionInfo.test_run = true;
 			submissionInfo.custom_input = await SubmissionManager.getCustomInput(solutionId);
 		}
-		payload = await SubmissionManager.getProblemInfo(solutionId);
+		payload = await SubmissionManager.getProblemInfo(problem_id);
 		Object.assign(submissionInfo, payload);
 		submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
+		// @ts-ignore
 		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${solutionId}.json`, JSON.stringify(submissionInfo), { mode: 0o777 }));
 	}
 
-	async addTask(solution_id, admin, no_sim = false, priority = 1, gray_task = false) {
+	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
 		solution_id = localJudger.formatSolutionId(solution_id);
 		if (!this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
@@ -186,8 +190,8 @@ export class localJudger extends eventEmitter {
      * @returns {Promise<void>} 返回一个空Promise
      */
 
-	async runJudger(solution_id, runner_id, admin = false, no_sim = false, gray_task = false) {
-		const stderrBuilder = [], stdoutBuilder = [];
+	async runJudger(solution_id: number, runner_id: number, admin = false, no_sim = false, gray_task = false) {
+		const stderrBuilder: any = [], stdoutBuilder: any = [];
 		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
 		if (gray_task) {
 			args.push("-no-mysql");
@@ -208,7 +212,7 @@ export class localJudger extends eventEmitter {
 			judger.kill("SIGKILL");
 		}, ConfigManager.getConfig("judger_process_kill_time", 1000 * 30));//kill process after 100s
 		this.emit("change", this.getStatus().free_judger);
-		judger.on("close", EXITCODE => {
+		judger.on("close", (EXITCODE: any) => {
 			if (process.env.NODE_ENV === "test") {
 				console.log(`solution_id: ${solution_id}, EXITCODE:${EXITCODE}`);
 			}
@@ -228,8 +232,8 @@ export class localJudger extends eventEmitter {
 				this.errorHandle(solution_id, runner_id);
 			}
 		});
-		judger.stdout.on("data", (resp) => {stdoutBuilder.push(resp.toString());});
-		judger.stderr.on("data", (resp) => {stderrBuilder.push(resp.toString());});
+		judger.stdout.on("data", (resp: any) => {stdoutBuilder.push(resp.toString());});
+		judger.stderr.on("data", (resp: any) => {stderrBuilder.push(resp.toString());});
 	}
 }
 

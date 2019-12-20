@@ -28,8 +28,8 @@ class SubmissionManager {
         return response[0].input_text;
     }
 
-    async getProblemInfo(solutionId: number) {
-        const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(solutionId)]);
+    async getProblemInfo(problemId: number) {
+        const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
         const problemInfo: ProblemInfo = response[0];
         if (problemInfo.time_limit <= 0) {
             problemInfo.time_limit = 1;
