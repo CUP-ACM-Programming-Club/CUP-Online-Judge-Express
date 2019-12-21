@@ -18,7 +18,25 @@ async function maintainProblem(problem_id: number | string) {
 
 type RawNumber = string | number;
 
-interface SubmissionPayload {
+
+interface RuntimeInfoPayload {
+	runtime_info: string | null | undefined,
+	solution_id: number | string
+}
+
+interface TestRunInfoPayload {
+	test_run_result: string | null | undefined,
+	solution_id: number | string
+}
+
+
+interface CompileInfoPayload {
+	compile_info: string | null | undefined,
+	solution_id: number | string
+}
+
+
+interface SubmissionPayload extends RuntimeInfoPayload, TestRunInfoPayload, CompileInfoPayload {
 	user_id: string,
 	problem_id: number | string,
 	time: RawNumber,
@@ -28,11 +46,8 @@ interface SubmissionPayload {
 	state: RawNumber,
 	pass_rate: RawNumber,
 	judger: string,
-	solution_id: RawNumber,
 	sim: RawNumber | null | undefined,
-	sim_s_id: RawNumber | null | undefined,
-	runtime_info: string | null | undefined,
-	compile_info: string | null | undefined
+	sim_s_id: RawNumber | null | undefined
 }
 
 
@@ -59,25 +74,26 @@ async function baseSubmissionStore(payload: SubmissionPayload) {
 	}
 }
 
-interface CompileInfoPayload {
-	compile_info: string | null | undefined,
-	solution_id: number | string
-}
-
 async function compileErrorStore(payload: CompileInfoPayload) {
 	const {compile_info, solution_id} = payload;
 	await query("delete from compileinfo where solution_id = ?", [solution_id]);
-	await query("insert into compileinfo values(?, ?)  on duplicate key update  error = ?", [solution_id, compile_info, compile_info]);}
+	await query("insert into compileinfo values(?, ?)  on duplicate key update  error = ?", [solution_id, compile_info, compile_info]);
+}
 
-interface RuntimeInfoPayload {
-	runtime_info: string | null | undefined,
-	solution_id: number | string
+
+async function storeToRuntimeError(solution_id: any, info: any) {
+	await query("delete from runtimeinfo where solution_id = ?", [solution_id]);
+	await query("insert into runtimeinfo values(?, ?) on duplicate key update error = ?", [solution_id, info, info]);
 }
 
 async function runtimeErrorStore(payload: RuntimeInfoPayload) {
 	const {runtime_info, solution_id} = payload;
-	await query("delete from runtimeinfo where solution_id = ?", [solution_id]);
-	await query("insert into runtimeinfo values(?, ?) on duplicate key update error = ?", [solution_id, runtime_info, runtime_info]);
+	await storeToRuntimeError(solution_id, runtime_info);
+}
+
+async function testRunStore(payload: TestRunInfoPayload) {
+	const {test_run_result, solution_id} = payload;
+	await storeToRuntimeError(solution_id, test_run_result);
 }
 
 async function storeNormalSubmission(payload: SubmissionPayload) {
@@ -96,14 +112,22 @@ async function storeCompileErrorSubmission(payload: SubmissionPayload) {
 
 async function storeRuntimeErrorSubmission(payload: SubmissionPayload) {
 	await baseSubmissionStore(payload);
+	await runtimeErrorStore(payload);
+}
+
+async function storeTestRunSubmission(payload: SubmissionPayload) {
+	await baseSubmissionStore(payload);
+	await testRunStore(payload);
 }
 
 async function storeSubmission(payload: SubmissionPayload) {
 	console.log("storeSubmission: ", payload);
 	if (payload.state === 11) {
 		await storeCompileErrorSubmission(payload);
-	} else if (payload.state === 10 || payload.state === 13) {
+	} else if (payload.state === 10) {
 		await storeRuntimeErrorSubmission(payload);
+	} else if (payload.state === 13) {
+		await storeTestRunSubmission(payload);
 	} else {
 		await storeNormalSubmission(payload);
 	}
