@@ -49,14 +49,18 @@ import SubmissionSet from "../module/websocket/set/SubmissionSet";
 import SocketSet from "../module/websocket/set/SocketSet";
 import UserSocketSet from "../module/websocket/set/UserSocketSet";
 import SubmissionOriginSet from "../module/websocket/set/SubmissionOriginSet";
-import BroadcastManager from "../module/websocket/BroadcastManager";
+import BroadcastManager from "../manager/websocket/BroadcastManager";
 import UserSetCollector from "../module/websocket/UserSetCollector";
-import OnlineUserBroadcast from "../module/websocket/OnlineUserBroadcast";
+import OnlineUserBroadcast from "../manager/websocket/OnlineUserBroadcast";
 import SolutionUserCollector from "../module/judger/SolutionUserCollector";
 import BuildSocketStatus, {buildSocket} from "../module/websocket/BuildSocketStatus";
 import ContestPagePushSet from "../module/websocket/set/ContestPagePushSet";
 import StatusSet from "../module/websocket/singleton/StatusSet";
 import InitExternalEnvironment from "../module/init/InitExternalEnvironment";
+import ProblemFromSpecialSubject from "../module/websocket/set/ProblemFromSpecialSubject";
+import SubmitUserInfo from "../module/websocket/set/SubmitUserInfo";
+import ProblemFromContest from "../module/websocket/set/ProblemFromContest";
+import SolutionContext from "../module/websocket/set/SolutionContext";
 
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
@@ -70,25 +74,16 @@ let whiteboard = new Set();
  * 本地判题WebSocket服务器建立连接
  */
 
-let problemFromContest = {};
-let problemFromSpecialSubject = {};
-let submitUserInfo = {};
-let solutionContext = {};
-
 global.submissions = SubmissionSet.getInnerStorage();
 global.contest_mode = false;
 
 function clearBinding(solution_id) {
-	if (problemFromContest[solution_id]) {
-		delete problemFromContest[solution_id];
-	}
-	if (problemFromSpecialSubject[solution_id]) {
-		delete problemFromSpecialSubject[solution_id];
-	}
+	ProblemFromContest.remove(solution_id);
+	ProblemFromSpecialSubject.remove(solution_id);
 	SubmissionOriginSet.remove(solution_id);
-	delete submitUserInfo[solution_id];
+	SubmitUserInfo.remove(solution_id);
 	SubmissionSet.remove(solution_id);
-	delete solutionContext[solution_id];
+	SolutionContext.remove(solution_id);
 }
 
 async function banSubmissionChecker(solution_pack) {
@@ -115,7 +110,7 @@ wss.on("connection", function (ws) {
 		const solutionPack = message;
 		const finished = parseInt(solutionPack.finish);
 		const solutionId = parseInt(solutionPack.solution_id);
-		Object.assign(solutionPack, submitUserInfo[solutionId], problemFromContest[solutionId], problemFromSpecialSubject[solutionId], solutionContext[solutionId]);
+		Object.assign(solutionPack, SubmitUserInfo.get(solutionId), ProblemFromContest.get(solutionId), ProblemFromSpecialSubject.get(solutionId), SolutionContext.get(solutionId));
 		if (finished) {
 			await banSubmissionChecker(solutionPack);
 			await storeSubmission(solutionPack);
@@ -123,7 +118,7 @@ wss.on("connection", function (ws) {
 
 		if (SubmissionSet.has(solutionId)) {
 			SubmissionSet.get(solutionId).emit("result", solutionPack);
-			BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!problemFromContest[solutionId]);
+			BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId));
 			if (SubmissionOriginSet.has(solutionId)) {
 				BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
 			}
@@ -332,23 +327,23 @@ io.on("connection", async function (socket) {
 		const ip = OnlineUserSet.get(socket.user_id).ip;
 		const fingerprint = data.val.fingerprint;
 		const fingerprintRaw = data.val.fingerprintRaw;
-		solutionContext[data.submission_id] = {
+		SolutionContext.set(data.submission_id, {
 			ip,
 			fingerprint,
 			fingerprintRaw
-		};
+		});
 		data.user_id = socket.user_id || "";
 		data.nick = socket.user_nick;
 		const submission_id = parseInt(data.submission_id);
 		SubmissionSet.set(submission_id, socket);
 		const avatar = await cache_query("select avatar,avatarUrl from users where user_id = ?", [data.user_id]);
-		submitUserInfo[submission_id] = {
+		SubmitUserInfo.set(submission_id, {
 			nick: data.nick,
 			user_id: data.user_id,
 			in_date: new Date().toISOString(),
 			avatar: !!avatar[0].avatar,
 			avatarUrl: avatar[0].avatarUrl
-		};
+		});
 		data.val.avatar = !!avatar[0].avatar;
 		data.val.avatarUrl = avatar[0].avatarUrl;
 		if (data.val && typeof data.val.cid !== "undefined" && !isNaN(parseInt(data.val.cid))) {
@@ -356,28 +351,28 @@ io.on("connection", async function (socket) {
                 contest_problem WHERE contest_id=? and num=?`, [Math.abs(data.val.cid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
-				problemFromContest[submission_id] = {
+				ProblemFromContest.set(submission_id, {
 					contest_id: data.val.cid,
 					num: data.val.pid
-				};
+				});
 			}
 		} else if (data.val && typeof data.val.tid !== "undefined" && !isNaN(parseInt(data.val.tid))) {
 			const id_val = await cache_query(`SELECT problem_id FROM 
 			special_subject_problem WHERE topic_id = ? and num = ?`, [Math.abs(data.val.tid), data.val.pid]);
 			if (id_val.length && id_val[0].problem_id) {
 				data.val.id = id_val[0].problem_id;
-				problemFromSpecialSubject[submission_id] = {
+				ProblemFromSpecialSubject.set(submission_id, {
 					topic: data.val.topic_id,
 					num: data.val.pid
-				};
+				});
 			}
 		}
-		Object.assign(data.val, solutionContext[submission_id]);
+		Object.assign(data.val, SolutionContext.get(submission_id));
 		if ((data.val && data.val.cid)) {
 			const contest_id = Math.abs(parseInt(data.val.cid)) || 0;
 			if (contest_id >= 1000) {
 				BroadcastManager.sendMessage(ContestPagePushSet.get(contest_id), "submit", data, 1);
-				BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1, !!problemFromContest[submission_id]);
+				BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1, ProblemFromContest.has(submission_id));
 				SubmissionOriginSet.set(submission_id, contest_id);
 			}
 		} else {

@@ -37,6 +37,8 @@ class SubmissionManager {
         problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         return problemInfo;
     }
+
+    
 }
 
 export default new SubmissionManager();

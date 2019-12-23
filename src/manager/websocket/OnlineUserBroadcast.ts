@@ -1,9 +1,9 @@
-import OnlineUserSet from "./set/OnlineUserSet";
+import OnlineUserSet from "../../module/websocket/set/OnlineUserSet";
 import BroadcastManager from "./BroadcastManager";
-import NormalUserSet from "./set/NormalUserSet";
-import AdminUserSet from "./set/AdminUserSet";
-import localJudge from "../judger"
-import {BaseUserSet} from "./set/BaseUserSet";
+import NormalUserSet from "../../module/websocket/set/NormalUserSet";
+import AdminUserSet from "../../module/websocket/set/AdminUserSet";
+import localJudge from "../../module/judger"
+import {BaseUserSet} from "../../module/websocket/set/BaseUserSet";
 import Throttle from "../../decorator/Throttle";
 
 /**

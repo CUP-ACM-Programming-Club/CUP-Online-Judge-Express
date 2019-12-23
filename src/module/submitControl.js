@@ -261,6 +261,13 @@ function classifySubmissionType(data) {
 	return submission_type;
 }
 
+function dos2unix(plainText) {
+	if (typeof plainText !== "string") {
+		throw new Error("input should be string");
+	}
+	return plainText.split("\r\n").join("\n");
+}
+
 async function insertTransaction({result, source_code, source_code_user, data}, testRun) {
 	const solution_id = result.insertId;
 	let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
@@ -269,6 +276,7 @@ async function insertTransaction({result, source_code, source_code_user, data}, 
 		values(?,?)`, [solution_id, source_code])
 	];
 	if (testRun) {
+		data.input_text = dos2unix(data.input_text);
 		promiseArray.push(query(`insert into custominput(solution_id, input_text)
             values(?,?)`, [solution_id, data.input_text]));
 	}

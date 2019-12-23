@@ -3,7 +3,7 @@ import UserSocketSet from "./set/UserSocketSet";
 import AdminUserSet from "./set/AdminUserSet";
 import NormalUserSet from "./set/NormalUserSet";
 import OnlineUserSet from "./set/OnlineUserSet";
-import OnlineUserBroadcast from "./OnlineUserBroadcast";
+import OnlineUserBroadcast from "../../manager/websocket/OnlineUserBroadcast";
 interface IUser {
     user_id: string,
     url: string[],
