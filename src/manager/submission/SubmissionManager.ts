@@ -19,7 +19,7 @@ class SubmissionManager {
     }
 
     async getSolutionInfo(solutionId: number) {
-        const response: any[] = await cache_query("select problem_id, user_id, language from solution where solution_id = ?", [solutionId]);
+        const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
         return response[0] as SolutionInfo;
     }
 
@@ -38,7 +38,7 @@ class SubmissionManager {
         return problemInfo;
     }
 
-    
+
 }
 
 export default new SubmissionManager();

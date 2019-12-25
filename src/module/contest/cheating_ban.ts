@@ -51,7 +51,7 @@ async function banChecker(contest: number | string, user_id: string) {
 	}
 }
 
-export default class Cheating {
+export class Cheating {
 	initContest(contest: number | string) {
 		if (!Object.prototype.hasOwnProperty.call(cache, contest)) {
 			cache[contest] = {};
@@ -89,4 +89,4 @@ export default class Cheating {
 	}
 }
 
-module.exports = Cheating;
+export default new Cheating();

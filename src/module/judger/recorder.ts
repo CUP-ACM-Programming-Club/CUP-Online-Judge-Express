@@ -86,41 +86,41 @@ async function storeToRuntimeError(solution_id: any, info: any) {
 	await query("insert into runtimeinfo values(?, ?) on duplicate key update error = ?", [solution_id, info, info]);
 }
 
-async function runtimeErrorStore(payload: RuntimeInfoPayload) {
+export async function runtimeErrorStore(payload: RuntimeInfoPayload) {
 	const {runtime_info, solution_id} = payload;
 	await storeToRuntimeError(solution_id, runtime_info);
 }
 
-async function testRunStore(payload: TestRunInfoPayload) {
+export async function testRunStore(payload: TestRunInfoPayload) {
 	const {test_run_result, solution_id} = payload;
 	await storeToRuntimeError(solution_id, test_run_result);
 }
 
-async function storeNormalSubmission(payload: SubmissionPayload) {
+export async function storeNormalSubmission(payload: SubmissionPayload) {
 	await baseSubmissionStore(payload);
 	const runtime_info = payload.runtime_info;
 	const solution_id = payload.solution_id;
 	await runtimeErrorStore({runtime_info, solution_id});
 }
 
-async function storeCompileErrorSubmission(payload: SubmissionPayload) {
+export async function storeCompileErrorSubmission(payload: SubmissionPayload) {
 	await baseSubmissionStore(payload);
 	const compile_info = payload.compile_info;
 	const solution_id  = payload.solution_id;
 	await compileErrorStore({compile_info, solution_id});
 }
 
-async function storeRuntimeErrorSubmission(payload: SubmissionPayload) {
+export async function storeRuntimeErrorSubmission(payload: SubmissionPayload) {
 	await baseSubmissionStore(payload);
 	await runtimeErrorStore(payload);
 }
 
-async function storeTestRunSubmission(payload: SubmissionPayload) {
+export async function storeTestRunSubmission(payload: SubmissionPayload) {
 	await baseSubmissionStore(payload);
 	await testRunStore(payload);
 }
 
-async function storeSubmission(payload: SubmissionPayload) {
+export async function storeSubmission(payload: SubmissionPayload) {
 	console.log("storeSubmission: ", payload);
 	if (payload.state === 11) {
 		await storeCompileErrorSubmission(payload);
@@ -140,13 +140,3 @@ async function storeSubmission(payload: SubmissionPayload) {
 		delete payload.runtime_info;
 	}
 }
-
-module.exports = {
-	storeRuntimeErrorSubmission,
-	storeCompileErrorSubmission,
-	storeNormalSubmission,
-	storeSubmission,
-	baseSubmissionStore,
-	maintainUserInfo,
-	maintainProblem
-};

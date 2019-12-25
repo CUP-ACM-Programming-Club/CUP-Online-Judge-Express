@@ -7,6 +7,8 @@ import path from "path";
 import Promise from "bluebird";
 import {mkdirAsync} from "./file/mkdir";
 import SubmissionManager from "../manager/submission/SubmissionManager";
+import WebsocketServer, {WebsocketServer as ws} from "../module/judger/WebsocketServer";
+import WebsocketServerAdapter from "../module/judger/websocket/adapter/WebsocketServerAdapter";
 import Tolerable from "../decorator/Tolerable";
 const fs: any = Promise.promisifyAll(fsDefault);
 const {spawn} = require("child_process");
@@ -17,6 +19,7 @@ const eventEmitter = require("events").EventEmitter;
 
 export class localJudger extends eventEmitter {
 
+	websocketServer: ws;
 	/**
      * 构造判题机
      * @param {String} home_dir 评测机所在的目录
@@ -42,6 +45,14 @@ export class localJudger extends eventEmitter {
 		this.platform = os.platform();
 		this.errorHandler = null;
 		this.SUBMISSION_INFO_PATH = path.join(global.config.judger.oj_home, "submission");
+		let wsport: any;
+		if (process.env.MODE === "websocket") {
+			wsport = process.env.WSPORT || global.config.ws.judger_port;
+		}
+		else {
+			wsport = process.env.WSPORT || 0;
+		}
+		this.websocketServer = WebsocketServer.setPort(wsport).setAdapter(WebsocketServerAdapter).startServer();
 		if (this.platform !== "linux" && this.platform !== "darwin") {
 			throw new Error("Your platform doesn't support right now");
 		}

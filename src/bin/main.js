@@ -9,21 +9,19 @@ import BindUserInfo from "../module/websocket/BindUserInfo";
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
-let port, wsport;
+let port;
 let dockerRunner;
 import localJudge from "../module/judger";
 const _dockerRunner = require("../module/docker_runner");
 dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
-	wsport = process.env.WSPORT || config.ws.judger_port;
 	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
 	localJudge.setErrorHandler(new RuntimeErrorHandler());
 	const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
 	databaseSubmissionCollector.setJudger(localJudge).start();
 } else {
 	port = process.env.PORT || 0;
-	wsport = process.env.WSPORT || 0;
 	const dash = require("appmetrics-dash");
 	const dashConfig = require("../module/init/dash-config");
 	dash.monitor(dashConfig);
@@ -32,16 +30,7 @@ const cache_query = require("../module/mysql_cache");
 const submitControl = require("../module/submitControl");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-const WebSocket = require("ws");
-
-const BanCheaterModel = require("../module/contest/cheating_ban");
-const {storeSubmission} = require("../module/judger/recorder");
-const {solutionContainContestId, getSolutionInfo} = require("../module/solution/solution");
 const {ConfigManager} = require("../module/config/config-manager");
-
-const wss = new WebSocket.Server({port: wsport});
-const banCheaterModel = new BanCheaterModel();
-const ErrorCollector = require("../module/error/collector");
 import OnlineUserSet from "../module/websocket/set/OnlineUserSet";
 import NormalUserSet from "../module/websocket/set/NormalUserSet";
 import AdminUserSet from "../module/websocket/set/AdminUserSet";
@@ -76,85 +65,6 @@ let whiteboard = new Set();
 
 global.submissions = SubmissionSet.getInnerStorage();
 global.contest_mode = false;
-
-function clearBinding(solution_id) {
-	ProblemFromContest.remove(solution_id);
-	ProblemFromSpecialSubject.remove(solution_id);
-	SubmissionOriginSet.remove(solution_id);
-	SubmitUserInfo.remove(solution_id);
-	SubmissionSet.remove(solution_id);
-	SolutionContext.remove(solution_id);
-}
-
-async function banSubmissionChecker(solution_pack) {
-	if (!ConfigManager.isSwitchedOn("ban_contest_cheater", 0)) {
-		return;
-	}
-	if (parseInt(solution_pack.sim) === 100 && solution_pack.state === 4 &&
-        (Object.prototype.hasOwnProperty.call(solution_pack, "contest_id") || await solutionContainContestId(solution_pack.solution_id))) {
-		if (!Object.prototype.hasOwnProperty.call(solution_pack, "contest_id")) {
-			Object.assign(solution_pack, await getSolutionInfo(solution_pack.solution_id));
-		}
-		Object.assign(solution_pack, {state: 15});
-		const {contest_id, num, user_id, solution_id} = solution_pack;
-		await banCheaterModel.addCheating(user_id, contest_id, {solution_id, num});
-	}
-}
-
-wss.on("connection", function (ws) {
-	/**
-     * 绑定judger发送的事件
-     */
-	ws.on("error", console.log);
-	ws.on("judger", async function (message) {
-		const solutionPack = message;
-		const finished = parseInt(solutionPack.finish);
-		const solutionId = parseInt(solutionPack.solution_id);
-		Object.assign(solutionPack, SubmitUserInfo.get(solutionId), ProblemFromContest.get(solutionId), ProblemFromSpecialSubject.get(solutionId), SolutionContext.get(solutionId));
-		if (finished) {
-			await banSubmissionChecker(solutionPack);
-			await storeSubmission(solutionPack);
-		}
-
-		if (SubmissionSet.has(solutionId)) {
-			SubmissionSet.get(solutionId).emit("result", solutionPack);
-			BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId));
-			if (SubmissionOriginSet.has(solutionId)) {
-				BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
-			}
-		}
-
-		if (finished) {
-			clearBinding(solutionId);
-		}
-	});
-
-	ws.on("vjudgeJudgerStatus", () => {
-
-	});
-
-	/**
-     * 获得推送信息，根据信息类型emit对应事件
-     */
-	ws.on("message", function (message) {
-		let request;
-		try {
-			request = JSON.parse(message);
-		} catch (e) {
-			ErrorCollector.push(__filename, e);
-			logger.fatal(`Error:\n
-			Error name:${e.name}\n
-			Error Message:${e.message}
-			`);
-			return;
-		}
-		if (request.type && typeof request.type === "string") {
-			ws.emit(request.type, request.value, request);
-		} else {
-			logger.fatal(`Error:Parsing message failed.Receive data:${message}`);
-		}
-	});
-});
 
 
 /**

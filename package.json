@@ -101,6 +101,7 @@
     "@types/redis": "^2.8.14",
     "@types/socket.io": "^2.1.4",
     "@types/validator": "^10.11.3",
+    "@types/ws": "^6.0.4",
     "chai": "^4.2.0",
     "codecov": "^3.6.1",
     "eslint": "^6.5.1",

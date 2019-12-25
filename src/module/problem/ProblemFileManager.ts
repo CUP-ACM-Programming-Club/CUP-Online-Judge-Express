@@ -3,8 +3,15 @@ interface JudgerConfig {
 	oj_home: string,
 	oj_judge_num: number
 }
+
+interface WebSocketConfig {
+	websocket_client_port: number
+	judger_port: number;
+}
+
 interface Config {
-	judger: JudgerConfig
+	judger: JudgerConfig,
+	ws: WebSocketConfig
 }
 declare global {
 	namespace NodeJS {
