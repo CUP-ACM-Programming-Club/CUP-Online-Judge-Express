@@ -1,9 +1,12 @@
 import WebSocket from "ws";
+
 const config = global.config;
 
 export interface IWebsocketServerAdapter {
     onMessage(server: WebSocket.Server, message: any): any;
+
     onJudgerMessage(server: WebSocket.Server, message: any): any;
+
     onError(server: WebSocket.Server, message: any): any;
 }
 
@@ -11,7 +14,9 @@ export class WebsocketServer {
     PORT = process.env.PORT || config.ws.judger_port || 0;
     websocketServer?: WebSocket.Server;
     adapter?: IWebsocketServerAdapter;
+
     setPort(port: number) {
+        console.log(`Websocket Server set port:${port}`);
         this.PORT = port;
         return this;
     }
@@ -34,14 +39,16 @@ export class WebsocketServer {
         if (!this.websocketServer) {
             throw new Error("Websocket Server not start!");
         }
-        this.websocketServer.on("message", message => {
-            adapter!.onMessage(this.websocketServer!, message);
-        });
-        this.websocketServer.on("judger", message => {
-            adapter!.onJudgerMessage(this.websocketServer!, message);
-        });
-        this.websocketServer.on("error", message => {
-            adapter!.onError(this.websocketServer!, message);
+        this.websocketServer.on("connection", (ws) => {
+            ws.on("message", message => {
+                adapter!.onMessage(this.websocketServer!, message);
+            });
+            ws.on("judger", message => {
+                adapter!.onJudgerMessage(this.websocketServer!, message);
+            });
+            ws.on("error", message => {
+                adapter!.onError(this.websocketServer!, message);
+            });
         });
     }
 
