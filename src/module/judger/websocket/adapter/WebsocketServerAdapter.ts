@@ -3,15 +3,15 @@ import WebSocket from "ws";
 import JudgeResultManager from "../../../../manager/websocket/JudgeResultManager";
 
 export class WebsocketServerAdapter implements IWebsocketServerAdapter {
-    onError(server: WebSocket.Server, message: any): any {
+    onError(server: WebSocket, message: any): any {
         console.log(message);
     }
 
-    async onJudgerMessage(server: WebSocket.Server, message: any) {
+    async onJudgerMessage(server: WebSocket, message: any) {
         await JudgeResultManager.messageHandle(message);
     }
 
-    onMessage(server: WebSocket.Server, message: any): any {
+    onMessage(server: WebSocket, message: any): any {
         let request;
         try {
             request = JSON.parse(message);

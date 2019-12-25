@@ -3,11 +3,11 @@ import WebSocket from "ws";
 const config = global.config;
 
 export interface IWebsocketServerAdapter {
-    onMessage(server: WebSocket.Server, message: any): any;
+    onMessage(server: WebSocket, message: any): any;
 
-    onJudgerMessage(server: WebSocket.Server, message: any): any;
+    onJudgerMessage(server: WebSocket, message: any): any;
 
-    onError(server: WebSocket.Server, message: any): any;
+    onError(server: WebSocket, message: any): any;
 }
 
 export class WebsocketServer {
@@ -41,13 +41,13 @@ export class WebsocketServer {
         }
         this.websocketServer.on("connection", (ws) => {
             ws.on("message", message => {
-                adapter!.onMessage(this.websocketServer!, message);
+                adapter!.onMessage(ws, message);
             });
             ws.on("judger", message => {
-                adapter!.onJudgerMessage(this.websocketServer!, message);
+                adapter!.onJudgerMessage(ws, message);
             });
             ws.on("error", message => {
-                adapter!.onError(this.websocketServer!, message);
+                adapter!.onError(ws, message);
             });
         });
     }
