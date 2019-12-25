@@ -1,4 +1,5 @@
 import {getUserIdBySolutionId} from "../user/user";
+import SubmissionManager from "../../manager/submission/SubmissionManager";
 
 const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
@@ -133,8 +134,7 @@ export async function storeSubmission(payload: SubmissionPayload) {
 	}
 	if (payload.state >= 4) {
 		await maintainUserInfo(payload.user_id);
-		Object.assign(payload, await getSolutionInfo(payload.solution_id));
-		await maintainProblem(payload.problem_id);
+		await maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id)).problem_id);
 	}
 	if (payload.runtime_info) {
 		delete payload.runtime_info;
