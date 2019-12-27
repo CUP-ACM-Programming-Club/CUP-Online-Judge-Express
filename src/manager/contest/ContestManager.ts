@@ -22,7 +22,7 @@ class ContestManager {
     @Cacheable(ContestCachePool, 10, "minute")
     getContestListByConditional(admin_str: string, myContest: string, limit: number) {
         const sql = this.buildSqlStructure(admin_str, myContest);
-        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc, end_time asc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
+        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW() and end_time, 1, 0))desc, end_time asc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
     }
 
     @ResponseLogger
@@ -78,11 +78,11 @@ class ContestManager {
     private buildPrivilegeStr(req: Request) {
         let admin_str = " 1 = 1 ";
         if (!req.session!.isadmin && !req.session!.contest_manager) {
-            admin_str += " and ctest.defunct = 'N' ";
+            admin_str += " and defunct = 'N' ";
         }
         // @ts-ignore
         if (global.contest_mode) {
-            admin_str = `${admin_str} and ctest.cmod_visible = '${!req.session!.isadmin ? 1 : 0}'`;
+            admin_str = `${admin_str} and cmod_visible = '${!req.session!.isadmin ? 1 : 0}'`;
         }
         return admin_str;
     }
