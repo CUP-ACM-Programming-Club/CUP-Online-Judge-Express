@@ -16,7 +16,7 @@ const PriorityQueue = require("tinyqueue");
 const os = require("os");
 const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
-
+const uuidV1 = require("uuid/v1");
 export class localJudger extends eventEmitter {
 
 	websocketServer: ws;
@@ -128,6 +128,7 @@ export class localJudger extends eventEmitter {
 	async writeSubmissionInfoToDisk (solutionId: number) {
 		await this.makeShareMemoryDirectory();
 		const submissionInfo = {
+			solution_id: solutionId,
 			source: "",
 			custom_input: "",
 			test_run: false,
@@ -148,8 +149,10 @@ export class localJudger extends eventEmitter {
 		payload = await SubmissionManager.getProblemInfo(problem_id);
 		Object.assign(submissionInfo, payload);
 		submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
+		const uuid = uuidV1();
 		// @ts-ignore
-		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${solutionId}.json`), JSON.stringify(submissionInfo), { mode: 0o777 });
+		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${uuid}.json`), JSON.stringify(submissionInfo), { mode: 0o777 });
+		return uuid;
 	}
 
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
@@ -157,7 +160,6 @@ export class localJudger extends eventEmitter {
 		if (!this.judging_queue.includes(solution_id) &&
             !this.in_waiting_queue[solution_id]) {
 			this.updateLatestSolutionId(solution_id);
-			await this.writeSubmissionInfoToDisk(solution_id);
 			if (!this.judge_queue.isEmpty()) {
 				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
 				this.judging_queue.push(solution_id);
@@ -202,8 +204,9 @@ export class localJudger extends eventEmitter {
      */
 
 	async runJudger(solution_id: number, runner_id: number, admin = false, no_sim = false, gray_task = false) {
+		const judgerId = await this.writeSubmissionInfoToDisk(solution_id);
 		const stderrBuilder: any = [], stdoutBuilder: any = [];
-		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home];
+		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home, "-judger_id", judgerId];
 		args.push("-no-mysql");
 		if (admin) {
 			args.push("-admin");
