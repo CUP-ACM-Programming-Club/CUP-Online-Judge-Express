@@ -28,7 +28,7 @@ class ContestManager {
     @ResponseLogger
     buildSqlStructure (admin_str: string, myContest: string) {
         const currentRunningSql = `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where start_time < NOW() and end_time>NOW() and ${admin_str} and ${myContest} order by end_time asc`;
-        const notRunningSql = `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()) ${admin_str} and ${myContest} order by contest_id desc`;
+        const notRunningSql = `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()) and ${admin_str} and ${myContest} order by contest_id desc`;
         return {
             currentRunningSql,
             notRunningSql
