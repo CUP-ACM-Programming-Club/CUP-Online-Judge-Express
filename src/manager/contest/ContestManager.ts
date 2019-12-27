@@ -22,7 +22,7 @@ class ContestManager {
     @Cacheable(ContestCachePool, 10, "minute")
     getContestListByConditional(admin_str: string, myContest: string, limit: number) {
         const sql = this.buildSqlStructure(admin_str, myContest);
-        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
+        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))asc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
     }
 
     @ResponseLogger
