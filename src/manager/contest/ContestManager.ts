@@ -6,6 +6,7 @@ import Timer from "../../decorator/Timer";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import isNumber from "../../module/util/isNumber";
+import ResponseLogger from "../../decorator/ResponseLogger";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 const PAGE_SIZE = 50;
@@ -24,6 +25,7 @@ class ContestManager {
         return cache_query(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2 limit ?, ?`, [limit, PAGE_SIZE]);
     }
 
+    @ResponseLogger
     buildSqlStructure (admin_str: string, myContest: string) {
         const currentRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where start_time < NOW() and end_time>NOW())ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by end_time asc`;
         const notRunningSql = `select user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from (select * from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()))ctest left join (select user_id,rightstr from privilege where rightstr like 'm%') p on concat('m',contest_id)=rightstr where ${admin_str} and ${myContest} order by contest_id desc`;
