@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
 		}
 		let sql = `update contest set title = ?,description = ?, start_time = ?, end_time = ?, private = ?, langmask = ?,
 	limit_hostname = ?, password = ?, vjudge = 0, cmod_visible = ?, ip_policy = ?, defunct = ? where contest_id = ?`;
-		await query(sql, [title, description, startTime, endTime, Public, langmask, hostname, password, ContestMode, classroomSelected,
+		await query(sql, [title, description, startTime, endTime, Public ? "0" : "1", langmask, hostname, password, ContestMode, classroomSelected,
 			defunct, contest_id]).then(() => console.log("update Finished"));
 		await removeAllContestProblem(contest_id).then(() => console.log("removeAllContestFinished", contest_id));
 		await addContestProblem(contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
