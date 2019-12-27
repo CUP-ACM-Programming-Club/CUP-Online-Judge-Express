@@ -19,10 +19,12 @@ function safeArrayParse(array: any[] | any) {
 
 class ContestManager {
     @Timer
-    @Cacheable(ContestCachePool, 10, "minute")
+    @Cacheable(ContestCachePool, 10, "second")
     getContestListByConditional(admin_str: string, myContest: string, limit: number) {
         const sql = this.buildSqlStructure(admin_str, myContest);
-        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW() and end_time, 1, 0))desc, end_time asc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
+        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
+         (IF(start_time < NOW() and end_time > NOW(), end_time, 0)),
+         (IF(start_time >= NOW() and end_time <= NOW(), contest_id, contest_id)) desc limit ?, ?`, [limit, PAGE_SIZE]);
     }
 
     @ResponseLogger
