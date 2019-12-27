@@ -1,8 +1,7 @@
 import {Dayjs} from "dayjs";
 import Lock from "../../decorator/Lock";
-
+import SegmentLock from "./SegmentLock";
 const dayjs = require("dayjs");
-const SegmentLock = require("./SegmentLock");
 const segLock = new SegmentLock();
 
 interface CacheValue {

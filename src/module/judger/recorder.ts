@@ -1,21 +1,9 @@
 import {getUserIdBySolutionId} from "../user/user";
 import SubmissionManager from "../../manager/submission/SubmissionManager";
-
+import Maintainer from "./recorder/Maintainer";
+import isNumber from "../util/isNumber";
 const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
-const isNumber = require("../util/isNumber").default;
-const SolutionUserCollector = require("./SolutionUserCollector").default;
-const {getSolutionInfo} = require("../solution/solution");
-
-async function maintainUserInfo(user_id: string) {
-	await query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`= ? AND `result`='4') WHERE `user_id`= ?", [user_id, user_id]);
-	await query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`= ? and problem_id>0) WHERE `user_id`= ?", [user_id, user_id]);
-}
-
-async function maintainProblem(problem_id: number | string) {
-	await query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`= ? AND `result`='4') WHERE `problem_id`= ?", [problem_id, problem_id]);
-	await query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`= ?) WHERE `problem_id`= ?", [problem_id, problem_id]);
-}
 
 type RawNumber = string | number;
 
@@ -133,8 +121,8 @@ export async function storeSubmission(payload: SubmissionPayload) {
 		await storeNormalSubmission(payload);
 	}
 	if (payload.state >= 4) {
-		await maintainUserInfo(payload.user_id);
-		await maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id)).problem_id);
+		await Maintainer.maintainUserInfo(payload.user_id);
+		await Maintainer.maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id)).problem_id);
 	}
 	if (payload.runtime_info) {
 		delete payload.runtime_info;

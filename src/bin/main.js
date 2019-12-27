@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable require-atomic-updates */
+import JudgeManager from "../manager/judge/JudgeManager";
+
 const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
@@ -298,7 +300,7 @@ io.on("connection", async function (socket) {
 			dockerRunner.addTask(data);
 			break;
 		default:
-			localJudge.addTask(data.submission_id, socket.privilege);
+			JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
 		}
 		BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 	});

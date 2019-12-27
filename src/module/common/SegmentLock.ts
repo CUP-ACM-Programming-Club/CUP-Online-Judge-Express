@@ -1,12 +1,12 @@
 import AwaitLock from "await-lock";
 import {ILock} from "./Lock";
 
-interface Lock {
+interface LockEntity {
 	[id: string]: AwaitLock
 }
 
 class SegmentLock implements ILock{
-	private readonly __lock__: Lock;
+	private readonly __lock__: LockEntity;
 	constructor() {
 		this.__lock__ = {};
 	}
@@ -32,4 +32,4 @@ class SegmentLock implements ILock{
 	}
 }
 
-module.exports = SegmentLock;
+export default SegmentLock;

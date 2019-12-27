@@ -6,10 +6,10 @@ import fsDefault from "fs";
 import path from "path";
 import Promise from "bluebird";
 import {mkdirAsync} from "./file/mkdir";
-import SubmissionManager from "../manager/submission/SubmissionManager";
 import WebsocketServer, {WebsocketServer as ws} from "../module/judger/WebsocketServer";
 import WebsocketServerAdapter from "../module/judger/websocket/adapter/WebsocketServerAdapter";
 import Tolerable from "../decorator/Tolerable";
+import JudgeManager from "../manager/judge/JudgeManager";
 const fs: any = Promise.promisifyAll(fsDefault);
 const {spawn} = require("child_process");
 const PriorityQueue = require("tinyqueue");
@@ -127,28 +127,7 @@ export class localJudger extends eventEmitter {
 	@Tolerable
 	async writeSubmissionInfoToDisk (solutionId: number) {
 		await this.makeShareMemoryDirectory();
-		const submissionInfo = {
-			solution_id: solutionId,
-			source: "",
-			custom_input: "",
-			test_run: false,
-			language: 0,
-			user_id: "",
-			problem_id: 0,
-			spj: false,
-			time_limit: 0,
-			memory_limit: 0
-		};
-		let payload;
-		const {problem_id} = payload = await SubmissionManager.getSolutionInfo(solutionId);
-		Object.assign(submissionInfo, payload);
-		if (problem_id <= 0) {
-			submissionInfo.test_run = true;
-			submissionInfo.custom_input = await SubmissionManager.getCustomInput(solutionId);
-		}
-		payload = await SubmissionManager.getProblemInfo(problem_id);
-		Object.assign(submissionInfo, payload);
-		submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
+		const submissionInfo = await JudgeManager.buildSubmissionInfo(solutionId);
 		const uuid = uuidV1();
 		// @ts-ignore
 		await fs.writeFileAsync(path.join(this.SUBMISSION_INFO_PATH, `${uuid}.json`), JSON.stringify(submissionInfo), { mode: 0o777 });
