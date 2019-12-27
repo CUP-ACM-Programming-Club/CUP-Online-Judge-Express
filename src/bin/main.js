@@ -1,7 +1,5 @@
 /* eslint-disable no-console */
 /* eslint-disable require-atomic-updates */
-import JudgeManager from "../manager/judge/JudgeManager";
-
 const ENVIRONMENT = process.env.NODE_ENV;
 require("../module/init/preinstall")();
 require("../module/init/build_env")();
@@ -52,6 +50,7 @@ import ProblemFromSpecialSubject from "../module/websocket/set/ProblemFromSpecia
 import SubmitUserInfo from "../module/websocket/set/SubmitUserInfo";
 import ProblemFromContest from "../module/websocket/set/ProblemFromContest";
 import SolutionContext from "../module/websocket/set/SolutionContext";
+import JudgeManager from "../manager/judge/JudgeManager";
 
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
