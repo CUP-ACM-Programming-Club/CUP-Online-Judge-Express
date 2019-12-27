@@ -21,18 +21,13 @@ class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 10, "minute")
     getContestListByConditional(admin_str: string, myContest: string, limit: number) {
-        const {currentRunningSql, notRunningSql} = this.buildSqlStructure(admin_str, myContest);
-        return cache_query(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2 limit ?, ?`, [limit, PAGE_SIZE]);
+        const sql = this.buildSqlStructure(admin_str, myContest);
+        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc, contest_id desc limit ?, ?`, [limit, PAGE_SIZE]);
     }
 
     @ResponseLogger
     buildSqlStructure (admin_str: string, myContest: string) {
-        const currentRunningSql = `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where start_time < NOW() and end_time>NOW() and ${admin_str} and ${myContest} order by end_time asc`;
-        const notRunningSql = `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where contest_id not in (select contest_id  from contest where start_time< NOW() and end_time > NOW()) and ${admin_str} and ${myContest} order by contest_id desc`;
-        return {
-            currentRunningSql,
-            notRunningSql
-        }
+        return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${admin_str} and ${myContest}`;
     }
 
     @Timer
@@ -49,8 +44,8 @@ class ContestManager {
 
     @ErrorHandlerFactory(ok.okMaker)
     async getTotalNumber(req: Request) {
-        const {currentRunningSql, notRunningSql} = this.buildSqlStructure(this.buildPrivilegeStr(req), this.getMyContestList(req));
-        return await this.countTotalNumber(`select * from (${currentRunningSql})t1 union all select * from (${notRunningSql})t2`);
+        const sql = this.buildSqlStructure(this.buildPrivilegeStr(req), this.getMyContestList(req));
+        return await this.countTotalNumber(sql);
     }
 
     @Timer
