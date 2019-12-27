@@ -189,6 +189,7 @@ export class localJudger extends eventEmitter {
 			const gray_task = task.gray_task;
 			delete this.in_waiting_queue[solution_id];
 			this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
+			this.judging_queue.push(solution_id);
 		}
 	}
 
