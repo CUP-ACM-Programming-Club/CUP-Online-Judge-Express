@@ -11,7 +11,7 @@ const cache_query = require("../../module/mysql_cache");
 
 export class SolveMapManager {
     async getUserList() {
-        return await cache_query("select user_id from users");
+        return await cache_query("select user_id from users where solved > 0");
     }
 
     @ErrorHandlerFactory(ok.okMaker)
@@ -23,11 +23,13 @@ export class SolveMapManager {
     }
 
     @ErrorHandlerFactory(ok.okMaker)
+    @Cacheable(new CachePool(), 1, "hour")
     async getUserListForRouter() {
         return await this.getUserList();
     }
 
     @ErrorHandlerFactory(ok.okMaker)
+    @Cacheable(new CachePool(), 30, "minute")
     async getUserACList(userId: string) {
         return await this.getUserACListByUserId(userId);
     }
@@ -38,7 +40,7 @@ export class SolveMapManager {
         if (user_id === "") {
             return [];
         }
-        return await cache_query("select problem_id from solution where user_id = ? and result = 4 order by in_date asc", [user_id]);
+        return await cache_query("select problem_id from solution where user_id = ? and result = 4 group by problem_id, in_date order by in_date asc", [user_id]);
     }
 
     async formatAcceptProblemToEdges(problem_list: any = [], problem_id: any) {
@@ -64,10 +66,9 @@ export class SolveMapManager {
     mergeSameEdges(Edges = []) {
         let map: any = {};
         Edges.forEach((el: any) => {
-            map[el.from + " to " + el.to] = Object.assign({value: 0}, el);
-        });
-        Edges.forEach((el: any) => {
-            ++map[el.from + " to " + el.to].value;
+            const key = el.from + " to " + el.to;
+            map[key] = Object.assign({value: 0}, el);
+            ++map[key].value;
         });
         return Object.values(map);
     }
@@ -79,9 +80,8 @@ export class SolveMapManager {
         const userList = await this.getUserList();
         let ACLists: any[] = await Promise.all(userList.map((user: any) => this.getUserACListByUserId(user.user_id)));
         ACLists = _.filter(ACLists, (e: any) => Array.isArray(e) && e.length > 0);
-        const formattedEdges = await Promise.all(ACLists.map(list => this.formatAcceptProblemToEdges(list, problem_id)));
-        const edges: any = [];
-        formattedEdges.forEach(edgeList => edges.push(...edgeList));
+        const formattedEdges: any[] = await Promise.all(ACLists.map(list => this.formatAcceptProblemToEdges(list, problem_id)));
+        const edges: any = _.flatten(formattedEdges);
         return this.mergeSameEdges(edges);
     }
 }

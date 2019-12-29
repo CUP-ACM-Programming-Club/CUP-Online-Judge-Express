@@ -9,7 +9,7 @@ module.exports = function () {
 	console.log("HTTP server is closed");
 	sequelize.close();
 	console.log("Sequelize instance is closed");
-	mysql.end();
+	mysql.pool.end();
 	console.log("MySQL is closed");
 	redis.quit();
 	console.log("Redis is closed");
