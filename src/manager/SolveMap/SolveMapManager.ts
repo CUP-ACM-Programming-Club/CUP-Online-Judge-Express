@@ -6,14 +6,17 @@ import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import _ from "lodash";
 import isNumber from "../../module/util/isNumber";
+import Timer from "../../decorator/Timer";
 
 const cache_query = require("../../module/mysql_cache");
 
 export class SolveMapManager {
+    @Timer
     async getUserList() {
         return await cache_query("select user_id from users where solved > 0");
     }
 
+    @Timer
     @ErrorHandlerFactory(ok.okMaker)
     @Lock(new SingleLock())
     @Cacheable(new CachePool(), 1, "hour")
@@ -22,18 +25,21 @@ export class SolveMapManager {
         return await Promise.all(userList.map((userArray: any) => this.getUserACListByUserId(userArray.user_id)));
     }
 
+    @Timer
     @ErrorHandlerFactory(ok.okMaker)
     @Cacheable(new CachePool(), 1, "hour")
     async getUserListForRouter() {
         return await this.getUserList();
     }
 
+    @Timer
     @ErrorHandlerFactory(ok.okMaker)
     @Cacheable(new CachePool(), 30, "minute")
     async getUserACList(userId: string) {
         return await this.getUserACListByUserId(userId);
     }
 
+    @Timer
     @Lock(new SingleLock())
     @Cacheable(new CachePool(), 30, "minute")
     async getUserACListByUserId(user_id = "") {
@@ -43,6 +49,7 @@ export class SolveMapManager {
         return await cache_query("select problem_id from solution where user_id = ? and result = 4 group by problem_id, in_date order by in_date asc", [user_id]);
     }
 
+    @Timer
     async formatAcceptProblemToEdges(problem_list: any = [], problem_id: any) {
         let specific_problem = false;
         if (isNumber(problem_id)) {
@@ -63,6 +70,7 @@ export class SolveMapManager {
         return result;
     }
 
+    @Timer
     mergeSameEdges(Edges = []) {
         let map: any = {};
         Edges.forEach((el: any) => {
@@ -73,6 +81,7 @@ export class SolveMapManager {
         return Object.values(map);
     }
 
+    @Timer
     @ErrorHandlerFactory(ok.okMaker)
     @Lock(new SingleLock())
     @Cacheable(new CachePool(), 1, "day")
