@@ -33,7 +33,7 @@ interface SubmissionPayload extends RuntimeInfoPayload, TestRunInfoPayload, Comp
 	result: RawNumber,
 	pass_point: RawNumber,
 	state: RawNumber,
-	pass_rate: RawNumber,
+	pass_rate: RawNumber | null,
 	judger: string,
 	sim: RawNumber | null | undefined,
 	sim_s_id: RawNumber | null | undefined
@@ -57,7 +57,7 @@ async function baseSubmissionStore(payload: SubmissionPayload) {
 	payload.result = payload.state;
 	let {time, memory, result, pass_point, pass_rate, judger, solution_id, sim, sim_s_id} = payload;
 	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result < 4",
-		[time, memory, result, pass_point, pass_rate, judger, solution_id]);
+		[time, memory, result, pass_point, pass_rate === null ? 0 : pass_rate, judger, solution_id]);
 	if (isNumber(sim) && parseInt(<string>sim) > 0 && await checkValidSim(solution_id, sim_s_id) && !(await isAdministrator(solution_id))) {
 		await query("insert into sim(s_id,sim_s_id,sim) values(?,?,?) on duplicate key update  sim_s_id=?,sim=?", [solution_id, sim_s_id, sim, sim_s_id, sim]);
 	}
