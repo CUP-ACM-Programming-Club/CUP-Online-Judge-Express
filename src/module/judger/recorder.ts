@@ -43,7 +43,7 @@ interface SubmissionPayload extends RuntimeInfoPayload, TestRunInfoPayload, Comp
 async function checkValidSim(simId: any, simSourceId: any) {
 	const source = await getUserIdBySolutionId(simSourceId);
 	const current = await getUserIdBySolutionId(simId);
-	return source[0].user_id !== current[0].user_id;
+	return source !== current;
 }
 
 async function isAdministrator(solutionId: string | number) {
