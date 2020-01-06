@@ -2,6 +2,7 @@ const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
 const {ConfigManager} = require("../config/config-manager");
 const DEFAULT_LOOP_SECONDS = 3000;
+const SUBMISSION_COLLECT_LIMIT = 30;
 
 function isJudgerGraySolutionId (solutionId) {
 	solutionId = parseInt(solutionId);
@@ -17,7 +18,7 @@ function isJudgerGraySolutionId (solutionId) {
 async function collectHandler () {
 	try {
 		this.collectFinished = false;
-		const result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22)");
+		const result = await query("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22) order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
 		for (let i in result) {
 			if (!Object.prototype.hasOwnProperty.call(result,i)) {
 				continue;
