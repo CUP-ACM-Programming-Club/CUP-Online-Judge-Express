@@ -29,6 +29,13 @@ module.exports = function (ip) {
 		} else if (ip_pattern2 >= 101 && ip_pattern2 <= 172) {
 			return 503;
 		}
+	} else if (ip_pattern1 === 27) {
+		if (ip_pattern2 >= 1 && ip_pattern2 <= 102) {
+			return 504;
+		}
+		else {
+			return null;
+		}
 	} else if (ip_pattern1 === 32) {
 		if (ip_pattern2 >= 1 && ip_pattern2 <= 157) {
 			return 1005;
