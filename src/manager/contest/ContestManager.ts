@@ -19,7 +19,7 @@ function safeArrayParse(array: any[] | any) {
 
 class ContestManager {
     @Timer
-    @Cacheable(ContestCachePool, 10, "second")
+    @Cacheable(ContestCachePool, 1, "second")
     getContestListByConditional(admin_str: string, myContest: string, limit: number) {
         const sql = this.buildSqlStructure(admin_str, myContest);
         return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
