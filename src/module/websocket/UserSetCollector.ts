@@ -28,9 +28,9 @@ export default function (socket: UserSocket, next: (err?: any) => void) {
         }
         UserSocketSet.get(userId).push(socket);
         if (socket.privilege) {
-            AdminUserSet.get(userId).push(socket);
+            AdminUserSet.get(userId, []).push(socket);
         } else {
-            NormalUserSet.get(userId).push(socket);
+            NormalUserSet.get(userId, []).push(socket);
         }
     } else {
         let user:IUser = {

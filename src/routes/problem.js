@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import _ from "lodash";
+
 const express = require("express");
 const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
@@ -526,6 +528,7 @@ router.post("/:source/:id", function (req, res) {
 				sampleinput: "",
 				sampleoutput: "",
 				label: "",
+				hint: "",
 				spj: 0
 			}, req.body.json);
 			console.log(req.body.json);

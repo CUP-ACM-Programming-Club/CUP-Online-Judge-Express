@@ -14,7 +14,15 @@ export class BaseUserSet {
         return !!this.userList[key];
     }
 
-    get(key: IKey) {
+    get(key: IKey, defaultValue?: any) {
+        if (!Object.prototype.hasOwnProperty.call(this.userList, key)) {
+            if (defaultValue) {
+                this.set(key, defaultValue);
+            }
+            else {
+                throw new Error(`Value of ${key} have not set yet!`);
+            }
+        }
         return this.userList[key];
     }
 
