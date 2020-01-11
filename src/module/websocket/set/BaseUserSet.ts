@@ -20,7 +20,7 @@ export class BaseUserSet {
                 this.set(key, defaultValue);
             }
             else {
-                throw new Error(`Value of ${key} have not set yet!`);
+                return null;
             }
         }
         return this.userList[key];
