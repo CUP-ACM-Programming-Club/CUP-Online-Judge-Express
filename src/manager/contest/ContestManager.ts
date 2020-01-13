@@ -7,6 +7,7 @@ import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import isNumber from "../../module/util/isNumber";
 import ResponseLogger from "../../decorator/ResponseLogger";
+import CachePool from "../../module/common/CachePool";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 const PAGE_SIZE = 50;
@@ -25,6 +26,12 @@ class ContestManager {
         return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
          (IF(start_time < NOW() and end_time > NOW(), end_time, 0)),
          (IF(start_time >= NOW() and end_time <= NOW(), contest_id, contest_id)) desc limit ?, ?`, [limit, PAGE_SIZE]);
+    }
+
+    @Timer
+    @Cacheable(new CachePool(), 1, "second")
+    getAllContest() {
+        return cache_query(`select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest order by contest_id desc`);
     }
 
     @ResponseLogger
@@ -74,6 +81,12 @@ class ContestManager {
     @Timer
     async getContestList(req: Request) {
         return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.buildLimit(req));
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    @Timer
+    async getAllContestList() {
+        return await this.getAllContest();
     }
 
     @Timer

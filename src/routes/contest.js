@@ -110,6 +110,10 @@ router.get("/list", async (req, res) => {
 	res.json(await ContestManager.getContestList(req));
 });
 
+router.get("/list/all", async (req, res) => {
+	res.json(await ContestManager.getAllContest());
+});
+
 router.get("/total", async (req, res) => {
 	res.json(await ContestManager.getTotalNumber(req));
 });
