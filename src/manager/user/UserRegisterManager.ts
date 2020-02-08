@@ -1,7 +1,7 @@
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {Request} from "express";
 import CaptchaChecker from "../../decorator/CaptchaChecker";
-import {ok} from "../../module/constants/state";
+import {error, ok} from "../../module/constants/state";
 import RuleChecker from "../../decorator/RuleChecker";
 import isString from "../../decorator/rule-checker/rule/isString";
 import TrimArg from "../../decorator/TrimArg";
@@ -86,7 +86,10 @@ export class UserRegisterManager {
         await this.userRegisterValidator.validate(payload);
         return payload as IUserRegisterPayload;
     }
-    @ErrorHandlerFactory(ok.okMaker)
+    @ErrorHandlerFactory(ok.okMaker, function (err) {
+        console.warn(err);
+        return error.errorMaker(err.message);
+    })
     @CaptchaChecker(1, "register")
     async registerUser(payload: any, req: Request) {
         const registerPayload = await this.validator(payload);

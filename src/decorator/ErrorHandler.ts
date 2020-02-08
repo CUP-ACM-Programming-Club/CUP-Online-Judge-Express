@@ -5,7 +5,7 @@ function errorHandle(err: any) {
     return error.internalError;
 }
 
-export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any) {
+export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any, errorHandlerWrapper?: (err: any) => any) {
     if (typeof wrapper !== "function") {
         wrapper = e => e;
     }
@@ -22,6 +22,9 @@ export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any) {
                 }
             }
             catch (e) {
+                if (errorHandlerWrapper !== undefined) {
+                    return errorHandlerWrapper(e);
+                }
                 return errorHandle(e);
             }
         }
