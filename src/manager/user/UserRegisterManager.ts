@@ -86,17 +86,20 @@ export class UserRegisterManager {
         await this.userRegisterValidator.validate(payload);
         return payload as IUserRegisterPayload;
     }
-    @ErrorHandlerFactory(ok.okMaker, function (err) {
-        console.warn(err);
-        return error.errorMaker(err.message);
-    })
+
     @CaptchaChecker(1, "register")
+    @ErrorHandlerFactory(ok.okMaker)
     async registerUser(payload: any, req: Request) {
         const registerPayload = await this.validator(payload);
+        console.log("pass validator");
         await InviteManager.consumeInviteCode(registerPayload.inviteCode);
+        console.log("pass consume");
         const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
+        console.log("pass get info");
         await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
+        console.log("pass add record");
         await UserManager.addUser(registerPayload, req);
+        console.log("pass add user");
     }
 }
 
