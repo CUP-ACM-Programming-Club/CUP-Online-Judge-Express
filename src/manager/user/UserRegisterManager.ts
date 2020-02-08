@@ -91,13 +91,18 @@ export class UserRegisterManager {
         return payload as IUserRegisterPayload;
     }
 
-    @ErrorHandlerFactory(ok.okMaker, errorHandler)
     async registerUser(payload: any, req: Request) {
-        const registerPayload = await this.validator(payload);
-        await InviteManager.consumeInviteCode(registerPayload.inviteCode);
-        const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
-        await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
-        await UserManager.addUser(registerPayload, req);
+        try {
+            const registerPayload = await this.validator(payload);
+            await InviteManager.consumeInviteCode(registerPayload.inviteCode);
+            const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
+            await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
+            await UserManager.addUser(registerPayload, req);
+            return ok.okMaker({});
+        }
+        catch (e) {
+            return error.errorMaker(e.message);
+        }
     }
 
     @CaptchaChecker(0, "register")
