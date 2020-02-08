@@ -7,12 +7,7 @@ import isString from "../../decorator/rule-checker/rule/isString";
 import TrimArg from "../../decorator/TrimArg";
 import UserManager, {UserInfoPayload} from "./UserManager";
 import InviteManager from "./InviteManager";
-const query = require("../../module/mysql_cache");
 
-function errorHandler(err: any) {
-    console.log("log error:", err);
-    return error.errorMaker(err && err.message ? err.message : err);
-}
 interface IUserRegisterPayload extends UserInfoPayload {
     inviteCode: string
 }
@@ -107,7 +102,7 @@ export class UserRegisterManager {
 
     @CaptchaChecker(0, "register")
     async registerUserRequest(req: Request) {
-        await this.registerUser(req.body, req)
+        return await this.registerUser(req.body, req)
     }
 }
 
