@@ -14,8 +14,7 @@ export interface UserInfoPayload {
 
 export class UserManager {
     async addUser(userInfoPayload: UserInfoPayload, request: Request) {
-        console.log(userInfoPayload);
-        await query(`insert into users(user_id, password, confirmquestion, confirmanswer, nick, ip)values(?,?,?,?,?,?)`,
+        await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time)values(?,?,?,?,?,?,NOW())`,
             [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
             encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request)]);
     }
