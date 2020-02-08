@@ -9,23 +9,24 @@ export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any, errorHan
     if (typeof wrapper !== "function") {
         wrapper = e => e;
     }
+    let errorHandlerFunction = errorHandle;
+    if (errorHandlerWrapper !== undefined) {
+        return errorHandlerFunction = errorHandlerWrapper;
+    }
     return function (target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
         const method = propertyDescriptor.value;
         propertyDescriptor.value = function (...args: any[]) {
             try {
                 const result = method.apply(this, args);
                 if (isPromise(result)) {
-                    return (result as Promise<any>).then(e => wrapper!(e)).catch(errorHandle);
+                    return (result as Promise<any>).then(e => wrapper!(e)).catch(errorHandlerFunction);
                 }
                 else {
                     return wrapper!(result);
                 }
             }
             catch (e) {
-                if (errorHandlerWrapper !== undefined) {
-                    return errorHandlerWrapper(e);
-                }
-                return errorHandle(e);
+                return errorHandlerFunction(e);
             }
         }
     }
