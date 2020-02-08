@@ -1,32 +1,8 @@
-const mysql = require("mysql2");
-const config = global.config;
-//const connection = mysql.createConnection(config["mysql"]);
-let pool = mysql.createPool(config["mysql"]);
-const query = function (sql_query, sqlArr, callback) {
-	if(!pool || pool._closed) {
-		query.pool = pool = mysql.createPool(config["mysql"]);
-	}
-	if (typeof callback === "function") {
-		pool.query(sql_query, sqlArr, function (err, results, fields) {
-			callback(results, fields);
-		});
-	}
-	else {
-		return new Promise((resolve, reject) => {
-			pool.query(sql_query, sqlArr, function (err, results, fields) {
-				if (err) {
-					reject({error:err, sql: sql_query, args: sqlArr});
-				}
-				else {
-					resolve(results, fields);
-				}
-			});
-		});
-	}
-	//connection.end();
-};
+import {MySQLManager} from "../manager/mysql/MySQLManager";
 
-query.pool = pool;
+const query = MySQLManager.execQuery;
+
+query.pool = MySQLManager.mysqlPool;
 
 const _end = query.pool.end;
 query.pool.end = function() {

@@ -11,7 +11,8 @@ interface WebSocketConfig {
 
 interface Config {
 	judger: JudgerConfig,
-	ws: WebSocketConfig
+	ws: WebSocketConfig,
+	salt: string
 }
 declare global {
 	namespace NodeJS {

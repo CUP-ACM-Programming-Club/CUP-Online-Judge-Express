@@ -4,6 +4,7 @@ const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]);
 
 export class MySQLManager {
+    static mysqlPool = pool;
     static execQuery(sql_query: string, sqlArr?: any[], callback?: (...args: any[]) => any) {
         if (typeof callback === "function") {
             pool.query(sql_query, sqlArr, function (err: any, results: any, fields: any) {
@@ -24,5 +25,17 @@ export class MySQLManager {
             });
         }
         //connection.end();
+    }
+    static getConnection() {
+        return new Promise((resolve, reject) => {
+            pool.getConnection((err: Error, connection: any) => {
+                if (err !== null) {
+                    reject(err);
+                }
+                else {
+                    resolve(connection);
+                }
+            });
+        })
     }
 }
