@@ -5,12 +5,9 @@ function errorHandle(err: any) {
     return error.internalError;
 }
 
-export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any, errorHandlerWrapper?: (err: any) => any) {
-    if (typeof wrapper !== "function") {
-        wrapper = e => e;
-    }
+export function ErrorHandlerFactory(wrapper: (wrapObject: any) => any, errorHandlerWrapper?: (err: any) => any) {
     let errorHandlerFunction = errorHandle;
-    if (errorHandlerWrapper !== undefined) {
+    if (typeof errorHandlerWrapper === "function") {
         return errorHandlerFunction = errorHandlerWrapper;
     }
     return function (target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
@@ -32,4 +29,4 @@ export function ErrorHandlerFactory(wrapper?: (wrapObject: any) => any, errorHan
     }
 }
 
-export const ErrorHandler = ErrorHandlerFactory();
+export const ErrorHandler = ErrorHandlerFactory(e => e);

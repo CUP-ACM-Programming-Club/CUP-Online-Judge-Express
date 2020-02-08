@@ -9,6 +9,10 @@ import UserManager, {UserInfoPayload} from "./UserManager";
 import InviteManager from "./InviteManager";
 const query = require("../../module/mysql_cache");
 
+function errorHandler(err: any) {
+    console.log("log error:", err);
+    return error.errorMaker(err && err.message ? err.message : err);
+}
 interface IUserRegisterPayload extends UserInfoPayload {
     inviteCode: string
 }
@@ -88,10 +92,7 @@ export class UserRegisterManager {
     }
 
     @CaptchaChecker(1, "register")
-    @ErrorHandlerFactory(ok.okMaker, function (err) {
-        console.log("log error:", err);
-        return error.errorMaker(err && err.message ? err.message : err);
-    })
+    @ErrorHandlerFactory(ok.okMaker, errorHandler)
     async registerUser(payload: any, req: Request) {
         const registerPayload = await this.validator(payload);
         await InviteManager.consumeInviteCode(registerPayload.inviteCode);
