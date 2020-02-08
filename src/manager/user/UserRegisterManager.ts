@@ -87,7 +87,7 @@ export class UserRegisterManager {
         return payload as IUserRegisterPayload;
     }
     @ErrorHandlerFactory(ok.okMaker)
-    @CaptchaChecker(2, "register")
+    @CaptchaChecker(1, "register")
     async registerUser(payload: any, req: Request) {
         const registerPayload = await this.validator(payload);
         await InviteManager.consumeInviteCode(registerPayload.inviteCode);
