@@ -5,9 +5,8 @@ async function main() {
     if (cluster.isMaster) {
         require("../module/init/preinstall")();
         require("../module/init/build_env")();
-        require("../module/config/transfer/ClusterTransfer")();
+        require("../module/config/transfer/ClusterTransfer").default();
         require("../module/config/cluster/websocket-reload");
-
     }
     else {
 

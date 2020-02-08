@@ -1,6 +1,6 @@
-const cluster = require("cluster");
-
+import cluster from "cluster";
 function main() {
+	// @ts-ignore
 	if (!global.clusterMode) {
 		return;
 	}
@@ -16,4 +16,4 @@ function main() {
 	});
 }
 
-module.exports = main;
+export default main;

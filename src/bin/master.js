@@ -9,7 +9,7 @@ if (cluster.isMaster) {
 	global.clusterMode = true;
 	require("../module/init/preinstall")();
 	require("../module/init/build_env")();
-	require("../module/config/transfer/ClusterTransfer")();
+	require("../module/config/transfer/ClusterTransfer").default();
 	require("../module/config/cluster/hot-reload");
 	const config = global.config;
 	const port = config.ws.http_client_port;
