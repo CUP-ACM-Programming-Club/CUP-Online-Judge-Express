@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
-import _ from "lodash";
-
+import ProblemManager from "../manager/problem/ProblemManager";
 const express = require("express");
 const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
@@ -507,6 +506,10 @@ function storePhoto(problem_id, photo = {description: {}, input: {}, output: {}}
 		storePhotoBase(problem_id, i, photo[i]);
 	}
 }
+
+router.post("/add", async (req, res) => {
+	res.json(await ProblemManager.addProblem(req.body));
+});
 
 router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
