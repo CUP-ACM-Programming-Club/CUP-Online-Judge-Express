@@ -73,6 +73,10 @@ export class InviteManager {
                             return connection.rollback(() => {
                                 reject(error);
                             });
+                        } else if (!(results && results[0] && results[0].valid_time)) {
+                            return connection.rollback(() => {
+                                reject("Invite code doesn't exist");
+                            })
                         } else {
                             const restTime = results[0].valid_time;
                             if (restTime > 0) {
