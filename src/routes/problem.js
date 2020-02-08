@@ -508,7 +508,7 @@ function storePhoto(problem_id, photo = {description: {}, input: {}, output: {}}
 }
 
 router.post("/add", async (req, res) => {
-	res.json(await ProblemManager.addProblem(req.body));
+	res.json(await ProblemManager.addProblem(req, req.body));
 });
 
 router.post("/:source/:id", function (req, res) {
