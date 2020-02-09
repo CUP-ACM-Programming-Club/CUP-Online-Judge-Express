@@ -7,7 +7,7 @@ export default function CaptchaChecker(requestPosition: number, captchaFrom: str
         propertyDescriptor.value = function (...args: any[]) {
             const request: Request = args[requestPosition];
             if (!checkCaptcha(request, captchaFrom)) {
-                return error.invalidCaptcha;
+                throw error.invalidCaptcha;
             }
             return method.apply(this, args);
         }

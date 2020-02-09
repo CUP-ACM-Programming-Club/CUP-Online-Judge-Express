@@ -12,14 +12,31 @@ export interface UserInfoPayload {
     confirmAnswer: string
 }
 
+export interface UserInfoDAO {
+    user_id: string,
+    password: string,
+    newpassword: string,
+    nick: string,
+    school: string,
+    email: string,
+    reg_time: string,
+    ip: string,
+    confirmquestion: string,
+    confirmanswer: string
+}
+
 export class UserManager {
     async addUser(userInfoPayload: UserInfoPayload, request: Request) {
-        await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email)values(?,?,?,?,?,?,NOW(),'','')`,
+        return await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email)values(?,?,?,?,?,?,NOW(),'','')`,
             [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
             encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request)]);
     }
 
-    async getUser(userId: string) {
+    async changePassword(userId: string, password: string) {
+        return await query(`update users set newpassword = ? where user_id = ?`, [encryptPassword(password, salt), userId]);
+    }
+
+    async getUser(userId: string): Promise<UserInfoDAO | null> {
         const result = await query(`select * from users where user_id = ?`, [userId]);
         if (result && result.length && result.length > 0) {
             return result[0];

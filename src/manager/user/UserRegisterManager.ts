@@ -12,7 +12,7 @@ interface IUserRegisterPayload extends UserInfoPayload {
     inviteCode: string
 }
 
-class UserRegisterValidator {
+export class UserRegisterValidator {
     @TrimArg
     @RuleChecker(isString)
     private async userIdValidator(userId: string) {
@@ -86,23 +86,14 @@ export class UserRegisterManager {
         return payload as IUserRegisterPayload;
     }
 
-    async registerUser(payload: any, req: Request) {
-        try {
-            const registerPayload = await this.validator(payload);
-            await InviteManager.consumeInviteCode(registerPayload.inviteCode);
-            const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
-            await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
-            await UserManager.addUser(registerPayload, req);
-            return ok.okMaker({});
-        }
-        catch (e) {
-            return error.errorMaker(e.message);
-        }
-    }
-
+    @ErrorHandlerFactory(ok.okMaker)
     @CaptchaChecker(0, "register")
     async registerUserRequest(req: Request) {
-        return await this.registerUser(req.body, req)
+        const registerPayload = await this.validator(req.body);
+        await InviteManager.consumeInviteCode(registerPayload.inviteCode);
+        const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
+        await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
+        await UserManager.addUser(registerPayload, req);
     }
 }
 
