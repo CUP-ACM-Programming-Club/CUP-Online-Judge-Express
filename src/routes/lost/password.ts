@@ -7,4 +7,8 @@ router.get("/:user_id", async (req, res) => {
     res.json(await LostPasswordManager.getConfirmQuestion(req));
 });
 
+router.post("/", async (req, res) => {
+    res.json(await LostPasswordManager.resetPassword(req));
+});
+
 export = ["/password", router];
