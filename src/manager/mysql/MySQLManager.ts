@@ -5,7 +5,7 @@ const pool = mysql.createPool(config["mysql"]);
 
 export class MySQLManager {
     static mysqlPool = pool;
-    static execQuery(sql_query: string, sqlArr?: any[], callback?: (...args: any[]) => any) {
+    static execQuery(sql_query: string, sqlArr?: any[], callback?: (...args: any[]) => any): any {
         if (typeof callback === "function") {
             pool.query(sql_query, sqlArr, function (err: any, results: any, fields: any) {
                 callback(results, fields);
