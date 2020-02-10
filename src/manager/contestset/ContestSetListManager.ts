@@ -15,8 +15,12 @@ interface IContestSetListDAO {
 }
 
 class ContestSetListManager {
-    async getContestSetListByContestSetId(ContestSetId: number | string): Promise<IContestSetListDAO[]> {
-        return await MySQLManager.execQuery(`select contest_set_list.*, contest.title,contest.start_time,contest.end_time,contest.maker from contest_set_list where contestset_id left join contest on contest.contest_id = contest_set_list.contest_id`)
+    async getContestSetListByContestSetId(contestSetId: number | string): Promise<IContestSetListDAO[]> {
+        return await MySQLManager.execQuery(`
+select clist.*, contest.title,contest.start_time,contest.end_time,contest.maker from 
+(select * from contest_set_list where contestset_id = ?)clist left join
+contest on 
+contest.contest_id = clist.contest_id`, [contestSetId]);
     }
 
     async checkLimitToAccess(req: Request, contestSetId: string | number) {
@@ -31,6 +35,24 @@ class ContestSetListManager {
         const contestSetId = req.params.contestSetId;
         await this.checkLimitToAccess(req, contestSetId);
         return await this.getContestSetListByContestSetId(contestSetId);
+    }
+
+    async deleteContestSetList(contestSetId: number) {
+        await MySQLManager.execQuery(`delete from contest_set_list where contestset_id = ?`, [contestSetId]);
+    }
+
+    async addContestSetListByContestSetIdAndContestId(contestSetId: number, contestId: number) {
+        await MySQLManager.execQuery(`insert into contest_set_list
+(contestset_id, contest_id)values(?,?)`,[contestSetId, contestId]);
+    }
+
+    async updateContestSetListByRequest(req: Request) {
+        const contestSetId = req.body.contestSetId;
+        const contestIdList = req.body.contestIdList as number[];
+        await this.deleteContestSetList(contestSetId);
+        await Promise.all(contestIdList.map(contestId => {
+            return this.addContestSetListByContestSetIdAndContestId(contestSetId, contestId);
+        }));
     }
 }
 
