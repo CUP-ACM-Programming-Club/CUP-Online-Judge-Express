@@ -51,7 +51,7 @@ export class LostPasswordManager {
     @CaptchaChecker(0, "lost")
     async resetPassword(req: Request) {
         const payload = await this.validator(req.body);
-        this.checkConfirmAnswer(payload.userId, payload.confirmAnswer);
+        await this.checkConfirmAnswer(payload.userId, payload.confirmAnswer);
         await UserManager.changePassword(payload.userId, payload.password);
     }
 }
