@@ -56,6 +56,7 @@ router.post("/", async (req, res) => {
 		return;
 	}
 	newpassword = encryptPassword(newpassword, salt);
+	confirmanswer = encryptPassword(confirmanswer, salt);
 	try {
 		let Queue = [];
 		let Property = {
