@@ -37,7 +37,7 @@ export class LostPasswordManager {
     async checkConfirmAnswer(userId: string, confirmAnswer: string) {
         const userInfo = await UserManager.getUser(userId);
         const rawConfirmAnswer = userInfo?.confirmanswer || "";
-        if (!checkPassword(rawConfirmAnswer, "", confirmAnswer)) {
+        if (!checkPassword("", confirmAnswer, rawConfirmAnswer)) {
             throw new Error("Confirm answer is wrong");
         }
     }
