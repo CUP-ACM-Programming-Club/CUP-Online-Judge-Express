@@ -35,8 +35,8 @@ class ContestManager {
     }
 
     @ResponseLogger
-    buildSqlStructure (admin_str: string, myContest: string) {
-        return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${admin_str} and ${myContest}`;
+    buildSqlStructure (...args: string[]) {
+        return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${args.join(" and ")}`;
     }
 
     @Timer

@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import TutorialInterceptor from "../module/tutorial/interceptor";
+
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
@@ -189,4 +191,4 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 	}
 });
 
-module.exports = ["/tutorial", auth, router];
+module.exports = ["/tutorial", auth, TutorialInterceptor, router];
