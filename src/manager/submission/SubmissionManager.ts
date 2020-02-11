@@ -1,9 +1,30 @@
+import Cacheable from "../../decorator/Cacheable";
+import CachePool from "../../module/common/CachePool";
+
 const cache_query = require("../../module/mysql_cache");
 
-interface SolutionInfo {
+export interface SolutionInfoDAO {
     problem_id: number,
     user_id: string,
     language: number
+    solution_id: number,
+    time: number,
+    memory: number,
+    in_date: string,
+    result: number,
+    ip: string,
+    contest_id: number,
+    topic_id: number,
+    valid: number,
+    pass_point: number,
+    num: number,
+    code_length: number,
+    judgetime: string,
+    pass_rate: number,
+    judger: string,
+    share: number,
+    fingerprint: string,
+    fingerprintRaw: string
 }
 
 interface ProblemInfo {
@@ -18,9 +39,10 @@ class SubmissionManager {
         return response[0].source;
     }
 
+    @Cacheable(new CachePool(), 1, "minute")
     async getSolutionInfo(solutionId: number) {
         const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
-        return response[0] as SolutionInfo;
+        return response[0] as SolutionInfoDAO;
     }
 
     async getCustomInput(solutionId: number) {

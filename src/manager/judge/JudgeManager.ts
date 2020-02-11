@@ -18,7 +18,7 @@ interface ISubmissionInfo {
 
 interface IJudgeManager {
     buildSubmissionInfo(solutionId: number): Promise<ISubmissionInfo>;
-    addJudgeRequest(solutionId: number, superUser: boolean): Promise<void>;
+    addJudgeRequest(solutionId: number, superUser: boolean): Promise<boolean>;
 }
 
 export class JudgeManager implements IJudgeManager{
@@ -50,7 +50,8 @@ export class JudgeManager implements IJudgeManager{
     }
 
     async addJudgeRequest(solutionId: number, superUser: boolean) {
-        await localJudger.addTask(solutionId, superUser);
+        const response = await localJudger.addTask(solutionId, superUser);
+        return !response;
     }
 }
 

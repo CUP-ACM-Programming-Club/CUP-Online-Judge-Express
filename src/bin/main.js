@@ -293,13 +293,19 @@ io.on("connection", async function (socket) {
 		}
 		const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);
+		let localJudge = true;
 		switch (language) {
 		case 15:
 		case 22:
 			dockerRunner.addTask(data);
 			break;
 		default:
-			JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
+			localJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
+		}
+		if (!localJudge) {
+			socket.emit("remoteJudge", {
+				solutionId: response.solution_id
+			});
 		}
 		BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 	});

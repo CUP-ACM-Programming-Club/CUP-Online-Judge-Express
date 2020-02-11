@@ -18,7 +18,7 @@ const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
 const uuidV1 = require("uuid/v1");
 export class localJudger extends eventEmitter {
-
+	judgerExist = fsDefault.existsSync(`${process.cwd()}/wsjudged`);
 	websocketServer: ws;
 	/**
      * 构造判题机
@@ -134,6 +134,20 @@ export class localJudger extends eventEmitter {
 		return uuid;
 	}
 
+	static JudgeExists(target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
+		const method = propertyDescriptor.value;
+		propertyDescriptor.value = async function (...args: any[]) {
+			const thisTarget = this as localJudger;
+			if (thisTarget.judgerExist) {
+				return await method.apply(this, args);
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	@localJudger.JudgeExists
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
 		solution_id = localJudger.formatSolutionId(solution_id);
 		if (!this.judging_queue.includes(solution_id) &&
@@ -153,6 +167,7 @@ export class localJudger extends eventEmitter {
 				this.in_waiting_queue[solution_id] = true;
 			}
 		}
+		return true;
 	}
 
 	/**
