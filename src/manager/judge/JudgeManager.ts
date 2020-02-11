@@ -50,8 +50,7 @@ export class JudgeManager implements IJudgeManager{
     }
 
     async addJudgeRequest(solutionId: number, superUser: boolean) {
-        const response = await localJudger.addTask(solutionId, superUser);
-        return !response;
+        return await localJudger.addTask(solutionId, superUser);
     }
 }
 
