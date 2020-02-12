@@ -129,7 +129,7 @@ creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contests
         }
         else {
             const response = await this.getContestSetByContestSetId(contestSetId);
-            return response?.defunct === "N" && response.visible;
+            return response!.defunct === "N" && response!.visible;
         }
     }
 }
