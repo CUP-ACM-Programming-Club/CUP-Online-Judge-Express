@@ -37,6 +37,16 @@ class ContestSetPayloadValidator {
         }
     }
 
+    contestSetIdValidate(contestSetId: any) {
+        contestSetId = parseInt(contestSetId);
+        if (isNaN(contestSetId)) {
+            throw new Error("Contest Set ID must be number");
+        }
+        else {
+            return contestSetId;
+        }
+    }
+
     validate(payload: any) {
         const contestPayload = payload as IContestSetDTO;
         contestPayload.defunct = this.formatDefunct(contestPayload.defunct);
@@ -105,6 +115,12 @@ creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contests
         else {
             return null;
         }
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async getContestSetByContestSetIdByRequest(req: Request) {
+        const contestSetId = this.validator.contestSetIdValidate(req.body.contestSetId);
+        return await this.getContestSetByContestSetId(contestSetId);
     }
 
     async hasLimitToAccessContestSet(req: Request, contestSetId: string | number) {

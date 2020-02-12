@@ -7,8 +7,4 @@ router.get("/:contestSetId", async (req, res) => {
     res.json(await ContestSetListManager.getContestSetListByRequest(req));
 });
 
-router.get("/", async (req, res) => {
-    res.json(await ContestSetManager.getContestSetByRequest(req));
-});
-
 export = ["/list", router];
