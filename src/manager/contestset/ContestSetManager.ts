@@ -119,7 +119,7 @@ creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contests
 
     @ErrorHandlerFactory(ok.okMaker)
     async getContestSetByContestSetIdByRequest(req: Request) {
-        const contestSetId = this.validator.contestSetIdValidate(req.body.contestSetId);
+        const contestSetId = this.validator.contestSetIdValidate(req.params.contestSetId);
         return await this.getContestSetByContestSetId(contestSetId);
     }
 
