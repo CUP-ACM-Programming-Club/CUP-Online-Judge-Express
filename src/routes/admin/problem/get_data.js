@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const ProblemFileManager = require("../../../module/problem/ProblemFileManager");
+import ProblemFileManager from "../../../module/problem/ProblemFileManager";
 
 router.get("/data/:problemId/:fileName", (req, res) => {
 	const {problemId, fileName} = req.params;

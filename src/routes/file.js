@@ -4,7 +4,7 @@ const auth = require("../middleware/auth");
 const Promise = require("bluebird");
 const fs = Promise.promisifyAll(require("fs"));
 const {error, ok} = require("../module/constants/state");
-const ProblemFileManager = require("../module/problem/ProblemFileManager");
+import ProblemFileManager from "../module/problem/ProblemFileManager";
 
 if(!String.exist) {
 	String.prototype.exist = function(str) {

@@ -1,38 +1,71 @@
+import fs from "fs";
 import path from "path";
+import {Request} from "express";
+import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import {ok} from "../constants/state";
+
 interface JudgerConfig {
-	oj_home: string,
-	oj_judge_num: number
+    oj_home: string,
+    oj_judge_num: number
 }
 
 interface WebSocketConfig {
-	websocket_client_port: number
-	judger_port: number;
+    websocket_client_port: number
+    judger_port: number;
+}
+
+interface ProblemUploadDestConfig {
+    dir: string
 }
 
 interface Config {
-	judger: JudgerConfig,
-	ws: WebSocketConfig,
-	salt: string
+    judger: JudgerConfig,
+    ws: WebSocketConfig,
+    salt: string,
+    problem_upload_dest: ProblemUploadDestConfig
 }
+
 declare global {
-	namespace NodeJS {
-		interface Global {
-			config: Config
-		}
-	}
+    namespace NodeJS {
+        interface Global {
+            config: Config
+        }
+    }
 }
+
 class ProblemFileManager {
-	constructor() {
-	}
+    constructor() {
+    }
 
-	getProblemPath(problemId: string | number) {
-		const ojHome = path.join(global.config.judger.oj_home, "data");
-		return path.join(ojHome, problemId.toString());
-	}
+    getProblemPath(problemId: string | number) {
+        const ojHome = path.join(global.config.judger.oj_home, "data");
+        return path.join(ojHome, problemId.toString());
+    }
 
-	getFilePath(problemId: string | number, fileName: string) {
-		return path.join(this.getProblemPath(problemId), fileName);
-	}
+    getFilePath(problemId: string | number, fileName: string) {
+        return path.join(this.getProblemPath(problemId), fileName);
+    }
+
+    async copyFileToDest(filePath: string, destPath: string) {
+        return new Promise((resolve, reject) => {
+            fs.copyFile(filePath, destPath, (err) => {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    resolve();
+                }
+            });
+        })
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    setFileByRequest(req: Request) {
+		const originalFileName = req.file.originalname;
+		const problemId = req.params.problemId as string;
+		const filePath = req.file.path;
+		return this.copyFileToDest(filePath, path.join(this.getProblemPath(problemId), originalFileName));
+    }
 }
 
-module.exports = new ProblemFileManager();
+export default new ProblemFileManager();
