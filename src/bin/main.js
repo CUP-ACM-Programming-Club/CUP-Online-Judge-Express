@@ -22,9 +22,6 @@ if (process.env.MODE === "websocket") {
 	databaseSubmissionCollector.setJudger(localJudge).start();
 } else {
 	port = process.env.PORT || 0;
-	const dash = require("appmetrics-dash");
-	const dashConfig = require("../module/init/dash-config");
-	dash.monitor(dashConfig);
 }
 const cache_query = require("../module/mysql_cache");
 const submitControl = require("../module/submitControl");
