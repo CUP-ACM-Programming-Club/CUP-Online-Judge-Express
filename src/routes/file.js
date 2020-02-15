@@ -27,6 +27,9 @@ router.get("/:problem_id",async (req, res) => {
 		const dirFile = await fs.readdirAsync(problem_path);
 		let validFile = [];
 		for (let file of dirFile) {
+			if (file === "ac") {
+				continue;
+			}
 			if (file.exist(".in") && file.lastIndexOf(".in") + 3 === file.length) {
 				validFile.push(file);
 			} else if (file.exist(".out") && file.lastIndexOf(".out") + 4 === file.length) {
