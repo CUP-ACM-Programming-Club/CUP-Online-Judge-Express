@@ -202,7 +202,9 @@ export class localJudger extends eventEmitter {
 		const judgerId = await this.writeSubmissionInfoToDisk(solution_id);
 		const stderrBuilder: any = [], stdoutBuilder: any = [];
 		let args = ["-solution_id", solution_id, "-runner_id", runner_id, "-dir", this.oj_home, "-judger_id", judgerId];
-		args.push("-no-mysql");
+		if (!judgerId) {
+			args.push("-no-mysql");
+		}
 		if (admin) {
 			args.push("-admin");
 		}
