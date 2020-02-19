@@ -247,4 +247,4 @@ export class localJudger extends eventEmitter {
 }
 
 const config = global.config;
-export default new localJudger(config.judger.oj_home, config.judger.oj_judge_num);
+export default new localJudger(config.judger.oj_home, Math.min(config.judger.oj_judge_num, os.cpus().length));

@@ -1,5 +1,8 @@
 import isNumber from "../util/isNumber";
-import {Request, Response} from "express";
+import express, {Request, Response} from "express";
+const query = require("../../module/mysql_query");
+import {error, ok} from "../constants/state";
+
 function switchDefunct(defunct: string) {
 	switch (defunct) {
 	case "Y":
@@ -12,11 +15,7 @@ function switchDefunct(defunct: string) {
 }
 
 module.exports = function (target: string, idName: string) {
-	const express = require("express");
 	const router = express.Router();
-	const query = require("../../module/mysql_query");
-	const [error, ok] = require("../../module/const_var");
-
 	async function baseChanger(base_id: number | string) {
 		let res = await query(`select defunct from ${target} where ${idName} = ?`, [base_id]);
 		const defunct = switchDefunct(res[0].defunct);

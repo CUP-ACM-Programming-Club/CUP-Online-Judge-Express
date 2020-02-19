@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 const auth = require("../middleware/auth");
 router.use(...require("./env/client"));
 
-module.exports = ["/env", auth, router];
+export = ["/env", auth, router];

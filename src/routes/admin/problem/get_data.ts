@@ -1,4 +1,4 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 import ProblemFileManager from "../../../module/problem/ProblemFileManager";
 
@@ -8,4 +8,4 @@ router.get("/data/:problemId/:fileName", (req, res) => {
 	res.download(filePath);
 });
 
-module.exports = ["/download", router];
+export = ["/download", router];
