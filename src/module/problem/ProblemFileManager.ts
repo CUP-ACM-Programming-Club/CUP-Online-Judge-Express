@@ -4,35 +4,6 @@ import {Request} from "express";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../constants/state";
 
-interface JudgerConfig {
-    oj_home: string,
-    oj_judge_num: number
-}
-
-interface WebSocketConfig {
-    websocket_client_port: number
-    judger_port: number;
-}
-
-interface ProblemUploadDestConfig {
-    dir: string
-}
-
-interface Config {
-    judger: JudgerConfig,
-    ws: WebSocketConfig,
-    salt: string,
-    problem_upload_dest: ProblemUploadDestConfig
-}
-
-declare global {
-    namespace NodeJS {
-        interface Global {
-            config: Config
-        }
-    }
-}
-
 class ProblemFileManager {
     constructor() {
     }
