@@ -7,7 +7,7 @@ router.get("/compile_arguments", async (req, res) => {
 });
 
 router.post("/compile_arguments", async (req, res) => {
-
+    res.json(await CompilerManager.updateCompileArgumentsByRequest(req));
 });
 
 export = ["/compile", router];
