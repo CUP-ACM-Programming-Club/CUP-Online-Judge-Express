@@ -25,7 +25,8 @@
     "dir": "/home/"
   },
   "etc": {
-    "compile_arguments": "/path/to/compile.json"
+    "compile_arguments": "/path/to/compile.json",
+    "frontend_path": "/path/to/frontend"
   },
   "session_secret": "YourSecretKeytoSession",
   "salt": "PleaseModifyThis"

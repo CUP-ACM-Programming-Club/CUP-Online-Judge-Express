@@ -5,4 +5,4 @@ const routerLoader = require( "../../module/router_loader");
 
 routerLoader(router, path.resolve(__dirname, "./config"));
 
-module.exports = ["/config", router];
+export = ["/config", router];
