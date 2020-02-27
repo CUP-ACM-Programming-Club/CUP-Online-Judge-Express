@@ -47,6 +47,8 @@ export class localJudger extends eventEmitter {
 			const {solutionId, recordId} = payload;
 			this.errorHandle(solutionId, recordId);
 		});
+
+		socket.emit("status", {});
 	}
 
 	errorHandle(solutionId: number, runnerId: number) {
