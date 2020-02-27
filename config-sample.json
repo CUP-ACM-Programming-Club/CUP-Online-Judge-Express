@@ -16,7 +16,8 @@
   },
   "judger": {
     "oj_home": "/home/judge",
-    "oj_judge_num": 8
+    "oj_judge_num": 8,
+    "address": "http://localhost:5110"
   },
   "problem_upload_dest": {
     "dir": "/path/to/upload"

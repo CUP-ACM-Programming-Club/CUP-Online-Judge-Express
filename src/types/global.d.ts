@@ -1,7 +1,8 @@
 
 export interface JudgerConfig {
     oj_home: string,
-    oj_judge_num: number
+    oj_judge_num: number,
+    address: string
 }
 
 export interface WebSocketConfig {

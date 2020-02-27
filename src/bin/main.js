@@ -195,13 +195,8 @@ io.on("connection", async function (socket) {
 		OnlineUserBroadcast.broadcast();
 	});
 
-	socket.on("status", function (data) {
-		if (socket.privilege) {
-			const request = data["request"];
-			if (request && request === "judger") {
-				socket.emit(localJudge.getStatus());
-			}
-		}
+	socket.on("status", function () {
+		// deprecated
 	});
 	/**
      * 提交推送处理

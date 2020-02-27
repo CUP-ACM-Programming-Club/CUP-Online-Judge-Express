@@ -2,7 +2,6 @@ import OnlineUserSet from "../../module/websocket/set/OnlineUserSet";
 import BroadcastManager from "./BroadcastManager";
 import NormalUserSet from "../../module/websocket/set/NormalUserSet";
 import AdminUserSet from "../../module/websocket/set/AdminUserSet";
-import localJudge from "../../module/judger"
 import {BaseUserSet} from "../../module/websocket/set/BaseUserSet";
 import Throttle from "../../decorator/Throttle";
 
@@ -23,7 +22,7 @@ export class OnlineUserBroadcast {
 
     private sendMessage(userSet: BaseUserSet, userList: any) {
         BroadcastManager.sendMessage(userSet.getInnerStorage(), "user", {
-            user: userList, judger: localJudge.getStatus().free_judger
+            user: userList, judger: []
         });
     }
 

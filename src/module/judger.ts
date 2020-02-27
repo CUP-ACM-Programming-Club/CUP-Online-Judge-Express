@@ -8,8 +8,10 @@ import Promise from "bluebird";
 import {mkdirAsync} from "./file/mkdir";
 import WebsocketServer, {WebsocketServer as ws} from "../module/judger/WebsocketServer";
 import WebsocketServerAdapter from "../module/judger/websocket/adapter/WebsocketServerAdapter";
+import SocketIoClient from "socket.io-client";
 import Tolerable from "../decorator/Tolerable";
 import JudgeManager from "../manager/judge/JudgeManager";
+import JudgeResultManager from "../manager/websocket/JudgeResultManager";
 const fs: any = Promise.promisifyAll(fsDefault);
 const {spawn} = require("child_process");
 const PriorityQueue = require("tinyqueue");
@@ -19,7 +21,8 @@ const eventEmitter = require("events").EventEmitter;
 const uuidV1 = require("uuid/v1");
 export class localJudger extends eventEmitter {
 	judgerExist = fsDefault.existsSync(`${process.cwd()}/wsjudged`);
-	websocketServer: ws;
+	socket:SocketIOClient.Socket;
+	status: any;
 	/**
      * 构造判题机
      * @param {String} home_dir 评测机所在的目录
@@ -27,35 +30,23 @@ export class localJudger extends eventEmitter {
      */
 	constructor(home_dir: string, judger_num: number) {
 		super();
-		this.oj_home = home_dir;
-		this.judge_queue = [...Array(judger_num).keys()].map(x => x + 1);
-		this.waiting_queue = new PriorityQueue([], function (a: any, b: any) {
-			if (a.priority !== b.priority) {
-				return b.priority - a.priority;
-			} else {
-				return b.solution_id - a.solution_id;
-			}
+		const socket = this.socket = SocketIoClient(global.config.judger.address);
+		socket.on("judger", (payload: any) => {
+			JudgeResultManager.messageHandle(payload);
 		});
-		this.in_waiting_queue = {};
-		this.judging_queue = [];
-		this.latestSolutionID = 0;
-		const CPUDetails = this.CPUDetails = os.cpus();
-		this.CPUModel = CPUDetails[0].model;
-		this.CPUSpeed = CPUDetails[0].speed;
-		this.platform = os.platform();
-		this.errorHandler = null;
-		this.SUBMISSION_INFO_PATH = path.join(global.config.judger.oj_home, "submission");
-		let wsport: any;
-		if (process.env.MODE === "websocket") {
-			wsport = process.env.WSPORT || global.config.ws.judger_port;
-		}
-		else {
-			wsport = process.env.WSPORT || 0;
-		}
-		this.websocketServer = WebsocketServer.setPort(wsport).setAdapter(WebsocketServerAdapter).startServer();
-		if (this.platform !== "linux" && this.platform !== "darwin") {
-			throw new Error("Your platform doesn't support right now");
-		}
+
+		socket.on("status", (payload: any) => {
+			this.status = payload;
+		});
+
+		socket.on("change", (payload: any) => {
+			this.emit("change", payload);
+		});
+
+		socket.on("error_record", (payload: any) => {
+			const {solutionId, recordId} = payload;
+			this.errorHandle(solutionId, recordId);
+		});
 	}
 
 	errorHandle(solutionId: number, runnerId: number) {
@@ -75,17 +66,7 @@ export class localJudger extends eventEmitter {
      */
 
 	getStatus() {
-		return {
-			judging: this.judging_queue,
-			free_judger: this.judge_queue,
-			waiting: this.waiting_queue,
-			last_solution_id: this.latestSolutionID,
-			oj_home: this.oj_home,
-			cpu_details: this.CPUDetails,
-			cpu_model: this.CPUModel,
-			cpu_speed: this.CPUSpeed,
-			platform: this.platform
-		};
+		return this.status;
 	}
 
 	static formatSolutionId(solution_id: any) {
@@ -147,27 +128,14 @@ export class localJudger extends eventEmitter {
 		}
 	}
 
-	@localJudger.JudgeExists
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
-		solution_id = localJudger.formatSolutionId(solution_id);
-		if (!this.judging_queue.includes(solution_id) &&
-            !this.in_waiting_queue[solution_id]) {
-			this.updateLatestSolutionId(solution_id);
-			if (!this.judge_queue.isEmpty()) {
-				this.runJudger(solution_id, this.judge_queue.shift(), admin, no_sim, gray_task);
-				this.judging_queue.push(solution_id);
-			} else {
-				this.waiting_queue.push({
-					solution_id,
-					priority,
-					admin,
-					no_sim,
-					gray_task
-				});
-				this.in_waiting_queue[solution_id] = true;
-			}
-		}
-		return true;
+		const data = await JudgeManager.buildSubmissionInfo(solution_id);
+		this.socket.emit("submission", {
+			solutionId: solution_id,
+			admin,
+			data
+		});
+		// solution_id, admin, data
 	}
 
 	/**
