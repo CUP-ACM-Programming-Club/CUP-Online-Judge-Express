@@ -121,7 +121,7 @@ export class localJudger extends eventEmitter {
 		const method = propertyDescriptor.value;
 		propertyDescriptor.value = async function (...args: any[]) {
 			const thisTarget = this as localJudger;
-			if (thisTarget.judgerExist) {
+			if (thisTarget.judgerExist || thisTarget.socket.connected) {
 				return await method.apply(this, args);
 			}
 			else {
@@ -130,6 +130,7 @@ export class localJudger extends eventEmitter {
 		}
 	}
 
+	@localJudger.JudgeExists
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
 		const data = await JudgeManager.buildSubmissionInfo(solution_id);
 		this.socket.emit("submission", {
