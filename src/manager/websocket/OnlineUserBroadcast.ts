@@ -4,6 +4,7 @@ import NormalUserSet from "../../module/websocket/set/NormalUserSet";
 import AdminUserSet from "../../module/websocket/set/AdminUserSet";
 import {BaseUserSet} from "../../module/websocket/set/BaseUserSet";
 import Throttle from "../../decorator/Throttle";
+import localJudger from "../../module/judger";
 
 /**
  * 向不同权限的用户广播用户信息
@@ -22,7 +23,7 @@ export class OnlineUserBroadcast {
 
     private sendMessage(userSet: BaseUserSet, userList: any) {
         BroadcastManager.sendMessage(userSet.getInnerStorage(), "user", {
-            user: userList, judger: []
+            user: userList, judger: localJudger.getStatus().free_judger
         });
     }
 

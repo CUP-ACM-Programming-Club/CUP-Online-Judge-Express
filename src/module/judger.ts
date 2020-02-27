@@ -22,7 +22,7 @@ const uuidV1 = require("uuid/v1");
 export class localJudger extends eventEmitter {
 	judgerExist = fsDefault.existsSync(`${process.cwd()}/wsjudged`);
 	socket:SocketIOClient.Socket;
-	status: any;
+	status: any = {free_judger: []};
 	/**
      * 构造判题机
      * @param {String} home_dir 评测机所在的目录
