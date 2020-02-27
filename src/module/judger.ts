@@ -135,6 +135,7 @@ export class localJudger extends eventEmitter {
 			admin,
 			data
 		});
+		return true;
 		// solution_id, admin, data
 	}
 
