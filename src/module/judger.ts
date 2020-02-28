@@ -130,15 +130,30 @@ export class localJudger extends eventEmitter {
 		}
 	}
 
+	async problemDataExist (problemId: number | string) {
+		try {
+			await fsDefault.promises.access(path.join(this.oj_home, "data", problemId + ""));
+			return true;
+		}
+		catch (e) {
+			return false;
+		}
+	}
+
 	@localJudger.JudgeExists
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
 		const data = await JudgeManager.buildSubmissionInfo(solution_id);
-		this.socket.emit("submission", {
-			solutionId: solution_id,
-			admin,
-			data
-		});
-		return true;
+		if (await this.problemDataExist(data.problem_id)) {
+			this.socket.emit("submission", {
+				solutionId: solution_id,
+				admin,
+				data
+			});
+			return true;
+		}
+		else {
+			return false;
+		}
 		// solution_id, admin, data
 	}
 
