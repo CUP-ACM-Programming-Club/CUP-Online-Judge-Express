@@ -272,10 +272,16 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
                 "           (select contest_id from contest_problem\n" +
                 "           where solution.problem_id = contest_problem.problem_id)\n" +
                 "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
-				.then(resolve => {
+				.then(async (resolve) => {
+					const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
+					const source = {source_code};
+					if (source.length > 0) {
+						const data = await cache_query("select language from solution where solution_id = ?",[opt.solution_id]);
+						source.language = data[0].language;
+					}
 					res.json(Object.assign({
 						problem: packed_problem,
-						source: resolve ? resolve[0] ? resolve[0].source : "" : "",
+						source: source,
 						isadmin: req.session.isadmin,
 						browse_code: req.session.source_browser,
 						editor: req.session.editor || false
