@@ -275,10 +275,12 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 				.then(async (resolve) => {
 					const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
 					const source = {source_code};
+
 					if (source.length > 0) {
 						const data = await cache_query("select language from solution where solution_id = ?",[opt.solution_id]);
 						source.language = data[0].language;
 					}
+					Object.assign(copyVal, {source: source});
 					res.json(Object.assign({
 						problem: packed_problem,
 						source: source,
