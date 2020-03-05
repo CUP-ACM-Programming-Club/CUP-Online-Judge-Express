@@ -1,7 +1,2 @@
 #!/bin/bash
-git fetch --all
-git reset --hard origin/typescript
-npm i
-tsc
-npm restart
-npm run websocket:restart
+git fetch --all && git reset --hard origin/typescript && npm i && npm run build && npm restart && npm run websocket:restart
