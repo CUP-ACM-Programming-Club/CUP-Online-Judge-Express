@@ -22,6 +22,7 @@ const uuidV1 = require("uuid/v1");
 export class localJudger extends eventEmitter {
 	judgerExist = fsDefault.existsSync(`${process.cwd()}/wsjudged`);
 	socket:SocketIOClient.Socket;
+	oj_home: string;
 	status: any = {free_judger: []};
 	/**
      * 构造判题机
@@ -31,6 +32,7 @@ export class localJudger extends eventEmitter {
 	constructor(home_dir: string, judger_num: number) {
 		super();
 		const socket = this.socket = SocketIoClient(global.config.judger.address);
+		this.oj_home = home_dir;
 		socket.on("judger", (payload: any) => {
 			JudgeResultManager.messageHandle(payload);
 		});
