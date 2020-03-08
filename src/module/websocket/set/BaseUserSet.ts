@@ -1,11 +1,11 @@
 export type IKey = number | string;
 
-export interface IUserList {
-    [id: string]: any
+export interface IUserList<T> {
+    [id: string]: T
 }
 
-export class BaseUserSet {
-    private readonly userList: IUserList = {};
+export class BaseUserSet<Type = any> {
+    private readonly userList: IUserList<Type> = {};
     constructor() {
 
     }

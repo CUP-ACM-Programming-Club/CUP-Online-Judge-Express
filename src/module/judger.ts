@@ -6,19 +6,22 @@ import fsDefault from "fs";
 import path from "path";
 import Promise from "bluebird";
 import {mkdirAsync} from "./file/mkdir";
-import WebsocketServer, {WebsocketServer as ws} from "../module/judger/WebsocketServer";
-import WebsocketServerAdapter from "../module/judger/websocket/adapter/WebsocketServerAdapter";
 import SocketIoClient from "socket.io-client";
 import Tolerable from "../decorator/Tolerable";
 import JudgeManager from "../manager/judge/JudgeManager";
 import JudgeResultManager from "../manager/websocket/JudgeResultManager";
+import SubmissionSet from "./websocket/set/SubmissionSet";
 const fs: any = Promise.promisifyAll(fsDefault);
 const {spawn} = require("child_process");
-const PriorityQueue = require("tinyqueue");
 const os = require("os");
 const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
 const uuidV1 = require("uuid/v1");
+interface IRejectInfo {
+	reason: string,
+	solutionId: number | string
+}
+
 export class localJudger extends eventEmitter {
 	judgerExist = fsDefault.existsSync(`${process.cwd()}/wsjudged`);
 	socket:SocketIOClient.Socket;
@@ -48,6 +51,15 @@ export class localJudger extends eventEmitter {
 		socket.on("error_record", (payload: any) => {
 			const {solutionId, recordId} = payload;
 			this.errorHandle(solutionId, recordId);
+		});
+
+		socket.on("reject_judge", (payload: IRejectInfo) => {
+			const socket = SubmissionSet.get(payload.solutionId);
+			if (socket) {
+				socket.emit("remoteJudge", {
+					solutionId: payload.solutionId
+				});
+			}
 		});
 
 		socket.emit("status", {});
@@ -145,17 +157,12 @@ export class localJudger extends eventEmitter {
 	@localJudger.JudgeExists
 	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
 		const data = await JudgeManager.buildSubmissionInfo(solution_id);
-		if (await this.problemDataExist(data.problem_id)) {
-			this.socket.emit("submission", {
-				solutionId: solution_id,
-				admin,
-				data
-			});
-			return true;
-		}
-		else {
-			return false;
-		}
+		this.socket.emit("submission", {
+			solutionId: solution_id,
+			admin,
+			data
+		});
+		return true;
 		// solution_id, admin, data
 	}
 

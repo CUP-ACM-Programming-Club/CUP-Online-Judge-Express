@@ -34,7 +34,7 @@ export class JudgeResultManager {
         }
 
         if (SubmissionSet.has(solutionId)) {
-            SubmissionSet.get(solutionId).emit("result", solutionPack);
+            SubmissionSet.get(solutionId)!.emit("result", solutionPack);
             BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId));
             if (SubmissionOriginSet.has(solutionId)) {
                 BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
