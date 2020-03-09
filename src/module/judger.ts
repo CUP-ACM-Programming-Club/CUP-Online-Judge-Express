@@ -155,12 +155,14 @@ export class localJudger extends eventEmitter {
 	}
 
 	@localJudger.JudgeExists
-	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1, gray_task = false) {
+	async addTask(solution_id: any, admin: boolean, no_sim = false, priority = 1) {
 		const data = await JudgeManager.buildSubmissionInfo(solution_id);
 		this.socket.emit("submission", {
 			solutionId: solution_id,
 			admin,
-			data
+			data,
+			no_sim,
+			priority
 		});
 		return true;
 		// solution_id, admin, data
