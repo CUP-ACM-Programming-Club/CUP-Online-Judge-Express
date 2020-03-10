@@ -11,6 +11,7 @@ class UnjudgedSubmissionCollector {
 
     setJudger(judger: localJudger) {
         this.judger = judger;
+        return this;
     }
 
     start () {
