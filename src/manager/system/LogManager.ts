@@ -9,12 +9,12 @@ const MAX_LINE = 1000;
 class LogManager {
     @ErrorHandlerFactory(ok.okMaker)
     async getStdoutLog(line: number = 10) {
-        await readLastLines.read(pm2.out_file, Math.min(+line, MAX_LINE))
+        return await readLastLines.read(pm2.out_file, Math.min(+line, MAX_LINE))
     }
 
     @ErrorHandlerFactory(ok.okMaker)
     async getStderrLog(line: number = 10) {
-        await readLastLines.read(pm2.error_file, Math.min(+line, MAX_LINE));
+        return await readLastLines.read(pm2.error_file, Math.min(+line, MAX_LINE));
     }
 }
 
