@@ -12,14 +12,14 @@ const logger = log4js.logger("normal", "info");
 let port;
 let dockerRunner;
 import localJudge from "../module/judger";
+import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
 const _dockerRunner = require("../module/docker_runner");
 dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
 	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
 	localJudge.setErrorHandler(new RuntimeErrorHandler());
-	const databaseSubmissionCollector = require("../module/judger/DatabaseSubmissionCollector");
-	databaseSubmissionCollector.setJudger(localJudge).start();
+	UnjudgedSubmissionCollector.setJudger(localJudge).start();
 } else {
 	port = process.env.PORT || 0;
 }
