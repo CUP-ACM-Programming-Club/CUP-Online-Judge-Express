@@ -31,6 +31,7 @@ module.exports = {
 			"Java 6",
 			"Clang11",
 			"Clang++17",
+			"C++20",
 			"Other Language"
 		],
 		"common": [
@@ -63,6 +64,7 @@ module.exports = {
 			"Python",
 			"Java",
 			"C",
+			"C++",
 			"C++",
 			"Other Language",
 			"Other Language"
@@ -166,6 +168,7 @@ module.exports = {
 			"py",
 			"java",
 			"c",
+			"cpp",
 			"cpp"
 		]
 	},
@@ -199,6 +202,7 @@ module.exports = {
 			"python",
 			"python",
 			"java",
+			"c++",
 			"c++",
 			"c++",
 			""
@@ -301,6 +305,7 @@ module.exports = {
 			"python",
 			"python",
 			"java",
+			"c_cpp",
 			"c_cpp",
 			"c_cpp"
 		]
