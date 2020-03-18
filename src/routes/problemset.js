@@ -69,6 +69,24 @@ async function searchHandler(val = {}, normal = false) {
 		 	limit ?,?`, sqlArr)]);
 }
 
+async function getListObject(user_id, payload, one_month_ago) {
+	const {problem_id, title, source, accepted, submit, label, in_date} = payload;
+	let acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
+		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`, [user_id, problem_id, user_id, problem_id]);
+	let ac = parseInt(acnum[0].cnt);
+	let mySubmit = parseInt(acnum[1].cnt);
+	return {
+		problem_id: problem_id,
+		ac: parseInt(ac) > 0 ? true : parseInt(mySubmit) > 0 ? false : -1,
+		title: title,
+		source: source,
+		submit: submit,
+		accepted: accepted,
+		label: label,
+		new: dayjs(in_date).isAfter(one_month_ago)
+	};
+}
+
 
 async function get_problem(req, res) {
 	try {
@@ -110,6 +128,7 @@ async function get_problem(req, res) {
 			let result, total_num, _total, recent_one_month, one_month_add_problem = undefined;
 			const one_month_ago = dayjs().subtract(1, "month").format("YYYY-MM-DD");
 			const browse_privilege = req.session.isadmin || req.session.source_browser || req.session.editor;
+			console.time("get info");
 			if (browse_privilege) {
 				if (search) {
 					[_total, result] = await searchHandler({search, label, has_from, from, start, search_table, order});
@@ -176,36 +195,14 @@ async function get_problem(req, res) {
 					[_total, result, recent_one_month] = await Promise.all(promiseArray);
 				}
 			}
+			console.timeEnd("get info");
 			total_num = parseInt(_total[0].cnt);
 			if (recent_one_month && recent_one_month.length > 0) {
 				one_month_add_problem = recent_one_month[0].cnt;
 			}
-			let send_problem_list = [];
-			for (let i of result) {
-				let acnum;
-				if (target === "local") {
-					acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
-		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`,
-					[req.session.user_id, i.problem_id, req.session.user_id, i.problem_id]);
-				} else {
-					acnum = await cache_query(`select count(1) as cnt from vjudge_solution where user_id = ? and problem_id = ?
-			and oj_name = ? and result = 4 union all select count(1) as cnt from vjudge_solution where user_id = ? 
-			and oj_name = ? and problem_id = ?`, [req.session.user_id, i.problem_id, i.source, req.session.user_id,
-						i.source, i.problem_id]);
-				}
-				let ac = parseInt(acnum[0].cnt);
-				let submit = parseInt(acnum[1].cnt);
-				send_problem_list.push({
-					problem_id: i.problem_id,
-					ac: parseInt(ac) > 0 ? true : parseInt(submit) > 0 ? false : -1,
-					title: i.title,
-					source: i.source,
-					submit: i.submit,
-					accepted: i.accepted,
-					label: i.label,
-					new: dayjs(i.in_date).isAfter(one_month_ago)
-				});
-			}
+			console.time("manage map");
+			let send_problem_list = Promise.all(result.map(e => getListObject(req.session.user_id, e, one_month_ago)));
+			console.timeEnd("manage map");
 			result = await cache_query("select value from global_setting where label='label_color'");
 			let send_target = {
 				problem: send_problem_list,
