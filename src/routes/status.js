@@ -254,13 +254,13 @@ function invalidProblemIdHandler(httpInstance, problem_id, result) {
 }
 
 function generateSqlData(request_query) {
-	let where_sql = "", sql_arr = [];
+	let where_sql = [], sql_arr = [];
 	for (let i in request_query) {
 		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
 			continue;
 		}
 		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
-			where_sql += ` and ${i} = ?`;
+			where_sql.push( ` ${i} = ?`);
 			sql_arr.push(request_query[i]);
 		} else if (typeof request_query[i] === "object") {
 			const ele = request_query[i];
@@ -270,22 +270,44 @@ function generateSqlData(request_query) {
 						continue;
 					}
 					if (typeof val === "string" || typeof val === "number") {
-						where_sql += ` and ${i} = ?`;
+						where_sql.push(` ${i} = ?`);
 						sql_arr.push(val);
 					} else if (isCompareFlag(val.type)) {
-						where_sql += ` and ${i} ${compareSymbol[val.type]} ?`;
+						where_sql.push(` ${i} ${compareSymbol[val.type]} ?`);
 						sql_arr.push(val.value);
 					}
 				}
 			} else {
 				if (isCompareFlag(ele.type)) {
-					where_sql += ` and ${i} ${compareSymbol[ele.type]} ?`;
+					where_sql.push(` ${i} ${compareSymbol[ele.type]} ?`);
 					sql_arr.push(ele.value);
 				}
 			}
 		}
 	}
 	return [where_sql, sql_arr];
+}
+
+async function buildResponse(req, val, request_query, browser_privilege, _end) {
+	const _user_info = await cache_query("SELECT nick,avatar,avatarUrl FROM users WHERE user_id = ?", [val.user_id]);
+	if (_user_info.length > 0) {
+		const nick = _user_info[0].nick.trim();
+		const avatar = Boolean(_user_info[0].avatar);
+		const avatarUrl = _user_info[0].avatarUrl || "";
+		let element = Object.assign({nick, avatar, avatarUrl}, val);
+		renameProperty(element, "sim_id", "sim_s_id");
+		renameProperty(element, "length", "code_length");
+		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
+			return element;
+		} else {
+			const owner = req.session.user_id === val.user_id;
+			return Object.assign(element, {
+				memory: check_owner(val.memory, owner),
+				time: check_owner(val.time, owner),
+				length: check_owner(val.code_length, owner)
+			});
+		}
+	}
 }
 
 async function get_status(req, res, next, request_query = {}, limit = 0) {
@@ -299,7 +321,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 				user_id_sql = " where s_user_id = ?";
 				sql_arr.push(request_query.user_id);
 			}
-			where_sql += ` and solution_id in (select s_id as solution_id from sim${user_id_sql})`;
+			where_sql.push( ` solution_id in (select s_id as solution_id from sim${user_id_sql})`);
 		} else {
 			pre_sim = "select * from(";
 			end_sim = ")t where sim is not null";
@@ -308,37 +330,43 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	let _end = false;
 	const browser_privilege = req.session.isadmin || req.session.source_browser;
 	if (browser_privilege) {
+		where_sql = where_sql.join(" and ").trim();
+		if (where_sql.length > 0) {
+			where_sql = ` where ${where_sql}`;
+		}
 		if (request_query.contest_id) {
-			sql_arr.push(...sql_arr);
 			sql_arr.push(limit);
 			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution where 1=1 ${where_sql} union all 
-								select '' as fingerprint,'' as fingerprintRaw,solution_id,0.00 as pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
-								from vjudge_solution where 1=1 ${where_sql} order by in_date) sol
+								from solution ${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		} else {
 			sql_arr.push(limit);
 			_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution where 1=1 ${where_sql}) sol
+								from solution ${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 		}
 	} else if (request_query.contest_id) {
-		sql_arr.push(...sql_arr);
+		where_sql.unshift("problem_id > 0");
+		where_sql = where_sql.join(" and ").trim();
+		where_sql = ` where ${where_sql}`;
+
 		sql_arr.push(limit);
 		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
 		_end = _end[0].cnt;
 		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution where problem_id > 0 ${where_sql} union all 
-								select '' as fingerprint,'' as fingerprintRaw,solution_id,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger,oj_name 
-								from vjudge_solution where problem_id > 0 ${where_sql} order by in_date) sol
+								from solution ${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc, sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	} else {
+		where_sql.unshift("problem_id > 0");
+		where_sql.unshift("contest_id is null");
+		where_sql = where_sql.join(" and ").trim();
+		where_sql = ` where ${where_sql}`;
 		sql_arr.push(limit);
 		_res = await cache_query(`${pre_sim}select * from
 								(select fingerprint,fingerprintRaw,solution_id,
@@ -347,32 +375,11 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
           and end_time > NOW()) ),1,0) as share
 								,pass_rate,problem_id,ip,contest_id,num,user_id,time,
 								memory,in_date,result,language,code_length,judger, "local" as oj_name from solution
-								where problem_id > 0 and contest_id is null  ${where_sql}) sol
+								${where_sql}) sol
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	}
-	let result = [];
-	for (const val of _res) {
-		const _user_info = await cache_query("SELECT nick,avatar,avatarUrl FROM users WHERE user_id = ?", [val.user_id]);
-		if (_user_info.length > 0) {
-			const nick = _user_info[0].nick.trim();
-			const avatar = Boolean(_user_info[0].avatar);
-			const avatarUrl = _user_info[0].avatarUrl || "";
-			let element = Object.assign({nick, avatar, avatarUrl}, val);
-			renameProperty(element, "sim_id", "sim_s_id");
-			renameProperty(element, "length", "code_length");
-			if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
-				result.push(element);
-			} else {
-				const owner = req.session.user_id === val.user_id;
-				result.push(Object.assign(element, {
-					memory: check_owner(val.memory, owner),
-					time: check_owner(val.time, owner),
-					length: check_owner(val.code_length, owner)
-				}));
-			}
-		}
-	}
+	let result = await Promise.all(_res.map(e => buildResponse(req, e, request_query, browser_privilege, _end)));
 	res.json({
 		result: result,
 		const_list: const_name,
