@@ -201,12 +201,11 @@ async function get_problem(req, res) {
 				one_month_add_problem = recent_one_month[0].cnt;
 			}
 			console.time("manage map");
-			let send_problem_list = Promise.all(result.map(e => getListObject(req.session.user_id, e, one_month_ago)));
+			let [colorSetting, ...send_problem_list] = await Promise.all([await cache_query("select value from global_setting where label='label_color'"), ...result.map(e => getListObject(req.session.user_id, e, one_month_ago))]);
 			console.timeEnd("manage map");
-			result = await cache_query("select value from global_setting where label='label_color'");
 			let send_target = {
 				problem: send_problem_list,
-				color: JSON.parse(result[0].value),
+				color: JSON.parse(colorSetting[0].value),
 				total: total_num,
 				recent_one_month: one_month_add_problem,
 				step: page_cnt
