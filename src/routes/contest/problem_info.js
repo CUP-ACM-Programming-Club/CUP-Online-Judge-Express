@@ -26,7 +26,19 @@ router.get("/:contestId", async (req, res) => {
 					.find()
 				)
 			)
-		).map(e => e.get());
+		).map(e => {
+			const ret = e.get();
+			return {
+				problem_id: ret.problem_id,
+				title: ret.title,
+				source: ret.source,
+				label: ret.label,
+				in_date: ret.in_date,
+				accepted: ret.accepted,
+				submit: ret.submit,
+				solved: ret.solved
+			};
+		});
 		res.json(ok.okMaker(problemInfo));
 	}
 	catch (e) {
