@@ -11,6 +11,8 @@ declare global {
 	}
 }
 
+const config = global.config;
+
 export interface IRedis extends RedisClient {
 	[x: string]: any
 }
@@ -36,7 +38,7 @@ if (global.unit_test === "autotest") {
 		}
 	} as unknown as IRedis;
 } else {
-	redisClient = redis.createClient() as IRedis;
+	redisClient = redis.createClient(config.redis) as IRedis;
 }
 
 module.exports = redisClient;

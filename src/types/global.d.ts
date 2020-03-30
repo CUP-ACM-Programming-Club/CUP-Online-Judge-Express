@@ -30,6 +30,11 @@ export interface EtcConfig {
     compile_arguments: string
 }
 
+export interface RedisConfig {
+    host: string,
+    port: number
+}
+
 export interface Config {
     mysql: MySQLConfig,
     judger: JudgerConfig,
@@ -39,6 +44,7 @@ export interface Config {
     website: WebSiteConfig,
     etc: EtcConfig,
     session_secret: string,
+    redis: RedisConfig
 }
 
 declare global {

@@ -29,6 +29,10 @@
     "compile_arguments": "/path/to/compile.json",
     "frontend_path": "/path/to/frontend"
   },
+  "redis": {
+    "host": "localhost",
+    "port": 6379
+  },
   "session_secret": "YourSecretKeytoSession",
   "salt": "PleaseModifyThis"
 }
