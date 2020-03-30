@@ -7,6 +7,13 @@ export = function (TEST_MODE: boolean = false) {
 			process.exit(0);
 		},8000);
 	}
+
+	if (typeof process.send !== "function") {
+		// @ts-ignore
+		process.send = function (...args: any) {
+
+		}
+	}
 	// @ts-ignore
 	String.prototype.exist = function (str: string) {
 		return this.indexOf(str) !== -1;
