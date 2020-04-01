@@ -203,6 +203,7 @@ async function get_problem(req, res) {
 			console.time("manage map");
 			let [colorSetting, ...send_problem_list] = await Promise.all([await cache_query("select value from global_setting where label='label_color'"), ...result.map(e => getListObject(req.session.user_id, e, one_month_ago))]);
 			console.timeEnd("manage map");
+			colorSetting = Array.isArray(colorSetting) && colorSetting.length > 0 ? colorSetting[0].value : {};
 			let send_target = {
 				problem: send_problem_list,
 				color: JSON.parse(colorSetting[0].value),
