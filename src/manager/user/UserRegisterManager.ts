@@ -7,6 +7,7 @@ import isString from "../../decorator/rule-checker/rule/isString";
 import TrimArg from "../../decorator/TrimArg";
 import UserManager, {UserInfoPayload} from "./UserManager";
 import InviteManager from "./InviteManager";
+import PrivilegeManager from "./PrivilegeManager";
 
 interface IUserRegisterPayload extends UserInfoPayload {
     inviteCode: string
@@ -68,13 +69,18 @@ export class UserRegisterValidator {
     }
 
     async validate(payload: any) {
-        const {userId, nick, password, confirmQuestion, confirmAnswer, inviteCode} = payload;
+        const {inviteCode} = payload;
+        this.validateWithoutInviteCode(payload);
+        await this.inviteCodeValidator(inviteCode);
+    }
+
+    async validateWithoutInviteCode(payload: any) {
+        const {userId, nick, password, confirmQuestion, confirmAnswer} = payload;
         await this.userIdValidator(userId);
         this.nickValidator(nick);
         this.passwordValidator(password);
         this.confirmQuestionValidator(confirmQuestion);
         this.confirmAnswerValidator(confirmAnswer);
-        await this.inviteCodeValidator(inviteCode);
     }
 }
 
@@ -86,6 +92,11 @@ export class UserRegisterManager {
         return payload as IUserRegisterPayload;
     }
 
+    private async validateWithoutInviteCode(payload: any) {
+        await this.userRegisterValidator.validateWithoutInviteCode(payload);
+        return payload as IUserRegisterPayload;
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     @CaptchaChecker(0, "register")
     async registerUserRequest(req: Request) {
@@ -94,6 +105,14 @@ export class UserRegisterManager {
         const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
         await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
         await UserManager.addUser(registerPayload, req);
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    @CaptchaChecker(0, "init")
+    async initSystemAdminUserRequest(req: Request) {
+        const registerPayload = await this.validateWithoutInviteCode(req.body);
+        await UserManager.addUser(registerPayload, req);
+        return await PrivilegeManager.addPrivilege(registerPayload.userId, "administrator");
     }
 }
 

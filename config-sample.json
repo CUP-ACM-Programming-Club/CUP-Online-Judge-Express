@@ -34,5 +34,6 @@
     "port": 6379
   },
   "session_secret": "YourSecretKeytoSession",
-  "salt": "PleaseModifyThis"
+  "salt": "PleaseModifyThis",
+  "init": false
 }

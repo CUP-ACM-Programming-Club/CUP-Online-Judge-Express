@@ -16,7 +16,7 @@ RUN set -xe && \
     apt-get update && \
     apt-get install --yes curl && \
     curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
-    apt-get install -y nodejs gcc g++ build-essential git net-tools vim && \
+    apt-get install -y nodejs mysql-client build-essential git net-tools vim && \
     npm config set registry https://registry.npm.taobao.org && \
     npm i -g pm2
 RUN set -xe && \
@@ -31,4 +31,4 @@ EXPOSE 3000 3300
 
 #  Defines your runtime(define default command)
 # These commands unlike RUN (they are carried out in the construction of the container) are run when the container
-CMD ["sh", "-c", "cd /backend && npm start && NODE_ENV=production MODE=websocket node ./dist/bin/main.js"]
+CMD ["sh", "-c", "mysql -uroot -proot -h mysql < /sql/structure.sql && cd /backend && npm start && NODE_ENV=production MODE=websocket node ./dist/bin/main.js"]

@@ -44,7 +44,8 @@ export interface Config {
     website: WebSiteConfig,
     etc: EtcConfig,
     session_secret: string,
-    redis: RedisConfig
+    redis: RedisConfig,
+    init: boolean
 }
 
 declare global {
