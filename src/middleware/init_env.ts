@@ -3,7 +3,7 @@ import {ok} from "../module/constants/state";
 import InitManager from "../manager/init/InitManager";
 
 const intializer = async (req: Request, res: Response, next: NextFunction) => {
-    if (global.config.init) {
+    if (global.config.init || req.path.includes("captcha")) {
         next();
     } else {
         InitManager.updateConfigInitFlag();
