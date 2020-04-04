@@ -8,6 +8,7 @@ import TrimArg from "../../decorator/TrimArg";
 import UserManager, {UserInfoPayload} from "./UserManager";
 import InviteManager from "./InviteManager";
 import PrivilegeManager from "./PrivilegeManager";
+import InitManager from "../init/InitManager";
 
 interface IUserRegisterPayload extends UserInfoPayload {
     inviteCode: string
@@ -112,6 +113,7 @@ export class UserRegisterManager {
     async initSystemAdminUserRequest(req: Request) {
         const registerPayload = await this.validateWithoutInviteCode(req.body);
         await UserManager.addUser(registerPayload, req);
+        InitManager.setInitFlag(true);
         return await PrivilegeManager.addPrivilege(registerPayload.userId, "administrator");
     }
 }

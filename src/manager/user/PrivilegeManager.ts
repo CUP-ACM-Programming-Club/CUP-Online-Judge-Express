@@ -7,6 +7,7 @@ class PrivilegeManager {
     async addPrivilege(userId: string, privilegeName: string) {
         privilegeName = privilegeName.trim();
         if (privilegeList.includes(privilegeName)) {
+            await MySQLManager.execQuery("delete from privilege where user_id = ? and rightstr = ?", [userId, privilegeName]);
             await MySQLManager.execQuery("insert into privilege(user_id, rightstr, defunct) values(?,?,'N')", [userId, privilegeName]);
             return true;
         }
