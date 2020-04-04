@@ -1,15 +1,24 @@
-import fs from "fs";
-import path from "path";
+import {Request} from "express";
+import ConfigFileManager from "../config/ConfigFileManager";
+import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import {ok} from "../../module/constants/state";
 
 class InitManager {
-    updateConfigInitFlag() {
-        global.config = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "config.json"), "utf-8"));
+    setInitFlag(init: boolean) {
+        ConfigFileManager.updateConfig();
+        global.config.init = init;
+        ConfigFileManager.writeConfigToFile(global.config);
     }
 
-    setInitFlag(init: boolean) {
-        this.updateConfigInitFlag();
-        global.config.init = init;
-        fs.writeFileSync(path.resolve(process.cwd(), "config.json"), JSON.stringify(global.config), "utf-8");
+    @ErrorHandlerFactory(ok.okMaker)
+    getConfigFile () {
+        return ConfigFileManager.getConfigFile();
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    initConfigFile (req: Request) {
+        const content = req.body.content;
+        return ConfigFileManager.writeConfigToFile(content);
     }
 }
 

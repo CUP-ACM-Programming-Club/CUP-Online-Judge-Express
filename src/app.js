@@ -1,6 +1,5 @@
 import express from "express";
 import tracer from "./middleware/tracer";
-import initEnv from "./middleware/init_env";
 const compression = require("compression");
 const path = require("path");
 const logger = require("morgan");
@@ -18,7 +17,6 @@ const sessionMiddleware = require("./module/session").sessionMiddleware;
 global.Application = app;
 app.use(performance);
 app.use(log4js.connectLogger(log, {level: "info"}));
-app.use(initEnv);
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 app.set("view cache", true);

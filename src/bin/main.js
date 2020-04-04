@@ -13,8 +13,10 @@ let port;
 let dockerRunner;
 import localJudge from "../module/judger";
 import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
+import initEnv from "../middleware/init_env";
 const _dockerRunner = require("../module/docker_runner");
 dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
+const {app, server} = require("../module/init/http-server");
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
 	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
@@ -22,6 +24,7 @@ if (process.env.MODE === "websocket") {
 	UnjudgedSubmissionCollector.setJudger(localJudge).start();
 } else {
 	port = process.env.PORT || 0;
+	app.use(initEnv);
 }
 const cache_query = require("../module/mysql_cache");
 const submitControl = require("../module/submitControl");
@@ -51,7 +54,6 @@ import JudgeManager from "../manager/judge/JudgeManager";
 
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
-const {app, server} = require("../module/init/http-server");
 const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
 
