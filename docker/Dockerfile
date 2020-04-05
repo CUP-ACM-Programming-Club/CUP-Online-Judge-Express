@@ -16,7 +16,7 @@ RUN set -xe && \
     apt-get update && \
     apt-get install --yes curl && \
     curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
-    apt-get install -y nodejs mysql-client build-essential git net-tools vim && \
+    apt-get install -y nodejs git vim && \
     npm config set registry https://registry.npm.taobao.org && \
     npm i -g pm2
 RUN set -xe && \
