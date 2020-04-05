@@ -1,6 +1,7 @@
 import {localJudger} from "../judger";
 import {MySQLManager} from "../../manager/mysql/MySQLManager";
 import { ConfigManager } from "../config/config-manager";
+import dayjs from "dayjs";
 const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;
 
@@ -36,6 +37,7 @@ class UnjudgedSubmissionCollector {
                 const admin = !!(_data && _data.length && _data[0].cnt);
                 const solutionId = parseInt(result[i].solution_id);
                 const priority = parseInt(String(!!result[i].result));
+                console.log(`Current Time: ${dayjs().format("YYYY-MM-DD HH:mm:ss")}, solutionId: ${solutionId}`);
                 this.judger!.addTask(solutionId, admin, false, (priority + 1) % 2);
             }
         }
