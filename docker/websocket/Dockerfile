@@ -14,11 +14,13 @@ RUN set -xe && \
     sed -i 's/http:\/\/archive.ubuntu.com/http:\/\/mirrors.aliyun.com/g' /etc/apt/sources.list && \
     sed -i 's/http:\/\/security.ubuntu.com/http:\/\/mirrors.aliyun.com/g' /etc/apt/sources.list && \
     apt-get update && \
-    apt-get install --yes curl && \
-    curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
-    apt-get install -y nodejs git vim && \
+    apt-get install --yes curl git vim npm build-essential && \
     npm config set registry https://registry.npm.taobao.org && \
-    npm i -g pm2
+    export N_NODE_MIRROR=https://npm.taobao.org/mirrors/node && \
+    npm -g install n && \
+    n latest && \
+    export PATH="$PATH" && \
+    npm config set registry https://registry.npm.taobao.org
 RUN set -xe && \
     git clone https://github.com/CUP-ACM-Programming-Club/CUP-Online-Judge-Express.git backend && \
     cd backend && \
@@ -27,8 +29,8 @@ RUN set -xe && \
     ln -s /config/config.json /backend/config.json
 
 # Binds to port
-EXPOSE 3000 3300
+EXPOSE 3300
 
 #  Defines your runtime(define default command)
 # These commands unlike RUN (they are carried out in the construction of the container) are run when the container
-CMD ["sh", "-c", "cd /backend && npm start && NODE_ENV=production MODE=websocket node ./dist/bin/main.js"]
+CMD ["sh", "-c", "cd /backend && NODE_ENV=production MODE=websocket node ./dist/bin/main.js"]
