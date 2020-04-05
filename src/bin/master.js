@@ -12,7 +12,7 @@ async function bootStrap() {
 		require("../module/init/build_env")();
 		require("../module/config/transfer/ClusterTransfer")();
 		require("../module/config/cluster/hot-reload");
-		await require("../module/init/init-mysql").default();
+		// await require("../module/init/init-mysql").default();
 		const config = global.config;
 		const port = config.ws.http_client_port;
 		let destroying = false;
