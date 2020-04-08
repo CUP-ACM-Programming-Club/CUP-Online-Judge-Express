@@ -1,6 +1,7 @@
+import {Request, Response, NextFunction} from "express";
 const cache_query = require("../module/mysql_cache");
-module.exports = async (req, res, next) => {
-	if (req.session.isadmin) {
+export = async (req: Request, res: Response, next: NextFunction) => {
+	if (req.session!.isadmin) {
 		return next;
 	}
 	const result = await cache_query("select value from global_setting where label = 'contest'");

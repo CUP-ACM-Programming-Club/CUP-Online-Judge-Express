@@ -25,4 +25,4 @@ class TokenManager {
 	}
 }
 
-module.exports = new TokenManager();
+export default new TokenManager();
