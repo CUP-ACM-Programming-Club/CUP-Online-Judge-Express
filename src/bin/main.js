@@ -10,12 +10,12 @@ require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 let port;
-let dockerRunner;
+// let dockerRunner;
 import localJudge from "../module/judger";
 import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
 import initEnv from "../middleware/init_env";
-const _dockerRunner = require("../module/docker_runner");
-dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
+// const _dockerRunner = require("../module/docker_runner");
+// dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 const {app, server} = require("../module/init/http-server");
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
@@ -51,13 +51,11 @@ import SubmitUserInfo from "../module/websocket/set/SubmitUserInfo";
 import ProblemFromContest from "../module/websocket/set/ProblemFromContest";
 import SolutionContext from "../module/websocket/set/SolutionContext";
 import JudgeManager from "../manager/judge/JudgeManager";
-
+import whiteboard from "../module/websocket/whiteboard/SocketSet";
+import io from "../module/websocket/server/SocketServer";
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
-const io = require("socket.io")(server);
 require("../module/init/express_loader")(app, io);
-
-let whiteboard = new Set();
 
 /**
  * 本地判题WebSocket服务器建立连接
@@ -285,17 +283,10 @@ io.on("connection", async function (socket) {
 		} else {
 			BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1);
 		}
-		const language = parseInt(data.val.language);
+		// const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);
 		let localEnvJudge = true;
-		switch (language) {
-		case 15:
-		case 22:
-			dockerRunner.addTask(data);
-			break;
-		default:
-			localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
-		}
+		localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
 		if (!localEnvJudge) {
 			socket.emit("remoteJudge", {
 				solutionId: response.solution_id

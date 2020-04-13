@@ -7,7 +7,11 @@ export interface TraceRequest extends Request{
     tracer: any
 }
 
+let counter = 0;
+
 export default function (req: TraceRequest, res: Response, next: NextFunction) {
+    const currentCounter = ++counter;
+    console.log(`tarcer in ${currentCounter}`);
     req.parentSpan = tracer.startSpan("根模块");
     req.tracer = tracer;
     req.parentSpan.setTag(opentracing.Tags.PEER_HOSTNAME, req.hostname);
@@ -15,6 +19,7 @@ export default function (req: TraceRequest, res: Response, next: NextFunction) {
     req.parentSpan.setTag(opentracing.Tags.HTTP_URL, req.url);
     next();
     res.once("finish", () => {
+        console.log(`tracer out ${currentCounter}`);
         req.parentSpan.setTag(opentracing.Tags.HTTP_STATUS_CODE, res.statusCode);
         req.parentSpan.finish(req);
     });

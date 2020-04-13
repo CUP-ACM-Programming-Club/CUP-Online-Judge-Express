@@ -1,4 +1,4 @@
-
+import {Express} from "express";
 export interface JudgerConfig {
     oj_home: string,
     oj_judge_num: number,
@@ -35,6 +35,10 @@ export interface RedisConfig {
     port: number
 }
 
+export interface WebhookConfig {
+    secret: string
+}
+
 export interface Config {
     mysql: MySQLConfig,
     judger: JudgerConfig,
@@ -45,6 +49,7 @@ export interface Config {
     etc: EtcConfig,
     session_secret: string,
     redis: RedisConfig,
+    webhook: WebhookConfig
     init: boolean
 }
 
@@ -52,6 +57,7 @@ declare global {
     namespace NodeJS {
         interface Global {
             config: Config
+            Application: Express
         }
     }
 }

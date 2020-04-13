@@ -45,7 +45,8 @@ app.use(bodyParser.urlencoded({limit: "50mb", extended: true}));
 app.use(cookieParser());
 app.use(webhookHandler);
 app.use(sessionMiddleware);
+// @ts-ignore
 app.use(tracer);
 // app.use("/",epf(options));
 
-module.exports = app;
+export = app;
