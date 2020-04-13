@@ -76,7 +76,7 @@ class ContestSetManager {
 
     @ErrorHandlerFactory(ok.okMaker)
     async getContestSetByRequest(req: Request) {
-        const page = isNaN(parseInt(req.query.page)) ? 0 : parseInt(req.query.page);
+        const page = isNaN(parseInt(req.query.page as string)) ? 0 : parseInt(req.query.page as string);
         const isAdministrator = req.session!.isadmin;
         return await this.getContestSetByConditional(this.buildAdminSQL(isAdministrator), page);
     }

@@ -54,7 +54,7 @@ class LoginLogManager {
     @ErrorHandlerFactory(ok.okMaker)
     async getUserLoginLogByRequest(req: Request) {
         const userId = req.params.userId;
-        const page = isNaN(parseInt(req.query.page)) ? 0 : parseInt(req.query.page);
+        const page = isNaN(parseInt(req.query.page as string)) ? 0 : parseInt(req.query.page as string);
         return await this.getUserIdLoginLog(userId, page);
     }
 }
