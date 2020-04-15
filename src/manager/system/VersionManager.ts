@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const packageConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "pm2.json"), "utf-8"));
+const packageConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "package.json"), "utf-8"));
 
 export default class VersionManager {
     static get version () {
