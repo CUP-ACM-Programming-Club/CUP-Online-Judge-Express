@@ -33,6 +33,7 @@ jobs:
         run: |
           echo "::set-env name=PKG_VERSION::$(node script/get_version.js)"
       - uses: mr-smithers-excellent/docker-build-push@v2
+        name: Build Backend service image
         with:
           image: ryanlee2014/cupoj-backend
           tag: ${{ env.PKG_VERSION }}
@@ -41,9 +42,28 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: mr-smithers-excellent/docker-build-push@v2
+        name: Update Backend service image
+        with:
+          image: ryanlee2014/cupoj-backend
+          tag: latest
+          registry: docker.io
+          dockerfile: ./docker/backend/Dockerfile
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: mr-smithers-excellent/docker-build-push@v2
+        name: Build Websocket service image
         with:
           image: ryanlee2014/cupoj-websocket
           tag: ${{ env.PKG_VERSION }}
+          registry: docker.io
+          dockerfile: ./docker/websocket/Dockerfile
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: mr-smithers-excellent/docker-build-push@v2
+        name: Update latest image
+        with:
+          image: ryanlee2014/cupoj-websocket
+          tag: latest
           registry: docker.io
           dockerfile: ./docker/websocket/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
