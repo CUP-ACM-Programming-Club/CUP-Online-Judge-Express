@@ -1,7 +1,7 @@
 // jQuery文件。务必在bootstrap.min.js 之前引入
 script(src='static/js/jquery.min.js')
 // 最新的 Bootstrap 核心 JavaScript 文件
-script(src='static/js/semantic.js')
+script(src='static/semantic-ui/semantic.min.js')
 script(src='static/js/vue.js')
 script(src='static/js/cookie.js')
 script(src='static/js/browser.min.js')
@@ -11,9 +11,6 @@ script(src='static/js/timeago.js')
 script(src='static/js/clipboard.min.js')
 script(src='static/js/base64.js')
 script.
-	if ($.browser.Trident) {
-		location.href = "notie.php";
-	}
 	$(document)
 		.ready(function () {
 			if ($('.ui.accordion').html())

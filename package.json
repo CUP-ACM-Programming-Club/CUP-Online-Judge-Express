@@ -37,6 +37,7 @@
     "express-php-fpm": "^2.0.2",
     "express-session": "^1.17.0",
     "express-status-monitor": "^1.2.11",
+    "fomantic-ui": "^2.8.4",
     "hash-generator": "^0.1.0",
     "helmet": "^3.22.0",
     "iconv-lite": "^0.5.1",
