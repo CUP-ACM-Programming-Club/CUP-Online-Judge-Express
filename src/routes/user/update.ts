@@ -1,4 +1,4 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 router.use(...require("./update/profile"));
-module.exports = ["/update", router];
+export = ["/update", router];

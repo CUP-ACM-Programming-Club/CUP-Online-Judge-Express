@@ -32,6 +32,7 @@ module.exports = {
 			"Clang11",
 			"Clang++17",
 			"C++20",
+			"Kotlin Native",
 			"Other Language"
 		],
 		"common": [
@@ -66,7 +67,7 @@ module.exports = {
 			"C",
 			"C++",
 			"C++",
-			"Other Language",
+			"Kotlin",
 			"Other Language"
 		],
 		"hdu": [
@@ -169,7 +170,8 @@ module.exports = {
 			"java",
 			"c",
 			"cpp",
-			"cpp"
+			"cpp",
+			"kt"
 		]
 	},
 	"markdown_language": {
@@ -205,6 +207,7 @@ module.exports = {
 			"c++",
 			"c++",
 			"c++",
+			"kotlin",
 			""
 		],
 		"hdu": [
@@ -307,7 +310,8 @@ module.exports = {
 			"java",
 			"c_cpp",
 			"c_cpp",
-			"c_cpp"
+			"c_cpp",
+			"java"
 		]
 	},
 	"langmask": 171440,
@@ -444,7 +448,9 @@ module.exports = {
 		"devicon-python-plain",
 		"devicon-java-plain",
 		"devicon-c-plain",
-		"devicon-cplusplus-plain"
+		"devicon-cplusplus-plain",
+		"devicon-cplusplus-plain",
+		"devicon-devicon-plain"
 	],
 	"judge_icon": [
 		"hourglass half",
