@@ -4,9 +4,11 @@ FROM ubuntu:20.04
 
 # Install Node.js
 RUN set -xe && \
-    cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
     apt-get update && \
-    apt-get install --yes curl git vim npm build-essential && \
+    apt-get install --yes curl git vim build-essential && \
+    curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+    apt-get update && \
+    apt-get install --yes nodejs && \
     npm -g install n && \
     n latest && \
     export PATH="$PATH"
