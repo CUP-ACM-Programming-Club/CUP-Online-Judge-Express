@@ -16,7 +16,7 @@ import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionColl
 import initEnv from "../middleware/init_env";
 // const _dockerRunner = require("../module/docker_runner");
 // dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
-const {app, server} = require("../module/init/http-server");
+import {app, server} from "../module/init/http-server";
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
 	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");

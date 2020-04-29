@@ -49,4 +49,4 @@ app.use(sessionMiddleware);
 app.use(tracer);
 // app.use("/",epf(options));
 
-export = app;
+export default app;
