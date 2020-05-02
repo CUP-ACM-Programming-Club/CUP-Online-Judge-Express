@@ -1,7 +1,7 @@
 import ProblemSetCachePool from "../../../module/problemset/ProblemSetCachePool";
 import ContestCachePool from "../../../module/contest/ContestCachePool";
 const query = require("../../../module/mysql_query");
-const [error, ok] = require("../../../module/const_var");
+import {error, ok} from "../../../module/constants/state";
 const express = require("express"), router = express.Router();
 const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor, addContestProblem} = require("../../../module/util");
 const dayjs = require("dayjs");
@@ -12,8 +12,13 @@ function timeToString(time) {
 
 router.post("/", async (req, res) => {
 	try {
+		// TODO: Error Handle
 		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
 		let {startTime, endTime, password, problemSelected, userList} = trimProperty(req.body);
+		if (typeof problemSelected !== "string" || (typeof problemSelected === "string" && problemSelected.trim().length === 0)) {
+			res.json(error.database);
+			return;
+		}
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0 || hostname === "null") {
