@@ -3,9 +3,8 @@ import {Request} from "express";
 import {MySQLManager} from "../mysql/MySQLManager";
 import {ErrorHandler, ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
-
+import { v1 as uuidV1 } from "uuid";
 const query = require("../../module/mysql_cache");
-const uuidV1 = require("uuid/v1");
 
 const PAGE_OFFSET = 50;
 

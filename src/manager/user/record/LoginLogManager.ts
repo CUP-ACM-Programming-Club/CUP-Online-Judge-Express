@@ -25,11 +25,11 @@ export interface ILoginLogDTO {
 
 class LoginLogManager {
     async getLatestLoginLog (): Promise<ILoginLogDAO[]> {
-        return await MySQLManager.execQuery(`select * from loginlog order by time desc limit ?`, [PAGE_LIMIT]);
+        return await MySQLManager.execQuery(`select loginlog.*, users.nick from loginlog left join users on users.user_id = loginlog.user_id order by time desc limit ?`, [PAGE_LIMIT]);
     }
 
     async getUserIdLoginLog (userId: string, page: number): Promise<ILoginLogDAO[]> {
-        return await MySQLManager.execQuery(`select * from loginlog where user_id = ? order by time desc limit ?, ?`, [userId, page * PAGE_LIMIT, PAGE_LIMIT]);
+        return await MySQLManager.execQuery(`select loginlog.*, users.nick from loginlog left join users on users.user_id = loginlog.user_id where loginlog.user_id = ? order by time desc limit ?, ?`, [userId, page * PAGE_LIMIT, PAGE_LIMIT]);
     }
 
     async setUserIdLoginLog (userId: string, loginLogDTO: ILoginLogDTO, ip: string) {

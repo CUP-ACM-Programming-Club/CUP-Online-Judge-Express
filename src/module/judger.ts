@@ -16,7 +16,7 @@ const {spawn} = require("child_process");
 const os = require("os");
 const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
-const uuidV1 = require("uuid/v1");
+import { v1 as uuidV1 } from "uuid";
 interface IRejectInfo {
 	reason: string,
 	solutionId: number | string
