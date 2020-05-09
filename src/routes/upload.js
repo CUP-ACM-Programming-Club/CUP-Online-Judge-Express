@@ -9,6 +9,14 @@ const zlib = require("zlib");
 const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const config = global.config;
+const D2UConverter = require("dos2unix").dos2unix;
+const d2u = new D2UConverter({ glob: { cwd: __dirname } })
+	.on("error", function(err) {
+		console.error(err);
+	})
+	.on("end", function(stats) {
+		console.log(stats);
+	});
 let upload = false;
 try {
 	upload = multer({dest: config.problem_upload_dest.dir});
@@ -143,6 +151,7 @@ const make_files = async (req, pid, problems = {}) => {
 	await fsPromise.mkdirAsync(save_path, 0o755);
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
+	d2u.process([`${save_path}/*`]);
 	await writeFiles(save_path, special_judge);
 	const special_judge_file = special_judge[0];
 

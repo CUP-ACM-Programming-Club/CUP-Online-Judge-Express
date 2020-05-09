@@ -34,7 +34,7 @@ const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 			return await query(sql, sqlArr);
 		}
 		const resp = await query(sql, sqlArr);
-		MySQLCachePool.set(identified, resp);
+		await MySQLCachePool.set(identified, resp);
 		return resp;
 	}
 };

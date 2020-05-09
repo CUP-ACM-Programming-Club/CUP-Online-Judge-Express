@@ -3,7 +3,14 @@ import path from "path";
 import {Request} from "express";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../constants/state";
-
+const D2UConverter = require("dos2unix").dos2unix;
+const d2u = new D2UConverter({ glob: { cwd: __dirname } })
+    .on("error", function(err: any) {
+        console.error(err);
+    })
+    .on("end", function(stats: any) {
+        console.log(stats);
+    });
 class ProblemFileManager {
     constructor() {
     }
@@ -24,6 +31,7 @@ class ProblemFileManager {
                     reject(err);
                 }
                 else {
+                    d2u.process([`${destPath}/*`]);
                     resolve();
                 }
             });

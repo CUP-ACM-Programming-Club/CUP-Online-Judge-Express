@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "3.17.11",
+  "version": "3.17.12",
   "engines": {
     "node": ">=10.0.0"
   },
@@ -30,6 +30,7 @@
     "crypto-js": "^4.0.0",
     "dayjs": "^1.8.26",
     "debug": "^4.1.1",
+    "dos2unix": "^1.1.2",
     "ejs": "^3.1.2",
     "escape-html": "^1.0.3",
     "express": "^4.17.1",
