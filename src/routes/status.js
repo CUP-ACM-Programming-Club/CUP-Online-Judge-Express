@@ -289,12 +289,13 @@ function generateSqlData(request_query) {
 }
 
 async function buildResponse(req, val, request_query, browser_privilege, _end) {
-	const _user_info = await cache_query("SELECT nick,avatar,avatarUrl FROM users WHERE user_id = ?", [val.user_id]);
+	const _user_info = await cache_query("SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?", [val.user_id]);
 	if (_user_info.length > 0) {
 		const nick = _user_info[0].nick.trim();
 		const avatar = Boolean(_user_info[0].avatar);
 		const avatarUrl = _user_info[0].avatarUrl || "";
-		let element = Object.assign({nick, avatar, avatarUrl}, val);
+		const email = _user_info[0].email || "";
+		let element = Object.assign({nick, avatar, avatarUrl, email}, val);
 		renameProperty(element, "sim_id", "sim_s_id");
 		renameProperty(element, "length", "code_length");
 		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
