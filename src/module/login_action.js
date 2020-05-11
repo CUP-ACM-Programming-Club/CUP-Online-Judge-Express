@@ -44,12 +44,13 @@ module.exports = async (req, user_id) => {
 	req.session.problem_maker = {};
 	let [val, nick] = await Promise.all(
 		[query("select rightstr from privilege where user_id = ?", [user_id]),
-			query("select nick,avatar,avatarUrl from users where user_id = ?", [user_id])]);
+			query("select nick,avatar,avatarUrl,email from users where user_id = ?", [user_id])]);
 	//for session admin privilege
 	if (nick && nick.length && nick.length > 0) {
 		req.session.nick = nick[0].nick;
 		req.session.avatar = nick[0].avatar;
 		req.session.avatarUrl = nick[0].avatarUrl;
+		req.session.email = nick[0].email;
 	}
 	for (let i of val) {
 		if (isAdmin(i.rightstr)) {

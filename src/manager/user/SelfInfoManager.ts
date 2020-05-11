@@ -23,7 +23,8 @@ class SelfInfoManager {
             avatar: req.session!.avatar,
             avatarUrl: req.session!.avatarUrl,
             privilege: sessionCopy,
-            contest_mode: global.contest_mode
+            contest_mode: global.contest_mode,
+            email: req.session!.email
         };
     }
 }
