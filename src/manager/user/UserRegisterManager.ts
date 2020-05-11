@@ -71,7 +71,7 @@ export class UserRegisterValidator {
 
     async validate(payload: any) {
         const {inviteCode} = payload;
-        this.validateWithoutInviteCode(payload);
+        await this.validateWithoutInviteCode(payload);
         await this.inviteCodeValidator(inviteCode);
     }
 

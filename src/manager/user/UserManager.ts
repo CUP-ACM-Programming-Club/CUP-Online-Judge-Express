@@ -1,4 +1,6 @@
 import {Request} from "express";
+import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import {ok} from "../../module/constants/state";
 const query = require("../../module/mysql_cache");
 const encryptPassword = require("../../module/util").encryptPassword;
 const getIP = require("../../module/getIP");
@@ -44,6 +46,21 @@ export class UserManager {
         else {
             return null;
         }
+    }
+
+    async getUserEmail(userId: string): Promise<string> {
+        const user = await this.getUser(userId);
+        if (user !== null) {
+            return user.email;
+        }
+        else {
+            return "";
+        }
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async getUserEmailByRequest(req: Request) {
+        return this.getUserEmail(req.params.user_id);
     }
 
     async hasUser(userId: string) {

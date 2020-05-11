@@ -12,6 +12,7 @@ router.use(...require("./user/self"));
 router.use(...require("./user/update"));
 router.use(...require("./user/lost"));
 router.use(...require("./user/tutorial"));
+router.use(...require("./user/email"));
 router.get("/:user_id", async (req, res) => {
 	const user_id = req.params.user_id;
 	let sqlQueue = [];
