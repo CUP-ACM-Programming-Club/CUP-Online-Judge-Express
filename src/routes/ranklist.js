@@ -37,11 +37,11 @@ const get_ranklist = async (req, res, opt = {}) => {
 	let result;
 	if (!opt.search && !opt.time_stamp) {
 		if (opt.vjudge) {
-			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar,avatarUrl FROM users where
+			result = await cache_query(`SELECT user_id,nick,biography,vjudge_accept,vjudge_submit,avatar,avatarUrl,email FROM users where
 			 ${generateMemberSql(opt)} school != 'your_own_school' ORDER BY vjudge_accept
 			 DESC,vjudge_submit DESC,reg_time LIMIT ?,?`, [page, page_cnt]);
 		} else {
-			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar,avatarUrl FROM users where
+			result = await cache_query(`SELECT user_id,biography,nick,solved,submit,vjudge_solved,avatar,avatarUrl,email FROM users where
 			${generateMemberSql(opt)} school != 'your_own_school' ORDER BY solved 
 				DESC,submit,reg_time LIMIT ?,?`, [page, page_cnt]);
 		}
@@ -66,7 +66,7 @@ const get_ranklist = async (req, res, opt = {}) => {
 			time_start = "1970-01-01";
 		}
 		if (!opt.vjudge) {
-			let nsql = `SELECT users.user_id,users.biography,users.avatar,users.avatarUrl,
+			let nsql = `SELECT users.user_id,users.biography,users.email,users.avatar,users.avatarUrl,
 		users.nick,s.solved FROM users
 		RIGHT JOIN (SELECT count(distinct problem_id) solved,user_id
 		FROM solution WHERE in_date >= ? AND result = 4 GROUP BY user_id
@@ -97,7 +97,7 @@ const get_ranklist = async (req, res, opt = {}) => {
 			result = await cache_query(nsql,
 				[time_start, page, page_cnt]);
 		} else {
-			result = await cache_query(`SELECT users.user_id,users.avatar,users.avatarUrl,users.biography,
+			result = await cache_query(`SELECT users.user_id,users.email,users.avatar,users.avatarUrl,users.biography,
 		users.nick,s.solved as vjudge_accept,t.submit as vjudge_submit FROM users
 		RIGHT JOIN (SELECT count(distinct CONCAT(oj_name,problem_id)) solved,user_id
 		FROM vjudge_solution WHERE in_date >= ? AND result = 4 GROUP BY user_id
@@ -115,12 +115,12 @@ const get_ranklist = async (req, res, opt = {}) => {
 	} else if (!opt.time_stamp) {
 		let search_name = `%${opt.search}%`;
 		if (opt.vjudge) {
-			result = await cache_query(`SELECT user_id,nick,biography,vjudge_submit,vjudge_accept,avatar,avatarUrl FROM users WHERE user_id
+			result = await cache_query(`SELECT user_id,nick,biography,vjudge_submit,vjudge_accept,avatar,avatarUrl,email FROM users WHERE user_id
 		LIKE ? OR nick LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
 			[search_name, search_name, page, page_cnt]);
 		} else {
-			result = await cache_query(`SELECT user_id,nick,biography,solved,vjudge_solved,submit,avatar,avatarUrl FROM users WHERE user_id
+			result = await cache_query(`SELECT user_id,nick,biography,solved,vjudge_solved,submit,avatar,avatarUrl,email FROM users WHERE user_id
 		LIKE ? OR nick LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
 			[search_name, search_name, page, page_cnt]);
