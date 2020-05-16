@@ -8,9 +8,9 @@ const loginAction = require("../../../module/login_action");
 const {encryptPassword} = require("../../../module/util");
 const salt = global.config.salt || "thisissalt";
 
-function checkLength(str) {
+function checkLength(str, size = LENGTH_LIMIT) {
 	str += "";
-	return str.length <= LENGTH_LIMIT;
+	return str.length <= size;
 }
 
 function buildUpdateQuery(name, val, user_id) {
@@ -24,7 +24,10 @@ function checkExists(str) {
 function checkRequestBodyProperties(body) {
 	for (let index in body) {
 		if (Object.hasOwnProperty.call(body, index)) {
-			if (!checkLength(body[index])) {
+			if (index !== "biography" && !checkLength(body[index])) {
+				return false;
+			}
+			else if (index === "biography" && !checkLength(body[index], 5 * LENGTH_LIMIT)) {
 				return false;
 			}
 			if (body[index] && body[index].trim) {
