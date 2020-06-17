@@ -14,4 +14,12 @@ export function mkdir(dirname: string, callback: () => void) {
 	});
 }
 
-export const mkdirAsync = Bluebird.promisify(mkdir);
+export async function mkdirAsync(dirname: string) {
+	try {
+		await fs.promises.access(dirname);
+	}
+	catch (e) {
+		await mkdirAsync(path.dirname(dirname));
+		await fs.promises.mkdir(dirname);
+	}
+}

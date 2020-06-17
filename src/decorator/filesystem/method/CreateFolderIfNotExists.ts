@@ -1,5 +1,6 @@
 import {folderMetadataKey} from "../parameter/Folder";
 import fs from "fs";
+import {mkdirAsync} from "../../../module/file/mkdir";
 export default function CreateFolderIfNotExists (target: any, propertyName: string, propertyDescriptor: TypedPropertyDescriptor<(...args:any) => Promise<any>>) {
     const method = propertyDescriptor.value;
     propertyDescriptor.value = async function (...args: any[]) {
@@ -11,7 +12,7 @@ export default function CreateFolderIfNotExists (target: any, propertyName: stri
                     await fs.promises.access(dest);
                 }
                 catch (e) {
-                    await fs.promises.mkdir(dest);
+                    await mkdirAsync(dest);
                 }
             }
         }
