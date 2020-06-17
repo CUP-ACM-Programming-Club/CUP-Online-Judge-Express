@@ -3,6 +3,9 @@ import path from "path";
 import {Request} from "express";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../constants/state";
+import CreateFolderIfNotExists from "../../decorator/filesystem/method/CreateFolderIfNotExists";
+import Folder from "../../decorator/filesystem/parameter/Folder";
+
 const D2UConverter = require("dos2unix").dos2unix;
 const d2u = new D2UConverter({ glob: { cwd: __dirname } })
     .on("error", function(err: any) {
@@ -24,31 +27,14 @@ class ProblemFileManager {
         return path.join(this.getProblemPath(problemId), fileName);
     }
 
-    async copyFileToDest(filePath: string, destPath: string) {
-        return new Promise((resolve, reject) => {
-            fs.copyFile(filePath, destPath, (err) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    d2u.process([`${destPath}/*`]);
-                    resolve();
-                }
-            });
-        })
+    @CreateFolderIfNotExists
+    async copyFileToDest(filePath: string, @Folder destPath: string) {
+        await fs.promises.copyFile(filePath, destPath);
+        d2u.process([`${destPath}/*`]);
     }
 
     async removeFileFromDest(filePath: string) {
-        return new Promise((resolve, reject) => {
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve();
-                }
-            });
-        });
+        await fs.promises.unlink(filePath);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
