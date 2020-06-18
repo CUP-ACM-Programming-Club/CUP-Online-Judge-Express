@@ -85,7 +85,7 @@ const checkProblemAvailable = async (problem_id) => {
 };
 
 const checkProblemInContest = async (problem_id) => {
-	const data = await cache_query("select problem from contest_problem where contest_id in (select contest_id from contest where end_time > NOW()) and problem_id = ?", [problem_id]);
+	const data = await cache_query("select problem_id from contest_problem where contest_id in (select contest_id from contest where end_time > NOW()) and problem_id = ?", [problem_id]);
 	return data && data.length && data.length > 0;
 };
 
