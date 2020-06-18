@@ -84,6 +84,10 @@ const checkProblemAvailable = async (problem_id) => {
 	return !(!data || data.defunct === "Y");
 };
 
+const checkProblemInContest = async (problem_id) => {
+	const data = await cache_query("select problem from contest_problem where contest_id in (select contest_id from contest where end_time > NOW()) and problem_id = ?", [problem_id]);
+	return data && data.length && data.length > 0;
+};
 
 const checkContestPrivilege = (req, cid) => {
 	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
@@ -179,6 +183,9 @@ async function normalProblemHandler(httpInstance, val = {}) {
 			return;
 		} else if (!await checkProblemAvailable(id)) {
 			res.json(error.errorMaker("problem not available!"));
+			return;
+		} else if (await checkProblemInContest(id)) {
+			res.json(error.errorMaker("problem is in contest"));
 			return;
 		}
 	}
