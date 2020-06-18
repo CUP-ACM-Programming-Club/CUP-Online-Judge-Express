@@ -4,7 +4,7 @@ module.exports = {
 			"C11",
 			"C++17",
 			"Pascal",
-			"Java 10",
+			"Java",
 			"Ruby",
 			"Bash",
 			"Python 2",
