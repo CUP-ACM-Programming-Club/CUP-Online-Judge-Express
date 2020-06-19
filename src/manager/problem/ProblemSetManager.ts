@@ -31,7 +31,7 @@ function order_rule(order: any, sort: string) {
 class ProblemSetManager {
 
     @Cacheable(new CachePool(), 10, "minute")
-    async getListObject(user_id: string, payload: any, one_month_ago: any) {
+    async getListObject(user_id: string, payload: any, one_month_ago: string) {
         const {problem_id, title, source, accepted, submit, label, in_date} = payload;
         let acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
 		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`, [user_id, problem_id, user_id, problem_id]);
