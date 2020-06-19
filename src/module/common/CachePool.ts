@@ -1,7 +1,8 @@
 import {Dayjs} from "dayjs";
 import Lock from "../../decorator/Lock";
 import SegmentLock from "./SegmentLock";
-const dayjs = require("dayjs");
+import _ from "lodash";
+import dayjs from "dayjs";
 const segLock = new SegmentLock();
 
 interface CacheValue {
@@ -57,7 +58,7 @@ class CachePool implements ICachePool{
     @InitCache
     async _set(key: string, value: any) {
         this.__cache__[key] = {
-            data: value,
+            data: _.cloneDeep(value),
             time: dayjs()
         };
     }

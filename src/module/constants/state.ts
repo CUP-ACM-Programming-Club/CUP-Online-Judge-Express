@@ -128,3 +128,10 @@ ok.okMaker = function(data: any) {
 		data
 	};
 };
+
+ok.okFlatMaker = function (data: any) {
+	return {
+		status: "OK",
+		...data
+	}
+};
