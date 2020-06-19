@@ -6,8 +6,6 @@ import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import ContestModeChecker from "../../decorator/common/ContestModeChecker";
 import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
-
-const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
 const NONE_PRIVILEGE_AND_SQL = ` and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) `;
 const page_cnt = 50;
