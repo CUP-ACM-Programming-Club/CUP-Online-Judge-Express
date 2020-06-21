@@ -5,13 +5,13 @@ import _ from "lodash";
 import dayjs from "dayjs";
 const segLock = new SegmentLock();
 
-interface CacheValue {
-    data: any,
+interface CacheValue<T = any> {
+    data: T,
     time: Dayjs
 }
 
-export interface ICachePool {
-	get(key: string): Promise<CacheValue | undefined | null>;
+export interface ICachePool<T = any> {
+	get(key: string): Promise<CacheValue<T> | undefined | null>;
 	getAllKey(): any[];
 	setWithTimestamp(key: string, value: any, timestamp: number): Promise<void>;
 	set(key: string, value: any): Promise<void>;
@@ -19,8 +19,8 @@ export interface ICachePool {
 	removeAll(): void;
 }
 
-interface Cache {
-    [id: string]: CacheValue | undefined
+interface Cache<T = any> {
+    [id: string]: CacheValue<T> | undefined
 }
 
 function InitCache(target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
@@ -33,7 +33,7 @@ function InitCache(target: any, propertyName: string, propertyDescriptor: Proper
     }
 }
 
-class CachePool implements ICachePool{
+class CachePool<T = any> implements ICachePool{
     private __cache__: Cache;
 
     constructor() {

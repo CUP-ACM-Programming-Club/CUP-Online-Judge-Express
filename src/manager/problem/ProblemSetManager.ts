@@ -81,8 +81,8 @@ class ProblemSetManager {
         if (typeof label !== "string") {
             label = false;
         }
-        const _from = req.query.from || "";
-        let from = undefined;
+        const _from: any = req.query.from || "";
+        let from: any = undefined;
         if (_from && _from.length >= 3 && _from.length <= 6) {
             from = _from;
         }
