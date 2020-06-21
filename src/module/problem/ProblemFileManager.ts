@@ -38,11 +38,26 @@ class ProblemFileManager {
     }
 
     @ErrorHandlerFactory(ok.okMaker)
-    setFileByRequest(req: Request) {
-		const originalFileName = req.file.originalname;
+    async setFileByRequest(req: Request) {
 		const problemId = req.params.problemId as string;
-		const filePath = req.file.path;
-		return this.copyFileToDest(filePath, path.join(this.getProblemPath(problemId), originalFileName));
+		return await this.setSingleFile(problemId, req.file);
+    }
+
+    async setSingleFile(problemId: string, file: Express.Multer.File) {
+        const originalFileName = file.originalname;
+        const filePath = file.path;
+        return await this.copyFileToDest(filePath, path.join(this.getProblemPath(problemId), originalFileName));
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async setMultipleFileByRequest(req: Request) {
+        const files = req.files as unknown as Express.Multer.File[];
+        const result = [];
+        for(const file of files) {
+            const problemId = req.params.problemId as string;
+            result.push(this.setSingleFile(problemId, file));
+        }
+        return await Promise.all(result);
     }
 
     @ErrorHandlerFactory(ok.okMaker)

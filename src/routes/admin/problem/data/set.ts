@@ -16,4 +16,8 @@ router.post("/:problemId", middleware.single("upload_file"), async (req, res) =>
     res.json(await ProblemFileManager.setFileByRequest(req));
 });
 
+router.post("/multiple/:problemId", middleware.array("upload_multiple_file"), async (req, res) => {
+    res.json(await ProblemFileManager.setMultipleFileByRequest(req));
+})
+
 export = ["/set", router];
