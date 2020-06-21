@@ -1,25 +1,7 @@
 import CachePool from "../module/common/CachePool";
 import AwaitLock from "await-lock";
 import dayjs, {OpUnitType} from "dayjs";
-import md5 from "../module/util/md5";
-
-function cacheMapToString (payload: any): string {
-    if (typeof payload === "string") {
-        return payload;
-    }
-    else if (typeof payload === "number") {
-        return payload.toString();
-    }
-    else if (typeof payload === "undefined") {
-        return "undefined";
-    }
-    else if (payload === null) {
-        return "null";
-    }
-    else {
-        return md5(JSON.stringify(payload));
-    }
-}
+import parameterHash from "../module/util/parameterHash";
 
 export default function Cacheable(cachePool: CachePool, timeDelta: number, timeUnit: OpUnitType) {
     const cacheLock = new AwaitLock();
@@ -29,7 +11,7 @@ export default function Cacheable(cachePool: CachePool, timeDelta: number, timeU
             if (!Array.isArray(args) || args.length === 0) {
                 args = [""];
             }
-            const cacheKey = args.map(cacheMapToString).reduce((accumulator, currentValue) => accumulator + currentValue);
+            const cacheKey = args.map(parameterHash).reduce((accumulator, currentValue) => accumulator + currentValue);
             const cache = await cachePool.get(cacheKey);
             if (cache && dayjs().subtract(timeDelta, timeUnit).isBefore(cache.time)) {
                 // console.log(`Hit cache data: ${propertyName}`);
