@@ -49,7 +49,7 @@ export class PrependAppendManager {
 
     private async deleteCodeByPrependOrAppend(prependCodePayload: IPrefileDTOPayload, prepend: number) {
         const problemId = prependCodePayload.problemId;
-        await query(`delete from prefile where problem_id = ? and preprend = ?`, [problemId, prepend]);
+        await query(`delete from prefile where problem_id = ? and prepend = ?`, [problemId, prepend]);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
