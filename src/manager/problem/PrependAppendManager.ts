@@ -47,6 +47,11 @@ export class PrependAppendManager {
         });
     }
 
+    private async deleteCodeByPrependOrAppend(prependCodePayload: IPrefileDTOPayload, prepend: number) {
+        const problemId = prependCodePayload.problemId;
+        await query(`delete from prefile where problem_id = ? and preprend = ?`, [problemId, prepend]);
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async getPrependCode(problemId: number | string) {
         return await this.getCodeByPrependOrAppend(problemId, 1);
@@ -59,11 +64,13 @@ export class PrependAppendManager {
 
     @ErrorHandlerFactory(ok.okMaker)
     async setPrependCode(prependAppendPayload: IPrefileDTOPayload) {
+        await this.deleteCodeByPrependOrAppend(prependAppendPayload, 1);
         return await this.setCodeByPrependOrAppend(prependAppendPayload, 1);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
     async setAppendCode(prependAppendPayload: IPrefileDTOPayload) {
+        await this.deleteCodeByPrependOrAppend(prependAppendPayload, 0);
         return await this.setCodeByPrependOrAppend(prependAppendPayload, 0);
     }
 }
