@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
 
 const ENVIRONMENT = process.env.NODE_ENV || "prod";
 const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
@@ -598,7 +599,7 @@ router.get("/graph", async function (req, res) {
 
 router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
-	const browse_privilege = req.session.isadmin || req.session.source_browser;
+	const browse_privilege = sid !== null && await SourcePrivilegeCache.checkPrivilege(req, sid);
 	if (sid) {
 		const _result = await query(`SELECT user_id,
                                             language,

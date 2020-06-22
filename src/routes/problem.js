@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
 import ProblemManager from "../manager/problem/ProblemManager";
+import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 const express = require("express");
 const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
@@ -149,7 +151,7 @@ async function contestProblemHandler(httpInstance, val = {}) {
 		let {langmask, end_time} = contest[0];
 		let problem_id = result[0].problem_id;
 		make_cache(res, req, {
-			problem_id, source, solution_id, raw, langmask, after_contest: dayjs().isAfter(dayjs(end_time))
+			cid, problem_id, source, solution_id, raw, langmask, after_contest: dayjs().isAfter(dayjs(end_time))
 		}, {limit_hostname: contest[0].limit_hostname});
 	} else {
 		res.json(error.invalidParams);
@@ -244,7 +246,7 @@ function prependAppendHandler(dataArray, opt) {
 	}
 }
 
-const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false}, copyVal = {}) => {
+const problem_callback = async (rows, req, res, opt = {source: "", sid: -1, raw: false}, copyVal = {}) => {
 	let packed_problem = {};
 	if (rows.length !== 0) {
 		/*if (!opt.raw && (packed_problem = cachePack[opt.id])) {
@@ -271,36 +273,34 @@ const problem_callback = (rows, req, res, opt = {source: "", sid: -1, raw: false
 			packed_problem.source = "";
 		}
 		if (~opt.solution_id) {
-			const browse_privilege = req.session.isadmin || req.session.source_browser;
-			cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
+			const browse_privilege = await SourcePrivilegeCache.checkPrivilege(req, opt.solution_id);
+			const resolve = await cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
 			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
                 "           and not exists\n" +
                 "           (select * from contest where contest_id in\n" +
                 "           (select contest_id from contest_problem\n" +
                 "           where solution.problem_id = contest_problem.problem_id)\n" +
-                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id])
-				.then(async (resolve) => {
-					const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
-					const source = {source_code};
+                "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id]);
 
-					if (source_code.length > 0) {
-						const data = await cache_query("select language from solution where solution_id = ?",[opt.solution_id]);
-						source.language = data[0].language;
-					}
-					Object.assign(copyVal, {source: source});
-					res.json(Object.assign({
-						problem: packed_problem,
-						source: source,
-						isadmin: req.session.isadmin,
-						browse_code: req.session.source_browser,
-						editor: req.session.editor || false
-					}, copyVal));
-				}).catch(e => log(e));
+			const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
+			const source = {source_code};
+			if (source_code.length > 0) {
+				const data = await cache_query("select language from solution where solution_id = ?",[opt.solution_id]);
+				source.language = data[0].language;
+			}
+			Object.assign(copyVal, {source: source});
+			res.json(Object.assign({
+				problem: packed_problem,
+				source: source,
+				isadmin: req.session.isadmin || (opt.contest_id && await ContestAssistantManager.userIsContestAssistant(opt.contest_id, req.session.user_id)),
+				browse_code: req.session.source_browser,
+				editor: req.session.editor || false
+			}, copyVal));
 		} else {
 			res.json(Object.assign({
 				problem: packed_problem,
 				source: "",
-				isadmin: req.session.isadmin,
+				isadmin: req.session.isadmin || (opt.contest_id && await ContestAssistantManager.userIsContestAssistant(opt.contest_id, req.session.user_id)),
 				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
 			}, copyVal));

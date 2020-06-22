@@ -1,4 +1,10 @@
 /* eslint-disable no-cond-assign */
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import {error} from "../module/constants/state";
+import SubmissionManager from "../manager/submission/SubmissionManager";
+import Cacheable from "../decorator/Cacheable";
+import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
+
 const express = require("express");
 //const NodeCache = require('node-cache');
 //const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
@@ -17,7 +23,6 @@ const language_name = cnameList.language_name;
 const result = cnameList.result.cn;
 const judge_color = cnameList.judge_color;
 const icon_list = cnameList.icon_list;
-const [error] = require("../module/const_var");
 const markdownPack = (html) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
@@ -27,13 +32,9 @@ const make_code = (data, source = "local") => {
 	return markdownPack(md.render(["```" + const_name[source.toLowerCase()][data.language], data.source, "```"].join("\n")));
 };
 
-const checkPrivilege = (req) => {
-	return req.session.isadmin || req.session.source_browser;
-};
-
-router.get("/:source/:id", (req, res, next) => {
+router.get("/:source/:id", async (req, res, next) => {
 	const id = isNaN(req.params.id) ? -1 : parseInt(req.params.id);
-	if(!checkPrivilege(req)) {
+	if(!await SourcePrivilegeCache.checkPrivilege(req, id)) {
 		if(global.contest_mode) {
 			res.json(error.contestMode);
 			return;
@@ -55,7 +56,7 @@ router.get("/:source/:id", async (req, res) => {
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
 	const raw = !!req.query.raw;
-	const browse_code = req.session.isadmin || req.session.source_browser;
+	const browse_code = await SourcePrivilegeCache.checkPrivilege(req, id);
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
 where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or solution_id in 
