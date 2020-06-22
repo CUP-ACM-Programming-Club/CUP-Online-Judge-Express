@@ -12,6 +12,21 @@ class ContestAssistantManager {
         return await cache_query("select user_id from contest_assistant where contest_id = ?", [contestId]);
     }
 
+    @ErrorHandlerFactory(ok.okMaker)
+    async getContestAssistantsByRequest (req: Request) {
+        const contestId = req.params.contestId;
+        return await this.getContestAssistants(contestId);
+    }
+
+    async getAllContestAssistants () {
+        return await cache_query("select user_id, contest_id from contest_assistant");
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async getAllContestAssistantsByRequest(req: Request) {
+        return await this.getAllContestAssistants();
+    }
+
     @Cacheable(new CachePool<any>(), 1, "hour")
     async userIsContestAssistant (contestId: number | string, userId: string) {
         const userList: any[] = await this.getContestAssistants(contestId);
@@ -25,6 +40,14 @@ class ContestAssistantManager {
 
     async setContestAssistant (contestId: number | string, userId: string) {
         return await MySQLManager.execQuery("insert into contest_assistant(contest_id, user_id) values(?,?)",[contestId, userId]);
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async setContestAssistantByRequest (req: Request) {
+        const contestId = req.body.contestId;
+        const userId = req.body.userId;
+        await this.setContestAssistant(contestId, userId);
+        return {contestId, userId};
     }
 }
 
