@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Setting = require("../../module/admin/setting");
 const [error, ok] = require("../../module/const_var");
+const admin = require("../../middleware/admin");
 const setting = new Setting();
 
 const baseHandler = async function (req, res, label = []) {
@@ -35,4 +36,4 @@ router.post("/", async (req, res) => {
 	}
 });
 
-module.exports = ["/setting", router];
+module.exports = ["/setting", admin, router];

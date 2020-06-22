@@ -1,7 +1,7 @@
 const isNumber = require("../util/isNumber").default;
 const {error, ok} = require("../constants/state");
 const query = require("../mysql_query");
-module.exports = function (target, baseId) {
+module.exports = function (target, baseId, middleware = []) {
 	const express = require("express");
 	const router = express.Router();
 
@@ -9,7 +9,7 @@ module.exports = function (target, baseId) {
 		return query(`select * from ${target} where ${baseId} = ?`, [id]);
 	}
 
-	router.get("/:id", async (req, res) => {
+	router.get("/:id", ...middleware, async (req, res) => {
 		let {id} = req.params;
 		if (!isNumber(id)) {
 			res.json(error.invalidParams);

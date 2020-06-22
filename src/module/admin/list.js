@@ -1,6 +1,8 @@
 const express = require("express");
 const query = require("../../module/mysql_query");
 const {error, ok} = require("../constants/state");
+const admin = require("../../middleware/admin");
+
 
 module.exports = function (target, opts = {}) {
 	const router = express.Router();
@@ -37,5 +39,5 @@ module.exports = function (target, opts = {}) {
 		}
 	});
 
-	return ["/list", router];
+	return ["/list", admin, router];
 };

@@ -3,6 +3,7 @@ import ContestCachePool from "../../../module/contest/ContestCachePool";
 const query = require("../../../module/mysql_query");
 import {error, ok} from "../../../module/constants/state";
 const express = require("express"), router = express.Router();
+const admin = require("../../../middleware/admin");
 const {trimProperty, removeAllCompetitorPrivilege, removeAllContestProblem, addContestCompetitor, addContestProblem} = require("../../../module/util");
 const dayjs = require("dayjs");
 
@@ -43,4 +44,4 @@ router.post("/", async (req, res) => {
 	}
 });
 
-module.exports = ["/add", router];
+module.exports = ["/add", admin, router];

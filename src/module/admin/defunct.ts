@@ -2,6 +2,8 @@ import isNumber from "../util/isNumber";
 import express, {Request, Response} from "express";
 const query = require("../../module/mysql_query");
 import {error, ok} from "../constants/state";
+const admin = require("../../middleware/admin");
+
 
 function switchDefunct(defunct: string) {
 	switch (defunct) {
@@ -41,5 +43,5 @@ module.exports = function (target: string, idName: string) {
 		}
 	});
 
-	return ["/defunct", router];
+	return ["/defunct", admin, router];
 };
