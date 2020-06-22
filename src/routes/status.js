@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+
 const ENVIRONMENT = process.env.NODE_ENV || "prod";
 const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
 const express = require("express");
@@ -329,7 +331,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		}
 	}
 	let _end = false;
-	const browser_privilege = req.session.isadmin || req.session.source_browser;
+	const browser_privilege = req.session.isadmin || req.session.source_browser || (request_query.contest_id && await ContestAssistantManager.userIsContestAssistant(request_query.contest_id, req.session.user_id));
 	if (browser_privilege) {
 		where_sql = where_sql.join(" and ").trim();
 		if (where_sql.length > 0) {
@@ -386,7 +388,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 		const_list: const_name,
 		self: req.session.user_id,
 		isadmin: req.session.isadmin,
-		browse_code: req.session.source_browser,
+		browse_code: browser_privilege,
 		end: Boolean(_end)
 	});
 }

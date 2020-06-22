@@ -1,12 +1,14 @@
+import ContestAssistantManager from "../../manager/contest/ContestAssistantManager";
+
 const express = require("express");
 const router = express.Router();
 const {error, ok} = require("../../module/constants/state");
 const getProblemInfo = require("../../module/contest/problem");
 const ProblemInfoManager = require("../../module/problem/ProblemInfoManager");
 
-function privilegeMiddleware(req, res, next) {
+async function privilegeMiddleware(req, res, next) {
 	const contestId = parseInt(req.params.contest_id);
-	if (req.session.isadmin || req.session.contest_manager || req.session.contest_maker[`m${contestId}`]) {
+	if (req.session.isadmin || req.session.contest_manager || req.session.contest_maker[`m${contestId}`] || await ContestAssistantManager.userIsContestAssistant(contestId, req.session.user_id)) {
 		next();
 	}
 	else {

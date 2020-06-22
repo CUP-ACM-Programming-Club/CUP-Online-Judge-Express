@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+
 const express = require("express");
 const router = express.Router();
 const ContestCachePool = require("../module/contest/ContestCachePool");
@@ -65,7 +67,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 			let submission_data;
 			let limit_data;
 			[contest_general_detail, submission_data, limit_data] = await Promise.all(sqlQueue);
-			let browse_privilege = req.session.isadmin || req.session.contest_manager;
+			let browse_privilege = req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id);
 			let submission_map = {};
 			for (let i of submission_data) {
 				if (typeof submission_map[i.problem_id] === "undefined") {
