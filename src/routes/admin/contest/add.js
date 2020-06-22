@@ -15,10 +15,6 @@ router.post("/", async (req, res) => {
 		// TODO: Error Handle
 		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
 		let {startTime, endTime, password, problemSelected, userList} = trimProperty(req.body);
-		if (typeof problemSelected !== "string" || (typeof problemSelected === "string" && problemSelected.trim().length === 0)) {
-			res.json(error.database);
-			return;
-		}
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0 || hostname === "null") {
