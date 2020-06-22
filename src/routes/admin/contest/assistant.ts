@@ -7,6 +7,10 @@ router.post("/", async (req, res) => {
     res.json(await ContestAssistantManager.setContestAssistantByRequest(req));
 });
 
+router.post("/remove", async (req, res) => {
+    res.json(await ContestAssistantManager.removeContestAssistantByRequest(req));
+});
+
 router.get("/all", async (req, res) => {
     res.json(await ContestAssistantManager.getAllContestAssistantsByRequest(req));
 });

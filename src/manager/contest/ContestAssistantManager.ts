@@ -42,11 +42,23 @@ class ContestAssistantManager {
         return await MySQLManager.execQuery("insert into contest_assistant(contest_id, user_id) values(?,?)",[contestId, userId]);
     }
 
+    async removeContestAssistant (contestId: number | string, userId: string) {
+        return await MySQLManager.execQuery("delete from contest_assistant where contest_id = ? and user_id = ?", [contestId, userId]);
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async setContestAssistantByRequest (req: Request) {
         const contestId = req.body.contestId;
         const userId = req.body.userId;
         await this.setContestAssistant(contestId, userId);
+        return {contestId, userId};
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async removeContestAssistantByRequest (req: Request) {
+        const contestId = req.body.contestId;
+        const userId = req.body.userId;
+        await this.removeContestAssistant(contestId, userId);
         return {contestId, userId};
     }
 }
