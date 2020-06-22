@@ -14,8 +14,8 @@ class ContestAssistantManager {
 
     @Cacheable(new CachePool<any>(), 1, "hour")
     async userIsContestAssistant (contestId: number | string, userId: string) {
-        const userList: string[] = await this.getContestAssistants(contestId);
-        return userList.includes(userId);
+        const userList: any[] = await this.getContestAssistants(contestId);
+        return userList.map(e => e.user_id).includes(userId);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
