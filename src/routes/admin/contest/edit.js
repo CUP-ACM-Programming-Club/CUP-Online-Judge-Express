@@ -8,11 +8,14 @@ const ProblemSetCachePool = require("../../../module/problemset/ProblemSetCacheP
 const ContestCachePool = require("../../../module/contest/ContestCachePool");
 
 async function privilegeMiddleware (req, res, next) {
+	if (req.session.isadmin || req.session.contest_manager) {
+		return next();
+	}
 	const method = req.method;
 	const contestId = method.toLowerCase() === "get" ? req.params.id : req.body.contest_id;
 	const result = await ContestAssistantManager.userIsContestAssistant(contestId, req.session.user_id);
 	if (result) {
-		next();
+		return next();
 	}
 	else {
 		res.json(error.noprivilege);
