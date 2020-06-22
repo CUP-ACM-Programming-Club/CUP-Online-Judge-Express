@@ -273,7 +273,7 @@ const problem_callback = async (rows, req, res, opt = {source: "", sid: -1, raw:
 			packed_problem.source = "";
 		}
 		if (~opt.solution_id) {
-			const browse_privilege = await SourcePrivilegeCache.checkPrivilege(req, opt.solution_id);
+			const browse_privilege = await SourcePrivilegeCache.checkPrivilege(req.session, opt.solution_id);
 			const resolve = await cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
 			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
                 "           and not exists\n" +

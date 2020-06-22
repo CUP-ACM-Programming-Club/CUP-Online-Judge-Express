@@ -34,7 +34,7 @@ const make_code = (data, source = "local") => {
 
 router.get("/:source/:id", async (req, res, next) => {
 	const id = isNaN(req.params.id) ? -1 : parseInt(req.params.id);
-	if(!await SourcePrivilegeCache.checkPrivilege(req, id)) {
+	if(!await SourcePrivilegeCache.checkPrivilege(req.session, id)) {
 		if(global.contest_mode) {
 			res.json(error.contestMode);
 			return;
@@ -56,7 +56,7 @@ router.get("/:source/:id", async (req, res) => {
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
 	const raw = !!req.query.raw;
-	const browse_code = await SourcePrivilegeCache.checkPrivilege(req, id);
+	const browse_code = await SourcePrivilegeCache.checkPrivilege(req.session, id);
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
 where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or solution_id in 

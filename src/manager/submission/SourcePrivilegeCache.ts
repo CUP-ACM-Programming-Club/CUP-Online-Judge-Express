@@ -6,8 +6,8 @@ import CachePool from "../../module/common/CachePool";
 
 class SourcePrivilegeCache {
     @Cacheable(new CachePool(), 10, "second")
-    async checkPrivilege (req: Request, id: number)  {
-        const basePrivilege = req.session!.isadmin || req.session!.source_browser;
+    async checkPrivilege (session: Express.Session, id: number)  {
+        const basePrivilege = session!.isadmin || session!.source_browser;
         if (basePrivilege) {
             return basePrivilege;
         }
@@ -15,7 +15,7 @@ class SourcePrivilegeCache {
         if (!contestId) {
             return false;
         }
-        return await ContestAssistantManager.userIsContestAssistant(contestId, req.session!.user_id);
+        return await ContestAssistantManager.userIsContestAssistant(contestId, session!.user_id);
     }
 }
 

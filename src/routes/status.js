@@ -599,7 +599,7 @@ router.get("/graph", async function (req, res) {
 
 router.get("/solution", async function (req, res) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
-	const browse_privilege = sid !== null && await SourcePrivilegeCache.checkPrivilege(req, sid);
+	const browse_privilege = sid !== null && await SourcePrivilegeCache.checkPrivilege(req.session, sid);
 	if (sid) {
 		const _result = await query(`SELECT user_id,
                                             language,
