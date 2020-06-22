@@ -292,7 +292,7 @@ const problem_callback = async (rows, req, res, opt = {source: "", sid: -1, raw:
 			res.json(Object.assign({
 				problem: packed_problem,
 				source: source,
-				isadmin: req.session.isadmin || (opt.contest_id && await ContestAssistantManager.userIsContestAssistant(opt.contest_id, req.session.user_id)),
+				isadmin: req.session.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid, req.session.user_id)),
 				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
 			}, copyVal));
@@ -300,7 +300,7 @@ const problem_callback = async (rows, req, res, opt = {source: "", sid: -1, raw:
 			res.json(Object.assign({
 				problem: packed_problem,
 				source: "",
-				isadmin: req.session.isadmin || (opt.contest_id && await ContestAssistantManager.userIsContestAssistant(opt.contest_id, req.session.user_id)),
+				isadmin: req.session.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid, req.session.user_id)),
 				browse_code: req.session.source_browser,
 				editor: req.session.editor || false
 			}, copyVal));
