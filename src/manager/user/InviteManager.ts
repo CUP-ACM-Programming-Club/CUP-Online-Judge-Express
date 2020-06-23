@@ -60,14 +60,14 @@ export class InviteManager {
 
     @ErrorHandler
     async consumeInviteCode(inviteCode: string) {
-        const connection: any = await MySQLManager.getConnection();
+        const connection = await MySQLManager.getConnection();
         await new Promise(((resolve, reject) => {
             connection.beginTransaction(async (err: Error) => {
                 if (err) {
                     reject(err);
                 }
                 else {
-                    connection.query(`select * from invite where invite_code = ? for update`, [inviteCode], (error: Error, results: any) => {
+                    connection.query(`select * from invite where invite_code = ? for update`, [inviteCode], (error, results) => {
                         if (error) {
                             return connection.rollback(() => {
                                 reject(error);
@@ -79,11 +79,16 @@ export class InviteManager {
                         } else {
                             const restTime = results[0].valid_time;
                             if (restTime > 0) {
-                                connection.query(`update invite set valid_time = valid_time - 1 where invite_code = ?`, [inviteCode], (error: Error, results: any) => {
+                                connection.query(`update invite set valid_time = valid_time - 1 where invite_code = ? and valid_time > 0`, [inviteCode], (error, results) => {
                                     if (error) {
                                         return connection.rollback(() => {
                                             reject(error);
                                         })
+                                    }
+                                    else if (results.affectedRows < 1) {
+                                        return connection.rollback(() => {
+                                            reject("consume invite code failed.");
+                                        });
                                     }
                                     else {
                                         connection.commit((err: Error) => {

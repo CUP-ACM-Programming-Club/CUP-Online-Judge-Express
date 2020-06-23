@@ -1,19 +1,20 @@
 // @ts-ignore
 import mysql from "mysql2";
+import {Pool, PoolConnection} from "mysql";
 const config: any = global.config || {};
-const pool = mysql.createPool(config["mysql"]);
+const pool: Pool = mysql.createPool(config["mysql"]);
 
 export class MySQLManager {
     static mysqlPool = pool;
     static execQuery(sql_query: string, sqlArr?: any[], callback?: (...args: any[]) => any): any {
         if (typeof callback === "function") {
-            pool.query(sql_query, sqlArr, function (err: any, results: any, fields: any) {
+            pool.query(sql_query, sqlArr, function (err, results, fields) {
                 callback(results, fields);
             });
         }
         else {
             return new Promise((resolve, reject) => {
-                pool.query(sql_query, sqlArr, function (err: any, results: any, fields: any) {
+                pool.query(sql_query, sqlArr, function (err, results, fields) {
                     if (err) {
                         reject({error:err, sql: sql_query, args: sqlArr});
                     }
@@ -26,9 +27,9 @@ export class MySQLManager {
         }
         //connection.end();
     }
-    static getConnection() {
+    static getConnection() : Promise<PoolConnection> {
         return new Promise((resolve, reject) => {
-            pool.getConnection((err: Error, connection: any) => {
+            pool.getConnection((err, connection) => {
                 if (err !== null) {
                     reject(err);
                 }
