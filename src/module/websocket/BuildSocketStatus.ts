@@ -24,7 +24,7 @@ export function buildSocket(socket: UserSocket) {
                     let contest_id: number = 0;
                     if (!isNaN(Number(url_split[idx + 1]))) {
                         contest_id = parseInt(url_split[idx + 1]);
-                    } else if (url_split[idx + 1] === "rank" && !isNaN(Number(url_split[idx + 2]))) {
+                    } else if (["status", "rank"].includes(url_split[idx + 1]) && !isNaN(Number(url_split[idx + 2]))) {
                         contest_id = parseInt(url_split[idx + 2]);
                     }
                     socket.contest_id = contest_id;
