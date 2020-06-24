@@ -8,7 +8,7 @@ const PAGE_OFFSET = 50;
 
 
 interface IContestSetDTO {
-    contestset_id?: number,
+    contestSetId?: number,
     title: string,
     creator?: string,
     description: string,
@@ -88,10 +88,10 @@ class ContestSetManager {
     }
 
     async updateContestSetByDTO(payload: IContestSetDTO) {
-        const {creator, title, defunct, description, visible, contestset_id} = payload;
+        const {creator, title, defunct, description, visible, contestSetId} = payload;
         return await MySQLManager.execQuery(`update contest_set set 
 creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
-            [creator, title, description, visible, defunct, contestset_id!]);
+            [creator, title, description, visible, defunct, contestSetId!]);
     }
 
     async addContestSetByRequest(req: Request) {

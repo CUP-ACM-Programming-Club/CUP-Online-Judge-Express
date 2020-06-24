@@ -4,7 +4,8 @@
     "user": "root",
     "password": "new_password",
     "port": "3306",
-    "database": "jol"
+    "database": "jol",
+    "supportBigNumbers": true
   },
   "monitor": {
     "port": 3002
