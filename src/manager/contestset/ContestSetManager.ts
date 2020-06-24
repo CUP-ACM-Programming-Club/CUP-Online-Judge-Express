@@ -88,10 +88,10 @@ class ContestSetManager {
     }
 
     async updateContestSetByDTO(payload: IContestSetDTO) {
-        const {creator, title, defunct, description, visible, contestSetId} = payload;
+        const {title, defunct, description, visible, contestSetId} = payload;
         return await MySQLManager.execQuery(`update contest_set set 
-creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
-            [creator, title, description, visible, defunct, contestSetId!]);
+title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
+            [title, description, visible, defunct, contestSetId!]);
     }
 
     async addContestSetByRequest(req: Request) {
@@ -129,7 +129,7 @@ creator = ?, title = ?, description = ?, visible = ?, defunct = ? where contests
         }
         else {
             const response = await this.getContestSetByContestSetId(contestSetId);
-            return response!.defunct === "N" && response!.visible;
+            return response!.defunct === "N";
         }
     }
 }
