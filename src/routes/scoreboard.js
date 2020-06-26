@@ -74,7 +74,7 @@ left join users on users.user_id = t.user_id`;
 async function scoreboardHandler(cid) {
 
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
-	const sql3 = "select start_time,title from contest where contest_id = ?";
+	const sql3 = "select start_time,title,show_all_ranklist from contest where contest_id = ?";
 
 	const _data = submitHandler(cid);
 	const _total = query(sql2, [cid]);
@@ -90,6 +90,7 @@ async function scoreboardHandler(cid) {
 			total: result[1][0].total_problem,
 			start_time: result[2][0].start_time,
 			title: result[2][0].title,
+			show_all_ranklist: result[2][0].show_all_ranklist,
 			users: result[3]
 		};
 	}
