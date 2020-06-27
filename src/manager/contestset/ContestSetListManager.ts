@@ -14,6 +14,11 @@ interface IContestSetListDAO {
     maker: string
 }
 
+interface IContestSetList {
+    contestSetId: number,
+    contestId: number
+}
+
 class ContestSetListManager {
     async getContestSetListByContestSetId(contestSetId: number | string): Promise<IContestSetListDAO[]> {
         return await MySQLManager.execQuery(`
@@ -42,16 +47,24 @@ contest.contest_id = clist.contest_id`, [contestSetId]);
     }
 
     async addContestSetListByContestSetIdAndContestId(contestSetId: number, contestId: number) {
-        await MySQLManager.execQuery(`insert into contest_set_list
-(contestset_id, contest_id)values(?,?)`,[contestSetId, contestId]);
+        return await MySQLManager.execQuery(`insert into contest_set_list
+(contestset_id, contest_id)values(?,?)`, [contestSetId, contestId]);
+    }
+
+    async addContestSetListByContestSetIdAndContestIdMultiple(contestSetListArray: IContestSetList[]) {
+        return await MySQLManager.execQuery(`insert into contest_set_list(contestset_id, contest_id) 
+values${contestSetListArray.map(() => "(?,?)").join(",")}`, contestSetListArray.flatMap(Object.values));
     }
 
     async updateContestSetListByRequest(req: Request) {
         const contestSetId = req.body.contestSetId;
         const contestIdList = req.body.contestIdList as number[];
         await this.deleteContestSetList(contestSetId);
-        await Promise.all(contestIdList.map(contestId => {
-            return this.addContestSetListByContestSetIdAndContestId(contestSetId, contestId);
+        await this.addContestSetListByContestSetIdAndContestIdMultiple(contestIdList.map(contestId => {
+            return {
+                contestSetId,
+                contestId
+            };
         }));
     }
 }
