@@ -1,3 +1,5 @@
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+
 const express = require("express");
 
 const router = express.Router();
@@ -18,7 +20,7 @@ router.get("/:cid", (req, res, next) => {
 	}
 });
 
-async function submitHandler(cid) {
+async function submitHandler(cid, browserPrivilege = false) {
 	const sql = `SELECT users.user_id,
        users.nick,
        users.avatar,
@@ -33,10 +35,12 @@ async function submitHandler(cid) {
        sim.sim,
        solution.code_length,
        solution.solution_id
-FROM (select *
+FROM (select result, num, in_date, fingerprint, fingerprintRaw, ip, problem_id, code_length, solution_id, user_id
       from solution
       where solution.contest_id = ?
-        and num >= 0) solution
+        and num >= 0
+        ${browserPrivilege ? "" : " and problem_id > 0 "}
+        ) solution
          left join users
                    on users.user_id = solution.user_id
          left join sim
@@ -49,14 +53,14 @@ select users.user_id,
        vsol.result,
        vsol.num,
        vsol.in_date,
-       ''   as fingerprint,
-       ''   as fingerprintRaw,
+       vsol.fingerprint,
+       vsol.fingerprintRaw,
        vsol.ip,
        vsol.problem_id,
        null as sim,
        vsol.code_length,
        vsol.solution_id
-from (select *
+from (select result, num, in_date, '' as fingerprint, '' as fingerprintRaw, ip, problem_id, code_length, solution_id, user_id
       from vjudge_solution
       where vjudge_solution.contest_id = ?
         and num >= 0
@@ -72,12 +76,12 @@ left join users on users.user_id = t.user_id`;
 	return query(sql4, ["c" + cid]);
 }
 
-async function scoreboardHandler(cid) {
+async function scoreboardHandler(cid, browsePrivilege = false) {
 
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
 	const sql3 = "select start_time,title,show_all_ranklist from contest where contest_id = ?";
 
-	const _data = submitHandler(cid);
+	const _data = submitHandler(cid, browsePrivilege);
 	const _total = query(sql2, [cid]);
 	const _start_time = query(sql3, [cid]);
 	const _user = contestUserHandler(cid);
@@ -122,7 +126,7 @@ router.get("/:cid", async (req, res) => {
 	if (!await check(req, res, cid)) {
 		return;
 	}
-	res.json(await scoreboardHandler(cid));
+	res.json(await scoreboardHandler(cid, req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id)));
 });
 
 router.get("/:cid/line", async (req, res) => {
