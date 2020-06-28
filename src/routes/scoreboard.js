@@ -29,6 +29,7 @@ async function submitHandler(cid) {
        solution.fingerprint,
        solution.fingerprintRaw,
        solution.ip,
+       solution.problem_id,
        sim.sim,
        solution.code_length,
        solution.solution_id
@@ -52,6 +53,7 @@ select users.user_id,
        ''   as fingerprint,
        ''   as fingerprintRaw,
        vsol.ip,
+       vsol.problem_id,
        null as sim,
        vsol.code_length,
        vsol.solution_id
