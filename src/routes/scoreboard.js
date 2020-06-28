@@ -36,8 +36,7 @@ async function submitHandler(cid) {
 FROM (select *
       from solution
       where solution.contest_id = ?
-        and num >= 0
-        and problem_id > 0) solution
+        and num >= 0) solution
          left join users
                    on users.user_id = solution.user_id
          left join sim
