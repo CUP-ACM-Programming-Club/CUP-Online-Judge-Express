@@ -55,9 +55,6 @@ router.post("/token", async function (req, res) {
 
 
 async function storeNewTypePassword(res, password, user_id, newpass) {
-	if(newpass) {
-		return;
-	}
 	try {
 		await generateNewEncryptPassword(user_id, password, salt);
 	} catch (e) {

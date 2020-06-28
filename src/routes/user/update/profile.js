@@ -18,7 +18,7 @@ function buildUpdateQuery(name, val, user_id) {
 }
 
 function checkExists(str) {
-	return !!(str && str.length && str.length > 0);
+	return !!(str && typeof str === "string" && str.trim().length && str.trim().length > 0);
 }
 
 function checkRequestBodyProperties(body) {
