@@ -24,6 +24,7 @@ router.use(...require("./contest/user"));
 router.use(...require("./contest/rest_problem"));
 router.use(...require("./contest/problem_info"));
 router.use(...require("./contest/assistant"));
+router.use(...require("./contest/config"));
 const check = require("../module/contest/check");
 
 
