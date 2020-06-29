@@ -2,6 +2,9 @@ import { Model, Table, Column, DataType, Index, Sequelize, ForeignKey } from "se
 
 @Table({ tableName: "contest_problem", timestamps: false })
 export class contestProblem extends Model<contestProblem> {
+    @Column({ field: "id", primaryKey: true, autoIncrement: true })
+    @Index({ name: "PRIMARY", using: "BTREE", order: "ASC", unique: true })
+    id!: number;
     @Column({ field: "problem_id", type: DataType.INTEGER })
     problemId!: number;
     @Column({ field: "contest_id", allowNull: true, type: DataType.INTEGER })
