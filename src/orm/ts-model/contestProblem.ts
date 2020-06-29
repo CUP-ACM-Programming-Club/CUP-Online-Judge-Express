@@ -12,6 +12,4 @@ export class contestProblem extends Model<contestProblem> {
     ojName?: string;
     @Column({ type: DataType.INTEGER })
     num!: number;
-    @Column({ allowNull: true, type: DataType.INTEGER })
-    id?: number;
 }
