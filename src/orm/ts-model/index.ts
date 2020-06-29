@@ -39,7 +39,6 @@ export * from "./specialSubject";
 export * from "./specialSubjectProblem";
 export * from "./switch";
 export * from "./switchLog";
-export * from "./topic";
 export * from "./tutorial";
 export * from "./tutorialLike";
 export * from "./users";
