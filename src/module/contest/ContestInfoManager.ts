@@ -1,26 +1,13 @@
-import sequelize from "../../orm/instance/sequelize";
-const Contest = sequelize.import("contest", require("../../orm/models/contest"));
+import { contest as Contest } from "../../orm/ts-model";
 
 class ContestInfoManager {
-	private contestId: number | undefined;
-	constructor () {}
-
-	static newInstance() {
-		return new ContestInfoManager();
-	}
-
-	setContestId (contestId: number) {
-		this.contestId = contestId;
-		return this;
-	}
-
-	async find () {
+	async find (contestId: number) {
 		return Contest.findOne({
 			where: {
-				contest_id: this.contestId
+				contest_id: contestId
 			}
 		});
 	}
 }
 
-module.exports = ContestInfoManager;
+export default new ContestInfoManager();

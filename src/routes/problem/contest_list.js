@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const ContestInfoManager = require("../../module/contest/ContestInfoManager");
+import ContestInfoManager from "../../module/contest/ContestInfoManager";
 const ContestFinder = require("../../module/problem/ContestFinder");
 const ErrorCollector = require("../../module/error/collector");
 const {error, ok} = require("../../module/constants/state");
@@ -9,7 +9,7 @@ const adminMiddleware = require("../../middleware/admin");
 router.get("/:problemId", async (req, res) => {
 	try {
 		const contestList = await ContestFinder.newInstance().setProblemId(parseInt(req.params.problemId)).find();
-		const contestInfoList = await Promise.all(contestList.map(el => ContestInfoManager.newInstance().setContestId(el.contest_id).find()));
+		const contestInfoList = await Promise.all(contestList.map(el => ContestInfoManager.find(el.contest_id)));
 		res.json(ok.okMaker(contestInfoList.filter(e => e && e.get && typeof e.get === "function").map(e => e.get())));
 	}
 	catch (e) {
