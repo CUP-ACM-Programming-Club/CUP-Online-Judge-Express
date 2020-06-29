@@ -31,7 +31,7 @@ function timeToString(time) {
 router.post("/", privilegeMiddleware, async (req, res) => {
 	try {
 		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
-		let {startTime, endTime, password, problemSelected, userList, showAllRanklist} = trimProperty(req.body);
+		let {startTime, endTime, password, problemSelected, userList, showAllRanklist, showSim} = trimProperty(req.body);
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0 || hostname === "null") {
@@ -43,9 +43,10 @@ router.post("/", privilegeMiddleware, async (req, res) => {
 			defunct = "N";
 		}
 		let sql = `update contest set title = ?,description = ?, start_time = ?, end_time = ?, private = ?, langmask = ?,
-	limit_hostname = ?, password = ?, vjudge = 0, cmod_visible = ?, ip_policy = ?, defunct = ?, show_all_ranklist = ? where contest_id = ?`;
+	limit_hostname = ?, password = ?, vjudge = 0, cmod_visible = ?, ip_policy = ?, defunct = ?,
+	 show_all_ranklist = ?, show_sim = ? where contest_id = ?`;
 		await query(sql, [title, description, startTime, endTime, Public ? "0" : "1", langmask, hostname, password, ContestMode, classroomSelected,
-			defunct, showAllRanklist, contest_id]).then(() => console.log("update Finished"));
+			defunct, showAllRanklist, showSim, contest_id]).then(() => console.log("update Finished"));
 		await removeAllContestProblem(contest_id).then(() => console.log("removeAllContestFinished", contest_id));
 		await addContestProblem(contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
 		await removeAllCompetitorPrivilege(contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));

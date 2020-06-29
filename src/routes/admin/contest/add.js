@@ -15,7 +15,7 @@ router.post("/", async (req, res) => {
 	try {
 		// TODO: Error Handle
 		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
-		let {startTime, endTime, password, problemSelected, userList} = trimProperty(req.body);
+		let {startTime, endTime, password, problemSelected, userList, showAllRanklist, showSim} = trimProperty(req.body);
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0 || hostname === "null") {
@@ -27,9 +27,9 @@ router.post("/", async (req, res) => {
 			defunct = "N";
 		}
 		let sql = `insert into contest(title, start_time, end_time, private, langmask, description, password, vjudge,
-    ip_policy, cmod_visible, limit_hostname,defunct,maker) values(?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+    ip_policy, cmod_visible, limit_hostname,defunct,maker,show_all_ranklist, show_sim) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 		const response = await query(sql, [title, startTime, endTime, Public ? "0" : "1", langmask, description, password, 0, classroomSelected, ContestMode,
-			hostname, defunct, req.session.user_id]);
+			hostname, defunct, req.session.user_id, showAllRanklist, showSim]);
 		contest_id = response.insertId;
 		await removeAllContestProblem(contest_id);
 		await addContestProblem(contest_id, problemSelected);
