@@ -5,6 +5,7 @@ const express = require("express");
 const router = express.Router();
 const ContestCachePool = require("../module/contest/ContestCachePool");
 import ContestManager from "../manager/contest/ContestManager";
+import AutoRouterUse from "../module/common/AutoRouterUse";
 const dayjs = require("dayjs");
 const md = require("markdown-it")({
 	html: true,
@@ -20,11 +21,7 @@ const query = require("../module/mysql_query");
 const getProblemData = require("../module/contest/problem");
 const {error, ok} = require("../module/constants/state");
 const auth = require("../middleware/auth");
-router.use(...require("./contest/user"));
-router.use(...require("./contest/rest_problem"));
-router.use(...require("./contest/problem_info"));
-router.use(...require("./contest/assistant"));
-router.use(...require("./contest/config"));
+AutoRouterUse.resolveDirRouter(__dirname, "./contest");
 const check = require("../module/contest/check");
 
 

@@ -51,7 +51,10 @@ class SubmissionManager {
     // @Retry(5)
     @ErrorLogger
     async getCustomInput(solutionId: number) {
-        const response: any[] = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
+        const response: any[] | undefined = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
+        if (response === undefined || response.length === 0) {
+            return "";
+        }
         return response[0].input_text;
     }
 

@@ -27,7 +27,7 @@ class UnjudgedSubmissionCollector {
     async collectHandler () {
         try {
             this.collectFinished = false;
-            const result = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22) order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
+            const result = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result<2 and language not in (15,22) and problem_id != 0 order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
             for (let i in result) {
                 if (!Object.prototype.hasOwnProperty.call(result,i)) {
                     continue;
