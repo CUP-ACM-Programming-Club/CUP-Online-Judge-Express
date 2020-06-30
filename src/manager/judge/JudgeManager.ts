@@ -22,7 +22,6 @@ interface IJudgeManager {
 }
 
 export class JudgeManager implements IJudgeManager{
-    @Cacheable(new CachePool(), 1, "month")
     async buildSubmissionInfo(solutionId: number) {
         const submissionInfo: ISubmissionInfo = {
             solution_id: solutionId,

@@ -1,5 +1,6 @@
 import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
+import ErrorLogger from "../../decorator/common/ErrorLogger";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -48,6 +49,7 @@ class SubmissionManager {
     }
 
     // @Retry(5)
+    @ErrorLogger
     async getCustomInput(solutionId: number) {
         const response: any[] = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
         return response[0].input_text;

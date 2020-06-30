@@ -191,7 +191,7 @@ async function makePrependAndAppendCode(problem_id, source, language) {
 }
 
 function checkLangmask(language, langmask = LANGMASK) {
-	return Boolean((~langmask) & (1 << language));
+	return Boolean((~langmask) & (2 ** language));
 }
 
 async function checkContestValidate(req, originalContestID, originalPID, language) {
