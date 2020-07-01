@@ -36,6 +36,7 @@ interface ProblemInfo {
 
 class SubmissionManager {
     // @Retry(5)
+    @ErrorLogger
     async getSourceBySolutionId(solutionId: number) {
         const response: any[] = await cache_query("select source from source_code where solution_id = ?", [solutionId]);
         return response[0].source;
@@ -59,6 +60,7 @@ class SubmissionManager {
     }
 
     // @Retry(5)
+    @ErrorLogger
     async getProblemInfo(problemId: number) {
         const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
         const problemInfo: ProblemInfo = response[0];
