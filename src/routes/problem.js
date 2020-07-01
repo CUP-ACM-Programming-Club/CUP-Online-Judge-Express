@@ -239,7 +239,7 @@ function prependAppendHandler(dataArray, opt) {
 			}
 			opt.append[parseInt(i.type)] = i.code;
 		}
-		new_langmask |= (1 << parseInt(i.type));
+		new_langmask |= (2 ** parseInt(i.type));
 	}
 	if (new_langmask) {
 		opt.langmask = ~new_langmask;

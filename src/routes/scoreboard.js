@@ -1,12 +1,10 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
-
-const express = require("express");
-
+import {error, ok} from "../module/constants/state";
+import express from "express";
 const router = express.Router();
 const query = require("../module/mysql_cache");
 const cache_query = query;
 const auth = require("../middleware/auth");
-const [error, ok] = require("../module/const_var");
 const check = require("../module/contest/check");
 
 router.get("/:cid", (req, res, next) => {
