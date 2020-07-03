@@ -3,20 +3,13 @@
  * Class LocalJudger
  */
 import fsDefault from "fs";
-import path from "path";
 import Promise from "bluebird";
-import {mkdirAsync} from "./file/mkdir";
 import SocketIoClient from "socket.io-client";
-import Tolerable from "../decorator/Tolerable";
 import JudgeManager from "../manager/judge/JudgeManager";
 import JudgeResultManager from "../manager/websocket/JudgeResultManager";
 import SubmissionSet from "./websocket/set/SubmissionSet";
-const fs: any = Promise.promisifyAll(fsDefault);
-const {spawn} = require("child_process");
 const os = require("os");
-const {ConfigManager} = require("./config/config-manager");
 const eventEmitter = require("events").EventEmitter;
-import { v1 as uuidV1 } from "uuid";
 interface IRejectInfo {
 	reason: string,
 	solutionId: number | string
@@ -35,6 +28,11 @@ export class localJudger extends eventEmitter {
 		super();
 		const socket = this.socket = SocketIoClient(global.config.judger.address);
 		this.oj_home = home_dir;
+		socket.on("connect", () => {
+			socket.emit("type", {
+				type: "submitter"
+			});
+		});
 		socket.on("judger", (payload: any) => {
 			JudgeResultManager.messageHandle(payload);
 		});
@@ -53,9 +51,9 @@ export class localJudger extends eventEmitter {
 		});
 
 		socket.on("reject_judge", (payload: IRejectInfo) => {
-			const socket = SubmissionSet.get(payload.solutionId);
-			if (socket) {
-				socket.emit("remoteJudge", {
+			const userSocket = SubmissionSet.get(payload.solutionId);
+			if (userSocket) {
+				userSocket.emit("remoteJudge", {
 					solutionId: payload.solutionId
 				});
 			}
