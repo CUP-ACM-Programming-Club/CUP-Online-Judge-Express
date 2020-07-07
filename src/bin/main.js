@@ -228,6 +228,7 @@ io.on("connection", async function (socket) {
 			socket.emit("reject_submit", response);
 			return;
 		}
+		socket.emit("judge:solution_id", response);
 		data.submission_id = data.solution_id = response.solution_id;
 		const ip = OnlineUserSet.get(socket.user_id).ip;
 		const fingerprint = data.val.fingerprint;

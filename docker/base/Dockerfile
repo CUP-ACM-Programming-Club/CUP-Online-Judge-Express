@@ -2,6 +2,9 @@
 # Pull base image.
 FROM ubuntu:20.04
 
+LABEL maintainer="Ryan Lee" \
+      email="gxlhybh@gmail.com"
+
 # Install Node.js
 RUN set -xe && \
     apt-get update && \

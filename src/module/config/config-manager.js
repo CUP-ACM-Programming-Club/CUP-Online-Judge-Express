@@ -241,10 +241,17 @@ ConfigManager.prototype.setSwitchPersistenceModule = function (module) {
 	return this;
 };
 
+async function baseInitProcedure(thisArg, module, setter) {
+	const result = await module.getAll();
+	result.forEach(el => setter.call(thisArg, el.key, el.value, el.comment));
+}
+
 async function baseMapInitHandler (thisArg, module, setter) {
 	if (typeof module !== "undefined") {
-		const result = await module.getAll();
-		result.forEach(el => setter.call(thisArg, el.key, el.value, el.comment));
+		setInterval(async () => {
+			await baseInitProcedure(thisArg, module, setter);
+		}, 10000);
+		await baseInitProcedure(thisArg, module, setter);
 	}
 }
 
