@@ -1,5 +1,6 @@
-const express = require("express"), router = express.Router();
-const BanModel = require("../../../module/user/ban");
+import express from "express";
+const router = express.Router();
+import BanModel from "../../../module/user/ban";
 const {error, ok} = require("../../../module/constants/state");
 const {trimProperty} = require("../../../module/util");
 router.get("/", async (req, res) => {
@@ -33,4 +34,4 @@ router.post("/delete", async (req, res) => {
 	}
 });
 
-module.exports = ["/ban", router];
+export = ["/ban", router];

@@ -58,6 +58,11 @@ export class UserManager {
         }
     }
 
+    async getUserNick(userId: string) {
+        const user = await this.getUser(userId);
+        return null !== user && user.nick || "";
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async getUserEmailByRequest(req: Request) {
         return this.getUserEmail(req.params.user_id);
