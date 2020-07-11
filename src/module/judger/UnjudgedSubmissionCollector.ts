@@ -19,7 +19,9 @@ class UnjudgedSubmissionCollector {
         if (!this.interval) {
             this.collectFinished = true;
             this.interval = setInterval(() => {
-                this.collectHandler();
+                if (ConfigManager.isSwitchedOn("enable_judge_collector", ConfigManager.SWITCH_ON)) {
+                    this.collectHandler();
+                }
             }, ConfigManager.getConfig("judger_loop_time", DEFAULT_LOOP_SECONDS));
         }
     }

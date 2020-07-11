@@ -1,4 +1,4 @@
-const express = require("express");
+import express from "express";
 const BanModel = require("../../module/user/ban");
 const router = express.Router();
 const {error, ok} = require("../../module/constants/state");
@@ -32,4 +32,4 @@ router.post("/", async (req, res) => {
 	}
 });
 
-module.exports = router;
+export = ["/ban_user", router];
