@@ -1,6 +1,6 @@
 import {Request, Response} from "express";
 const {error, ok} = require("../constants/state");
-const query = require("../../module/mysql_query");
+const query = require("../mysql_query");
 
 export async function rejudgeHandler(idName: string, id: number | string, result: number | string) {
 	return await query(`update solution set result = ? where ${idName} = ?`, [result, id]);

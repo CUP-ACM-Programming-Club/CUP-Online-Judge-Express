@@ -1,5 +1,5 @@
 const express = require("express");
-const query = require("../../module/mysql_query");
+const query = require("../mysql_query");
 const {error, ok} = require("../constants/state");
 const admin = require("../../middleware/admin");
 

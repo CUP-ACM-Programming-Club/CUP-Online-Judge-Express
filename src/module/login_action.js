@@ -1,4 +1,4 @@
-const query = require("../module/mysql_query");
+const query = require("./mysql_query");
 
 function isAdmin(str) {
 	return str === "administrator";

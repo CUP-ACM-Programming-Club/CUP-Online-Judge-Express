@@ -1,5 +1,5 @@
-const {server} = require("../../../init/http-server");
-const sequelize = require("../../../../orm/instance/sequelize");
+import {server} from "../../../init/http-server";
+import sequelize from "../../../../orm/instance/sequelize";
 const mysql = require("../../../mysql_query");
 const redis = require("../../../redis");
 

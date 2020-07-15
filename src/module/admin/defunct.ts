@@ -1,6 +1,6 @@
 import isNumber from "../util/isNumber";
 import express, {Request, Response} from "express";
-const query = require("../../module/mysql_query");
+const query = require("../mysql_query");
 import {error, ok} from "../constants/state";
 const admin = require("../../middleware/admin");
 

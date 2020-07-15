@@ -25,4 +25,4 @@ class ErrorCollector {
 	}
 }
 
-module.exports  = new ErrorCollector();
+export = new ErrorCollector();

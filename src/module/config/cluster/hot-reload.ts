@@ -114,4 +114,4 @@ class HotReloadManager extends BaseReload implements IReload{
 	}
 }
 
-module.exports = new HotReloadManager();
+export = new HotReloadManager();

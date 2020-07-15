@@ -57,7 +57,8 @@ declare global {
     namespace NodeJS {
         interface Global {
             config: Config
-            Application: Express
+            Application: Express,
+            clusterMode?: boolean
         }
     }
 }

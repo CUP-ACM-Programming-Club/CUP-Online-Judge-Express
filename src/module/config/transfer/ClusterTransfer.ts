@@ -1,5 +1,4 @@
-const cluster = require("cluster");
-
+import cluster from "cluster";
 function main() {
 	if (!global.clusterMode) {
 		return;
@@ -16,4 +15,4 @@ function main() {
 	});
 }
 
-module.exports = main;
+export = main;

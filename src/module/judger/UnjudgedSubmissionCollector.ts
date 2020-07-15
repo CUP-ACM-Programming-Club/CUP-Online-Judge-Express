@@ -16,6 +16,7 @@ class UnjudgedSubmissionCollector {
     }
 
     start () {
+        this.collectHandler();
         if (!this.interval) {
             this.collectFinished = true;
             this.interval = setInterval(() => {

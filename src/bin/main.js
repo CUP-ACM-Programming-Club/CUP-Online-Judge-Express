@@ -30,7 +30,7 @@ const cache_query = require("../module/mysql_cache");
 const submitControl = require("../module/submitControl");
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-const {ConfigManager} = require("../module/config/config-manager");
+import {ConfigManager} from "../module/config/config-manager";
 import OnlineUserSet from "../module/websocket/set/OnlineUserSet";
 import NormalUserSet from "../module/websocket/set/NormalUserSet";
 import AdminUserSet from "../module/websocket/set/AdminUserSet";

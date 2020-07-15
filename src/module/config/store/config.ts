@@ -1,3 +1,4 @@
-export const mysql = require("./config/mysql");
-
-export const redis = require("./config/redis");
+import {mysqlInstance} from "./config/mysql";
+import {redisInstance} from "./config/redis";
+export const mysql = mysqlInstance;
+export const redis = redisInstance;

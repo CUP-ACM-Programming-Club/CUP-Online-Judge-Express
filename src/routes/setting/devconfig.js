@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
+import {error, ok} from "../../module/constants/state";
+import ConfigManager from "../../manager/ConfigManager";
 const router = express.Router();
-const {error, ok} = require("../../module/constants/state");
-const ConfigManager = require("../../manager/ConfigManager/index");
 
 function validator(key) {
 	if (typeof key !== "string" || key.length === 0) {
