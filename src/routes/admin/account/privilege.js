@@ -7,9 +7,12 @@ const UpdatePool = require("../../../module/user/LazyPrivilegeUpdatePool");
 const privilegeList = ["administrator", "source_browser", "contest_creator", "http_judge", "problem_editor", "contest_manager", "editor"];
 
 async function privilegeListGetter() {
-	return await query(`select * from privilege where rightstr in 
-    ('${privilegeList.join("','")}')
-    order by user_id`);
+	return await query(`select superuser.*, users.nick
+from (select user_id, rightstr, defunct
+      from privilege
+      where rightstr in
+            ('${privilegeList.join("','")}')) superuser
+         inner join users on users.user_id = superuser.user_id`);
 }
 
 async function modifyHandler(req, res, sql) {
