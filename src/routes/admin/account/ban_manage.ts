@@ -5,7 +5,7 @@ const {error, ok} = require("../../../module/constants/state");
 const {trimProperty} = require("../../../module/util");
 router.get("/", async (req, res) => {
 	try {
-		res.json(ok.okMaker(await BanModel.getAllByRequest(req)));
+		res.json(await BanModel.getAllByRequest(req));
 	} catch (e) {
 		console.log(e);
 		res.json(error.database);
