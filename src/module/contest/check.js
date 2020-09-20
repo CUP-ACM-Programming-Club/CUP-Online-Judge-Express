@@ -1,3 +1,5 @@
+import ContestAssistantManager from "../../manager/contest/ContestAssistantManager";
+
 const {error} = require("../constants/state");
 const dayjs = require("dayjs");
 const cache_query = require("../mysql_cache");
@@ -32,7 +34,11 @@ module.exports = async (req, res, cid) => {
 	} else if (parseInt(contest[0].private) === 1) {
 		if (req.session.contest_manager || req.session.contest[`c${cid}`]) {
 			return contest;
-		} else {
+		}
+		else if (await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id)) {
+			return contest;
+		}
+		else {
 			await require("../login_action")(req, req.session.user_id);
 			if (req.session.contest_manager || req.session.contest[`c${cid}`]) {
 				return contest;
