@@ -3,6 +3,7 @@ import {ok} from "../../module/constants/state";
 import {Request} from "express";
 import ContestSetManager from "./ContestSetManager";
 import ContestSetListManager from "./ContestSetListManager";
+import ContestAssistantManager from "../contest/ContestAssistantManager";
 
 class ContestSetWithListManager {
     @ErrorHandlerFactory(ok.okMaker)
@@ -15,6 +16,7 @@ class ContestSetWithListManager {
     async updateContestSet(req: Request) {
         await ContestSetManager.updateContestSetByRequest(req);
         await ContestSetListManager.updateContestSetListByRequest(req);
+        await ContestAssistantManager.updateTopicAssistantListByRequest(req);
     }
 }
 

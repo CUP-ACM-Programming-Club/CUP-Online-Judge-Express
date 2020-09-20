@@ -22,6 +22,10 @@ class ContestAssistantManager {
         return await cache_query("select user_id, contest_id from contest_assistant");
     }
 
+    async getTopicAssistant (contestId: number | string) {
+        return await cache_query("select user_id from topic_assistant where topic_id in (select contestset_id as topic_id from contest_set_list where contest_id = ?)", [contestId]);
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async getAllContestAssistantsByRequest(req: Request) {
         return await this.getAllContestAssistants();
@@ -30,7 +34,8 @@ class ContestAssistantManager {
     @Cacheable(new CachePool<any>(), 1, "hour")
     async userIsContestAssistant (contestId: number | string, userId: string) {
         const userList: any[] = await this.getContestAssistants(contestId);
-        return userList.map(e => e.user_id).includes(userId);
+        const topicUserList: any[] = await this.getTopicAssistant(contestId);
+        return userList.map(e => e.user_id).includes(userId) || topicUserList.map(e => e.user_id).includes(userId);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
@@ -46,12 +51,39 @@ class ContestAssistantManager {
         return await MySQLManager.execQuery("delete from contest_assistant where contest_id = ? and user_id = ?", [contestId, userId]);
     }
 
+    async setContestAssistantByTopicId (topicId: number | string, userId: string) {
+        return await MySQLManager.execQuery("insert into topic_assistant(topic_id, user_id) values(?,?)",[topicId, userId]);
+    }
+
+    async setContestAssistantByTopicIdAndMultipleUserId (topicId: number | string, userIdList: string[]) {
+        return Promise.all(userIdList.map(userId => this.setContestAssistantByTopicId(topicId, userId)));
+    }
+
+    async deleteTopicAssistantList(topicId: number | string) {
+        return await MySQLManager.execQuery(`delete from topic_assistant where topic_id = ?`, [topicId]);
+    }
+
+    async updateTopicAssistantListByRequest(req: Request) {
+        const topicAssistant = req.body.topicAssistant as string[];
+        const topicId = req.body.contestSetId;
+        await this.deleteTopicAssistantList(topicId);
+        await this.setContestAssistantByTopicIdAndMultipleUserId(topicId, topicAssistant);
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async setContestAssistantByRequest (req: Request) {
         const contestId = req.body.contestId;
         const userId = req.body.userId;
         await this.setContestAssistant(contestId, userId);
         return {contestId, userId};
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async setContestAssistantByTopicByRequest (req: Request) {
+        const topicId = req.params.topicId || req.body.topicId;
+        const userId = req.body.userId;
+        await this.setContestAssistantByTopicId(topicId, userId);
+        return {topicId, userId};
     }
 
     @ErrorHandlerFactory(ok.okMaker)

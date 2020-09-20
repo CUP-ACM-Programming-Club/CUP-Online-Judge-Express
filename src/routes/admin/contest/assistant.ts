@@ -3,6 +3,10 @@ import ContestAssistantManager from "../../../manager/contest/ContestAssistantMa
 const router = express.Router();
 const admin = require("../../../middleware/admin");
 
+router.post("/:topicId", async (req, res) => {
+    res.json(await ContestAssistantManager.setContestAssistantByTopicByRequest(req));
+});
+
 router.post("/", async (req, res) => {
     res.json(await ContestAssistantManager.setContestAssistantByRequest(req));
 });

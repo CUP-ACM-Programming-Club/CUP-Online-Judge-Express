@@ -21,6 +21,12 @@ interface IContestSetDAO extends IContestSetDTO{
     create_time: string,
 }
 
+export interface ITopicAssistantDAO {
+    topic_id: number,
+    topic_assistant_id: number,
+    user_id: string
+}
+
 class ContestSetPayloadValidator {
 
     formatDefunct(defunct: any) {
@@ -117,10 +123,31 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
         }
     }
 
+    async getTopicAssistantByContestSetId(contestSetId: number | string) {
+        const response = await MySQLManager.execQuery(`select * from topic_assistant where topic_id = ?`, [contestSetId]);
+        if (response && response.length && response.length > 0) {
+            return response[0] as ITopicAssistantDAO;
+        }
+        else {
+            return null;
+        }
+    }
+
+    async mergeContestSetInfoAndTopicAssistantInfo(contestSetId: number | string) {
+        const [contestSetInfo, topicAssistantInfo] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId)]) ;
+        return Object.assign(contestSetInfo, topicAssistantInfo);
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async getContestSetByContestSetIdByRequest(req: Request) {
         const contestSetId = this.validator.contestSetIdValidate(req.params.contestSetId);
         return await this.getContestSetByContestSetId(contestSetId);
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async getContestSetForAdministratorByContestSetIdByRequest(req: Request) {
+        const contestSetId = this.validator.contestSetIdValidate(req.params.contestSetId);
+        return await this.mergeContestSetInfoAndTopicAssistantInfo(contestSetId);
     }
 
     async hasLimitToAccessContestSet(req: Request, contestSetId: string | number) {
