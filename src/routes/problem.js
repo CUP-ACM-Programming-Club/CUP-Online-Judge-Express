@@ -2,6 +2,7 @@
 import ProblemManager from "../manager/problem/ProblemManager";
 import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+
 const express = require("express");
 const dayjs = require("dayjs");
 //const NodeCache = require('node-cache');
@@ -33,6 +34,7 @@ const ENVIRONMENT = process.env.NODE_ENV;
 const path = require("path");
 const ProblemInfoManager = require("../module/problem/ProblemInfoManager");
 const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
+const check = require("../module/contest/check");
 const {error, ok} = require("../module/constants/state");
 require("../module/router_loader")(router, path.resolve(__dirname, "./problem"));
 
@@ -92,7 +94,11 @@ const checkProblemInContest = async (problem_id) => {
 };
 
 const checkContestPrivilege = (req, cid) => {
-	return req.session.isadmin || req.session.source_browser || req.session.contest[`c${cid}`] || req.session.contest_maker[`m${cid}`];
+	return req.session.source_browser || check(req, {
+		json(...args) {
+			return args;
+		}
+	}, cid) !== false;
 };
 
 const maintainLabels = (vjudge) => {
@@ -140,7 +146,7 @@ async function contestProblemHandler(httpInstance, val = {}) {
 		}
 	}
 	if (parseInt(contest[0].private) === 1 && !checkContestPrivilege(req, cid)) {
-		res.json(error.problemInContest);
+		res.json(error.noprivilege);
 		return;
 	}
 	if (result.length > 0) {
