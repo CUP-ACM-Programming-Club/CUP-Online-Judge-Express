@@ -126,7 +126,7 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
     async getTopicAssistantByContestSetId(contestSetId: number | string) {
         const response = await MySQLManager.execQuery(`select * from topic_assistant where topic_id = ?`, [contestSetId]);
         if (response && response.length && response.length > 0) {
-            return response[0] as ITopicAssistantDAO;
+            return response as ITopicAssistantDAO[];
         }
         else {
             return null;
@@ -134,8 +134,8 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
     }
 
     async mergeContestSetInfoAndTopicAssistantInfo(contestSetId: number | string) {
-        const [contestSetInfo, topicAssistantInfo] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId)]) ;
-        return Object.assign(contestSetInfo, topicAssistantInfo);
+        const [contestSetInfo, topicAssistantInfoList] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId)]) ;
+        return Object.assign(contestSetInfo, {assistant: topicAssistantInfoList});
     }
 
     @ErrorHandlerFactory(ok.okMaker)
