@@ -4,7 +4,7 @@ const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const {trimProperty} = require("../../../module/util");
 const UpdatePool = require("../../../module/user/LazyPrivilegeUpdatePool");
-const privilegeList = ["administrator", "source_browser", "contest_creator", "http_judge", "problem_editor", "contest_manager", "editor"];
+const privilegeList = ["administrator", "source_browser", "contest_manager", "editor"];
 
 async function privilegeListGetter() {
 	return await query(`select superuser.*, users.nick
