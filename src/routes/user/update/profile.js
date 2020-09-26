@@ -58,8 +58,8 @@ router.post("/", async (req, res) => {
 		res.json(error.errorMaker("Two password not same"));
 		return;
 	}
-	newpassword = encryptPassword(newpassword, salt);
-	confirmanswer = encryptPassword(confirmanswer, salt);
+	newpassword = checkExists(newpassword) ? encryptPassword(newpassword, salt) : "";
+	confirmanswer = checkExists(confirmanswer) ? encryptPassword(confirmanswer, salt) : "";
 	try {
 		let Queue = [];
 		let Property = {

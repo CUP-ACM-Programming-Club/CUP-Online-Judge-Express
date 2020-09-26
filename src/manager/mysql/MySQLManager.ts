@@ -2,7 +2,7 @@
 import mysql from "mysql2";
 import {Pool, PoolConnection} from "mysql";
 const config: any = global.config || {};
-const pool: Pool = mysql.createPool(config["mysql"]);
+const pool = mysql.createPool(config["mysql"]) as any as Pool;
 
 export class MySQLManager {
     static mysqlPool = pool;
