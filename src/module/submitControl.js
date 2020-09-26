@@ -1,3 +1,5 @@
+import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+
 const query = require("./mysql_query");
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
@@ -61,6 +63,9 @@ function judgeContestPrivilege(req, contest_id) {
 
 async function checkContestPrivilege(req, contest_id) {
 	if (judgeContestPrivilege(req, contest_id)) {
+		return true;
+	}
+	if (await ContestAssistantManager.userIsContestAssistant(contest_id, req.session.user_id)) {
 		return true;
 	}
 	await login_action(req, req.session.user_id);
