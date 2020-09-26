@@ -15,4 +15,8 @@ router.get("/", async (req, res) => {
     res.json(await InviteManager.getAllInviteCode());
 });
 
+router.post("/expire", async (req, res) => {
+    res.json(await InviteManager.expireInviteCodeByRequest(req));
+})
+
 export = ["/invite", router];

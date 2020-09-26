@@ -54,6 +54,10 @@ export class InviteManager {
         return await query(`select * from invite where user_id = ?`, [userId]);
     }
 
+    async expireInviteCode (inviteCode: string) {
+        return await query(`update invite set valid_date = NOW() where invite_code = ?`, [inviteCode]);
+    }
+
     async hasInviteCode (inviteCode: string) {
         return (await this.getInviteInfoByInviteCode(inviteCode)) !== null;
     }
@@ -67,14 +71,14 @@ export class InviteManager {
                     reject(err);
                 }
                 else {
-                    connection.query(`select * from invite where invite_code = ? for update`, [inviteCode], (error, results) => {
+                    connection.query(`select * from invite where invite_code = ? and valid_date > NOW() for update`, [inviteCode], (error, results) => {
                         if (error) {
                             return connection.rollback(() => {
                                 reject(error);
                             });
                         } else if (!(results && results[0] && results[0].valid_time)) {
                             return connection.rollback(() => {
-                                reject("Invite code doesn't exist");
+                                reject("Invite code doesn't exist or has been expired.");
                             })
                         } else {
                             const restTime = results[0].valid_time;
@@ -153,6 +157,13 @@ export class InviteManager {
             formattedPage = parseInt(page);
         }
         return this.getInviteCodeByConditional(formattedPage * PAGE_OFFSET, PAGE_OFFSET);
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    async expireInviteCodeByRequest(req: Request) {
+        const inviteCode = req.body.inviteCode;
+        const result = await this.expireInviteCode(inviteCode);
+        return;
     }
 }
 
