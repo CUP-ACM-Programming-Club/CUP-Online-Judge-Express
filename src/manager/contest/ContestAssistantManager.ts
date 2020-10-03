@@ -33,9 +33,10 @@ class ContestAssistantManager {
 
     @Cacheable(new CachePool<any>(), 1, "hour")
     async userIsContestAssistant (contestId: number | string, userId: string) {
+        userId = userId.trim();
         const userList: any[] = await this.getContestAssistants(contestId);
         const topicUserList: any[] = await this.getTopicAssistant(contestId);
-        return userList.map(e => e.user_id).includes(userId) || topicUserList.map(e => e.user_id).includes(userId);
+        return userList.map(e => e.user_id).filter(e => typeof e === "string").map(e => e.trim()).includes(userId) || topicUserList.map(e => e.user_id).filter(e => typeof e === "string").map(e => e.trim()).includes(userId);
     }
 
     @ErrorHandlerFactory(ok.okMaker)
