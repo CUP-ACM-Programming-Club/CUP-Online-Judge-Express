@@ -8,6 +8,7 @@ import {ok} from "../../module/constants/state";
 import isNumber from "../../module/util/isNumber";
 import ResponseLogger from "../../decorator/ResponseLogger";
 import CachePool from "../../module/common/CachePool";
+import {MySQLManager} from "../mysql/MySQLManager";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 const PAGE_SIZE = 50;
@@ -87,6 +88,30 @@ class ContestManager {
     @Timer
     async getAllContestList() {
         return await this.getAllContest();
+    }
+
+    @Timer
+    async removeAllCompetitorFromPrivilege(contestId: string | number) {
+        return await MySQLManager.execQuery(`delete from privilege where rightstr = ?`, [`c${contestId}`]);
+    }
+
+    @Timer
+    async addContestCompetitor(contestId: string | number, userList: string[]) {
+        if (userList.length === 0) {
+            return;
+        }
+        let baseSql = "insert into privilege (user_id, rightstr) values";
+        let sqlArray: string[] = [], valueArray: string[] = [];
+        userList.forEach(el => {
+            sqlArray.push("(?,?)");
+            valueArray.push(el, `c${contestId}`);
+        });
+        return await MySQLManager.execQuery(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+    }
+
+    async updateContestCompetitor(contestIdList: (string | number)[], userList: string[], newContestIdList: (string | number)[]) {
+        await Promise.all(contestIdList.map(e => this.removeAllCompetitorFromPrivilege(e)));
+        await Promise.all(newContestIdList.map(e => this.addContestCompetitor(e, userList)));
     }
 
     @Timer

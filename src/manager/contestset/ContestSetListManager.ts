@@ -42,6 +42,16 @@ contest.contest_id = clist.contest_id`, [contestSetId]);
         return await this.getContestSetListByContestSetId(contestSetId);
     }
 
+    async getContestListByContestSetId (contestSetId: string | number) {
+        const response = await this.getContestSetListByContestSetId(contestSetId) || [];
+        return response.map(e => e.contest_id);
+    }
+
+    async getContestListByContestSetIdByRequest (req: Request) {
+        const contestSetId = req.body.contestSetId;
+        return await this.getContestListByContestSetId(contestSetId);
+    }
+
     async deleteContestSetList(contestSetId: number) {
         await MySQLManager.execQuery(`delete from contest_set_list where contestset_id = ?`, [contestSetId]);
     }
