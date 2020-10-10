@@ -50,7 +50,7 @@ class SelfInfoManager {
         const selfInfo = this.getSelfInfo(req);
         const baseSystemInfo = {
             userInfo: selfInfo,
-            gravatar: ConfigManager.getConfig("gravatarCDN", "https://cn.gravatar.com/avatar/")
+            gravatar: ConfigManager.getConfig("gravatarCDN", "cn.gravatar.com")
         };
         const response: SelfInfoResponse = Object.assign(_.cloneDeep(selfInfo), baseSystemInfo);
         return response;
