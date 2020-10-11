@@ -139,7 +139,7 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
         const contestIdList = (await ContestSetListManager.getContestSetListByContestSetId(contestSetId)).map(e => e.contest_id);
         const userList = await Promise.all(contestIdList.map(e => ContestManager.getContestCompetitorByContestId(e)));
         const userSet = new Set<string>();
-        userList.forEach(e => userSet.add(e));
+        userList.forEach((e: any[]) => e.forEach(userWrapper => userSet.add(userWrapper.user_id)));
         return Array.from(userSet);
     }
 
