@@ -114,6 +114,10 @@ class ContestManager {
         await Promise.all(newContestIdList.map(e => this.addContestCompetitor(e, userList)));
     }
 
+    async getContestCompetitorByContestId(contestId: string | number) {
+        return await MySQLManager.execQuery("select user_id from privilege where rightstr = ?", [`c${contestId}`]);
+    }
+
     @Timer
     private buildPrivilegeStr(req: Request) {
         let admin_str = " 1 = 1 ";

@@ -4,6 +4,8 @@ import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
+import ContestSetListManager from "./ContestSetListManager";
+import ContestManager from "../contest/ContestManager";
 const PAGE_OFFSET = 50;
 
 
@@ -133,9 +135,17 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
         }
     }
 
+    async getAllCompetitorByContestSetId(contestSetId: number | string) {
+        const contestIdList = (await ContestSetListManager.getContestSetListByContestSetId(contestSetId)).map(e => e.contest_id);
+        const userList = await Promise.all(contestIdList.map(e => ContestManager.getContestCompetitorByContestId(e)));
+        const userSet = new Set<string>();
+        userList.forEach(e => userSet.add(e));
+        return Array.from(userSet);
+    }
+
     async mergeContestSetInfoAndTopicAssistantInfo(contestSetId: number | string) {
-        const [contestSetInfo, topicAssistantInfoList] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId)]) ;
-        return Object.assign(contestSetInfo, {assistant: topicAssistantInfoList});
+        const [contestSetInfo, topicAssistantInfoList, userList] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId), this.getAllCompetitorByContestSetId(contestSetId)]) ;
+        return Object.assign(contestSetInfo, {assistant: topicAssistantInfoList}, {userList});
     }
 
     @ErrorHandlerFactory(ok.okMaker)
