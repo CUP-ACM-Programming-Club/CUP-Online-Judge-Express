@@ -22,7 +22,7 @@ class ContestSetWithListManager {
             return;
         }
         const contestIdList = await ContestSetListManager.getContestListByContestSetIdByRequest(req);
-        await ContestManager.updateContestCompetitor(contestIdList || [], req.body.userList || [], req.body.contestList || []);
+        await ContestManager.updateContestCompetitor(contestIdList || [], req.body.userList || [], req.body.contestIdList || []);
     }
 }
 
