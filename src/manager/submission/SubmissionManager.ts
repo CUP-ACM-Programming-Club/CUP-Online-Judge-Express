@@ -1,6 +1,7 @@
 import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
 import ErrorLogger from "../../decorator/common/ErrorLogger";
+import RetryAsync from "../../decorator/RetryAsync";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -35,21 +36,21 @@ interface ProblemInfo {
 }
 
 class SubmissionManager {
-    // @Retry(5)
+    @RetryAsync(5)
     @ErrorLogger
     async getSourceBySolutionId(solutionId: number) {
         const response: any[] = await cache_query("select source from source_code where solution_id = ?", [solutionId]);
         return response[0].source;
     }
 
+    @RetryAsync(5)
     @Cacheable(new CachePool(), 1, "second")
-    // @Retry(5)
     async getSolutionInfo(solutionId: number) {
         const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
         return response[0] as SolutionInfoDAO;
     }
 
-    // @Retry(5)
+    @RetryAsync(5)
     @ErrorLogger
     async getCustomInput(solutionId: number) {
         const response: any[] | undefined = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
@@ -59,7 +60,7 @@ class SubmissionManager {
         return response[0].input_text;
     }
 
-    // @Retry(5)
+    @RetryAsync(5)
     @ErrorLogger
     async getProblemInfo(problemId: number) {
         const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
