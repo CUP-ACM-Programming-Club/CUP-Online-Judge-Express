@@ -259,6 +259,9 @@ function invalidProblemIdHandler(httpInstance, problem_id, result) {
 function generateSqlData(request_query) {
 	let where_sql = [], sql_arr = [];
 	for (let i in request_query) {
+		if (!Object.prototype.hasOwnProperty.call(request_query, i)) {
+			continue;
+		}
 		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
 			continue;
 		}
@@ -267,7 +270,7 @@ function generateSqlData(request_query) {
 			sql_arr.push(request_query[i]);
 		} else if (typeof request_query[i] === "object") {
 			const ele = request_query[i];
-			if (ele.length) {
+			if (Array.isArray(ele)) {
 				for (let val of ele) {
 					if (typeof val === "undefined" || val === null) {
 						continue;
