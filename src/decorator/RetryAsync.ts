@@ -7,6 +7,8 @@ export default function (tryTime: number) {
                     return await method.apply(this, args);
                 } catch (e) {
                     console.log("Catch error: ", e);
+                    console.error(`RetryAsync catch the error:${target.constructor.name}.${propertyName}`);
+                    console.error(`Argument is:`, args);
                     console.log("Rest tryAsync time: ", tryTime);
                 }
             }
