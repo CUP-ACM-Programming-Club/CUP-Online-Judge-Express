@@ -34,6 +34,11 @@
     "host": "localhost",
     "port": 6379
   },
+  "rpc": {
+    "protocol": "http",
+    "host": "127.0.0.1",
+    "port": 5031
+  },
   "session_secret": "YourSecretKeytoSession",
   "salt": "PleaseModifyThis",
   "init": false

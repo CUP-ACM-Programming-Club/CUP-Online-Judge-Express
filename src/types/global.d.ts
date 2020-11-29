@@ -39,6 +39,12 @@ export interface WebhookConfig {
     secret: string
 }
 
+export interface RPCConfig {
+    protocol: string,
+    host: string,
+    port: number
+}
+
 export interface Config {
     mysql: MySQLConfig,
     judger: JudgerConfig,
@@ -50,7 +56,8 @@ export interface Config {
     session_secret: string,
     redis: RedisConfig,
     webhook: WebhookConfig
-    init: boolean
+    init: boolean,
+    rpc: RPCConfig
 }
 
 declare global {
