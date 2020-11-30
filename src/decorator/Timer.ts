@@ -5,7 +5,7 @@ export default function Timer(target: any, propertyName: string, propertyDescrip
     propertyDescriptor.value = function (...args: any[]) {
         const httpRequest: any = args[0];
         let child: any;
-        const useOpenTracing: boolean = httpRequest && httpRequest.tracer && httpRequest.parentSpan;
+        const useOpenTracing: boolean = !!(httpRequest && httpRequest.tracer && httpRequest.parentSpan);
         if (useOpenTracing) {
             // @ts-ignore
             child = httpRequest.tracer.startSpan(`${target.constructor.name}.${propertyName}`, {childOf: httpRequest.parentSpan});
