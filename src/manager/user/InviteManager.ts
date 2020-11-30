@@ -102,7 +102,7 @@ export class InviteManager {
                                                 })
                                             }
                                         });
-                                        resolve();
+                                        resolve(null);
                                     }
                                 });
                             }

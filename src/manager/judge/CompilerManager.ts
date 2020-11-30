@@ -43,7 +43,7 @@ class CompilerManager {
                     reject(err);
                 }
                 else {
-                    resolve();
+                    resolve(null);
                 }
             })
         })
