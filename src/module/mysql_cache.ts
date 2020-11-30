@@ -4,11 +4,11 @@ const query = require("./mysql_query");
 const dayjs = require("dayjs");
 const MySQLCachePool = require("./mysql/cache");
 
-function deepCopy(obj) {
+function deepCopy(obj: any) {
 	return JSON.parse(JSON.stringify(obj));
 }
 
-function modifySql(sql) {
+function modifySql(sql: string) {
 	return sql.includes("update") || sql.includes("insert") || sql.includes("delete");
 }
 
@@ -18,7 +18,7 @@ CacheScheduler.addCacheContainer({
 	timeUnit: "second"
 });
 
-const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
+const cache_query = async function (sql: string, sqlArr: any[] = [], opt: any = {copy: 0}) {
 	let identified = sql.toString() + JSON.stringify(sqlArr.toString());
 	let now = dayjs();
 	let cache = await MySQLCachePool.get(identified);
@@ -56,4 +56,4 @@ query.pool.end = function() {
 	}
 };
 
-module.exports = cache_query;
+export = cache_query;
