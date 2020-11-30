@@ -1,3 +1,5 @@
+import CacheScheduler from "../manager/cache/scheduler/CacheScheduler";
+
 const query = require("./mysql_query");
 const dayjs = require("dayjs");
 const MySQLCachePool = require("./mysql/cache");
@@ -9,6 +11,12 @@ function deepCopy(obj) {
 function modifySql(sql) {
 	return sql.includes("update") || sql.includes("insert") || sql.includes("delete");
 }
+
+CacheScheduler.addCacheContainer({
+	cacheContainer: MySQLCachePool,
+	timeDelta: 2,
+	timeUnit: "second"
+});
 
 const cache_query = async function (sql, sqlArr = [], opt = {copy: 0}) {
 	let identified = sql.toString() + JSON.stringify(sqlArr.toString());

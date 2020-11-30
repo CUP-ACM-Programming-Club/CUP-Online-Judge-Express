@@ -2,9 +2,15 @@ import CachePool from "../module/common/CachePool";
 import AwaitLock from "await-lock";
 import dayjs, {OpUnitType} from "dayjs";
 import parameterHash from "../module/util/parameterHash";
+import CacheScheduler from "../manager/cache/scheduler/CacheScheduler";
 
 export default function Cacheable(cachePool: CachePool, timeDelta: number, timeUnit: OpUnitType) {
     const cacheLock = new AwaitLock();
+    CacheScheduler.addCacheContainer({
+        cacheContainer: cachePool,
+        timeDelta,
+        timeUnit
+    });
     return function (target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
         const method = propertyDescriptor.value;
         propertyDescriptor.value = async function (...args: any[]) {

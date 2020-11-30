@@ -74,7 +74,7 @@ class CachePool<T = any> implements ICachePool{
     @InitCache
     @Lock(segLock)
     async set(key: string, value: any) {
-        this._set(key, value);
+        await this._set(key, value);
     }
 
     @InitCache
