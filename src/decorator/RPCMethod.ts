@@ -1,7 +1,7 @@
 import axios, {AxiosRequestConfig} from "axios";
 import {RPCClient} from "../integration/rpc/RPCClient";
 
-const rpcConfig = global.config.rpc;
+const rpcConfig = global.config.rpc || {};
 
 const rpcRequestSchema = `${rpcConfig.protocol || "http"}://${rpcConfig.host || "127.0.0.1"}:${rpcConfig.port || "5031"}`;
 
