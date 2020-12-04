@@ -57,7 +57,7 @@ class SubmissionManager {
         if (response === undefined || response.length === 0) {
             return "";
         }
-        return response[0].input_text;
+        return response[0].input_text || "";
     }
 
     @RetryAsync(5, 500)

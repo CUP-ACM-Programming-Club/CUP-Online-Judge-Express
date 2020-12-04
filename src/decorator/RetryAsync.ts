@@ -1,5 +1,7 @@
+import Logger from "../module/console/Logger";
+
 function wait(ms: number) {
-    return new Promise(resolve => setTimeout(() => resolve(null), ms));
+    return new Promise(resolve => setTimeout(() => { Logger.log(`failDelay: ${ms}`); resolve(null) }, ms));
 }
 
 export default function (tryTime: number, delay?: number) {
@@ -11,10 +13,10 @@ export default function (tryTime: number, delay?: number) {
                 try {
                     return await method.apply(this, args);
                 } catch (e) {
-                    console.log("Catch error: ", e);
-                    console.error(`RetryAsync catch the error:${target.constructor.name}.${propertyName}`);
-                    console.error(`Argument is:`, args);
-                    console.log("Rest tryAsync time: ", tryTime);
+                    Logger.log("Catch error: ", e);
+                    Logger.log(`RetryAsync catch the error:${target.constructor.name}.${propertyName}`);
+                    Logger.log(`Argument is:`, args);
+                    Logger.log("Rest tryAsync time: ", tryTime);
                     await wait(failDelay);
                 }
             }

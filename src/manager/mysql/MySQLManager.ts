@@ -1,6 +1,7 @@
 // @ts-ignore
 import mysql from "mysql2";
 import {Pool, PoolConnection, Query, queryCallback, QueryOptions} from "mysql";
+import Logger from "../../module/console/Logger";
 const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]) as any as Pool;
 
@@ -49,7 +50,7 @@ export class MySQLManager {
         return new Promise((resolve, reject) => {
             pool.getConnection((err, connection) => {
                 if (err) reject(err);
-                console.log("MySQL pool connected: threadId " + connection.threadId);
+                Logger.log("MySQL pool connected: threadId " + connection.threadId);
                 const query = (sql: string, binding: any[]) => {
                     return new Promise((resolve, reject) => {
                         connection.query(sql, binding, (err, result) => {
@@ -61,7 +62,7 @@ export class MySQLManager {
                 const release = () => {
                     return new Promise((resolve, reject) => {
                         if (err) reject(err);
-                        console.log("MySQL pool released: threadId " + connection.threadId);
+                        Logger.log("MySQL pool released: threadId " + connection.threadId);
                         resolve(connection.release());
                     });
                 };

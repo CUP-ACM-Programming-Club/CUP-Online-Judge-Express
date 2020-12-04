@@ -2,6 +2,7 @@ import {localJudger} from "../judger";
 import {MySQLManager} from "../../manager/mysql/MySQLManager";
 import { ConfigManager } from "../config/config-manager";
 import dayjs from "dayjs";
+import Logger from "../console/Logger";
 const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;
 
@@ -41,11 +42,15 @@ class UnjudgedSubmissionCollector {
                 const solutionId = parseInt(result[i].solution_id);
                 const priority = parseInt(String(!!result[i].result));
                 console.log(`Current Time: ${dayjs().format("YYYY-MM-DD HH:mm:ss")}, solutionId: ${solutionId}`);
-                this.judger!.addTask(solutionId, admin, false, (priority + 1) % 2);
+                await this.judger!.addTask(solutionId, admin, false, (priority + 1) % 2);
             }
         }
         catch (e) {
-            console.log(e);
+            if (e && e.noRetry && e.solutionId) {
+                Logger.log(`e, e.noRetry, e.solutionId: ${e.solutionId}`);
+                await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [e.solutionId]);
+            }
+            Logger.log(`e:${e}, e.noRetry:${e.noRetry}, e.solutionId:${e.solutionId}`);
         }
         this.collectFinished = true;
     }

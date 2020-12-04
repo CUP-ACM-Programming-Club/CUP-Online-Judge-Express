@@ -1,6 +1,7 @@
 import SubmissionManager from "../submission/SubmissionManager";
 import localJudger from "../../module/judger";
 import {error} from "../../module/constants/state";
+import Logger from "../../module/console/Logger";
 
 interface ISubmissionInfo {
     solution_id: number,
@@ -22,9 +23,9 @@ interface IJudgeManager {
 
 export class JudgeManager implements IJudgeManager{
 
-    checkNotNull(obj: any) {
-        if (obj === null) {
-            throw error.errorMaker("db error.Please contact the administrator.");
+    checkNotNull(obj: any, solutionId: number) {
+        if (obj === null || obj === undefined) {
+            throw Object.assign(error.errorMaker("db error.Please contact the administrator."), {noRetry: true, solutionId});
         }
     }
 
@@ -42,7 +43,8 @@ export class JudgeManager implements IJudgeManager{
             memory_limit: 0
         };
         let solutionInfo: any = await SubmissionManager.getSolutionInfo(solutionId);
-        this.checkNotNull(solutionId);
+        this.checkNotNull(solutionInfo, solutionId);
+        Logger.log("SolutionInfo: ", solutionInfo);
         const {problem_id} = solutionInfo;
         Object.assign(submissionInfo, solutionInfo);
         if (problem_id <= 0) {
@@ -50,13 +52,10 @@ export class JudgeManager implements IJudgeManager{
             submissionInfo.custom_input = await SubmissionManager.getCustomInput(solutionId);
         }
         const problemInfo = await SubmissionManager.getProblemInfo(problem_id);
-        this.checkNotNull(problemInfo);
-        if (problemInfo === null) {
-            throw error.errorMaker("db error.Please contact the administrator.");
-        }
+        this.checkNotNull(problemInfo, solutionId);
         Object.assign(submissionInfo, problemInfo);
         submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
-        this.checkNotNull(submissionInfo.source);
+        this.checkNotNull(submissionInfo.source, solutionId);
         return submissionInfo;
     }
 

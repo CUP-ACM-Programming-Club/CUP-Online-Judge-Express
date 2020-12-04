@@ -1,5 +1,6 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import {MySQLManager} from "../manager/mysql/MySQLManager";
+import Logger from "./console/Logger";
 
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
@@ -82,7 +83,7 @@ async function checkContestPrivilege(req, contest_id) {
 }
 
 async function limitAddressForContest(connection, req, contest_id) {
-	const referer = req.headers.referer;
+	const referer = req && req.headers && req.headers.referer ? req.headers.referer : "no-referer";
 	const data = await connection.query("select limit_hostname from contest where contest_id = ?", [contest_id]);
 	let limit_hostname;
 	if (data && data[0] && data[0].limit_hostname) {
@@ -204,7 +205,7 @@ async function checkContestValidate(connection, req, originalContestID, original
 		throw error.errorMaker("Invalid contest_id or pid");
 	}
 	const positiveContestID = Math.abs(originalContestID);
-	let limit_address = await limitAddressForContest(req, positiveContestID);
+	let limit_address = await limitAddressForContest(connection, req, positiveContestID);
 	if (typeof limit_address === "string") {
 		throw error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
 	}
@@ -325,11 +326,13 @@ async function normalSubmissionTransaction(connection, req, data) {
 	const code_length = source_code_user.length;
 	const result = await connection.query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
-	return await insertTransaction({result, source_code, source_code_user, data}, originalProblemId !== positiveProblemId);
+	Logger.log("result", result);
+	return await insertTransaction(connection, {result, source_code, source_code_user, data}, originalProblemId !== positiveProblemId);
 }
 
 module.exports = async function (req, data, cookie) {
 	const connection = await MySQLManager.transaction();
+	Logger.log("start submit transaction.");
 	try {
 		await prepareRequest(req, cookie);
 		dataErrorChecker(data);
@@ -388,6 +391,7 @@ module.exports = async function (req, data, cookie) {
 		}
 	}
 	catch (err) {
+		Logger.log("failed submitControl", err);
 		await connection.query("ROLLBACK");
 		throw err;
 	}

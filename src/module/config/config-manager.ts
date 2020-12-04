@@ -210,11 +210,11 @@ export class SystemConfigManager {
         return this;
     };
 
-    getSwitch(configKey: string) {
+    getSwitch(configKey: string, defaultValue?: boolean) {
         if (this.__data__.switchMap.hasOwnProperty(configKey)) {
             return this.__data__.switchMap[configKey];
         }
-        return null;
+        return defaultValue || null;
     };
 
     getJSONConfig(configKey: string, defaultValue?: string) {
