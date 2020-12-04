@@ -44,7 +44,7 @@ class SubmissionManager {
     }
 
     @RetryAsync(5)
-    @Cacheable(new CachePool(), 1, "second")
+    //@Cacheable(new CachePool(), 1, "second")
     async getSolutionInfo(solutionId: number) {
         const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
         return response[0] as SolutionInfoDAO;
