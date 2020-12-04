@@ -43,10 +43,11 @@ class SubmissionManager {
         return response[0].source;
     }
 
-    @RetryAsync(5)
+    //@RetryAsync(5)
     //@Cacheable(new CachePool(), 1, "second")
     async getSolutionInfo(solutionId: number) {
         const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
+        console.log("Response: ", response);
         return response[0] as SolutionInfoDAO;
     }
 
