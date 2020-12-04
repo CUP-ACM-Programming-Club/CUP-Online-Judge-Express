@@ -1,8 +1,13 @@
 // @ts-ignore
 import mysql from "mysql2";
-import {Pool, PoolConnection} from "mysql";
+import {Pool, PoolConnection, Query, queryCallback, QueryOptions} from "mysql";
 const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]) as any as Pool;
+
+interface MySQLTransaction {
+    query: (options: string | QueryOptions, values?: any, callback?: queryCallback) => Query;
+    release: () => void
+}
 
 export class MySQLManager {
     static mysqlPool = pool;
@@ -38,5 +43,30 @@ export class MySQLManager {
                 }
             });
         })
+    }
+
+    static transaction(): Promise<MySQLTransaction> {
+        return new Promise((resolve, reject) => {
+            pool.getConnection((err, connection) => {
+                if (err) reject(err);
+                console.log("MySQL pool connected: threadId " + connection.threadId);
+                const query = (sql: string, binding: any[]) => {
+                    return new Promise((resolve, reject) => {
+                        connection.query(sql, binding, (err, result) => {
+                            if (err) reject(err);
+                            resolve(result);
+                        });
+                    });
+                };
+                const release = () => {
+                    return new Promise((resolve, reject) => {
+                        if (err) reject(err);
+                        console.log("MySQL pool released: threadId " + connection.threadId);
+                        resolve(connection.release());
+                    });
+                };
+                resolve({query, release} as unknown as MySQLTransaction);
+            });
+        });
     }
 }

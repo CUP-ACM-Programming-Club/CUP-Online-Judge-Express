@@ -36,22 +36,21 @@ interface ProblemInfo {
 }
 
 class SubmissionManager {
-    //@RetryAsync(5)
+    @RetryAsync(5, 500)
     // @ErrorLogger
     async getSourceBySolutionId(solutionId: number) {
         const response: any[] = await cache_query("select source from source_code where solution_id = ?", [solutionId]);
-        return response[0].source;
+        return response && response.length && response.length > 0 ? response[0].source : null;
     }
 
-    //@RetryAsync(5)
-    //@Cacheable(new CachePool(), 1, "second")
+    @Cacheable(new CachePool(), 1, "second")
+    @RetryAsync(5, 500)
     async getSolutionInfo(solutionId: number) {
         const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
-        console.log("Response: ", response);
-        return response[0] as SolutionInfoDAO;
+        return response && response.length && response.length > 0 ? response[0] as SolutionInfoDAO : null;
     }
 
-    //@RetryAsync(5)
+    @RetryAsync(5, 500)
     // @ErrorLogger
     async getCustomInput(solutionId: number) {
         const response: any[] | undefined = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
@@ -61,7 +60,7 @@ class SubmissionManager {
         return response[0].input_text;
     }
 
-    //@RetryAsync(5)
+    @RetryAsync(5, 500)
     // @ErrorLogger
     async getProblemInfo(problemId: number) {
         const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);

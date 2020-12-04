@@ -1,7 +1,6 @@
 import SubmissionManager from "../submission/SubmissionManager";
 import localJudger from "../../module/judger";
-import Cacheable from "../../decorator/Cacheable";
-import CachePool from "../../module/common/CachePool";
+import {error} from "../../module/constants/state";
 
 interface ISubmissionInfo {
     solution_id: number,
@@ -22,6 +21,13 @@ interface IJudgeManager {
 }
 
 export class JudgeManager implements IJudgeManager{
+
+    checkNotNull(obj: any) {
+        if (obj === null) {
+            throw error.errorMaker("db error.Please contact the administrator.");
+        }
+    }
+
     async buildSubmissionInfo(solutionId: number) {
         const submissionInfo: ISubmissionInfo = {
             solution_id: solutionId,
@@ -35,16 +41,22 @@ export class JudgeManager implements IJudgeManager{
             time_limit: 0,
             memory_limit: 0
         };
-        let payload;
-        const {problem_id} = payload = await SubmissionManager.getSolutionInfo(solutionId);
-        Object.assign(submissionInfo, payload);
+        let solutionInfo: any = await SubmissionManager.getSolutionInfo(solutionId);
+        this.checkNotNull(solutionId);
+        const {problem_id} = solutionInfo;
+        Object.assign(submissionInfo, solutionInfo);
         if (problem_id <= 0) {
             submissionInfo.test_run = true;
             submissionInfo.custom_input = await SubmissionManager.getCustomInput(solutionId);
         }
-        payload = await SubmissionManager.getProblemInfo(problem_id);
-        Object.assign(submissionInfo, payload);
+        const problemInfo = await SubmissionManager.getProblemInfo(problem_id);
+        this.checkNotNull(problemInfo);
+        if (problemInfo === null) {
+            throw error.errorMaker("db error.Please contact the administrator.");
+        }
+        Object.assign(submissionInfo, problemInfo);
         submissionInfo.source = await SubmissionManager.getSourceBySolutionId(solutionId);
+        this.checkNotNull(submissionInfo.source);
         return submissionInfo;
     }
 

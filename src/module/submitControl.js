@@ -1,6 +1,6 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import {MySQLManager} from "../manager/mysql/MySQLManager";
 
-const query = require("./mysql_query");
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
 const dayjs = require("dayjs");
@@ -81,9 +81,9 @@ async function checkContestPrivilege(req, contest_id) {
 	return !_private;
 }
 
-async function limitAddressForContest(req, contest_id) {
+async function limitAddressForContest(connection, req, contest_id) {
 	const referer = req.headers.referer;
-	const data = await query("select limit_hostname from contest where contest_id = ?", [contest_id]);
+	const data = await connection.query("select limit_hostname from contest where contest_id = ?", [contest_id]);
 	let limit_hostname;
 	if (data && data[0] && data[0].limit_hostname) {
 		limit_hostname = data[0].limit_hostname;
@@ -99,11 +99,11 @@ async function limitAddressForContest(req, contest_id) {
 	}
 }
 
-async function limitClassroomAccess(req, contest_id) {
+async function limitClassroomAccess(connection, req, contest_id) {
 	const ip = getIP(req);
 	let detectResult = detectClassroom(ip);
 	console.log("Detect IP result:", detectResult);
-	const data = await query("select ip_policy from contest where contest_id = ?", [contest_id]);
+	const data = await connection.query("select ip_policy from contest where contest_id = ?", [contest_id]);
 	let limitClassroom;
 	if (data && data[0] && data[0].ip_policy) {
 		limitClassroom = data[0].ip_policy.split(",").map(e => e.trim());
@@ -199,7 +199,7 @@ function checkLangmask(language, langmask = LANGMASK) {
 	return Boolean((~langmask) & (2 ** language));
 }
 
-async function checkContestValidate(req, originalContestID, originalPID, language) {
+async function checkContestValidate(connection, req, originalContestID, originalPID, language) {
 	if (isNaN(originalContestID) || isNaN(originalPID)) {
 		throw error.errorMaker("Invalid contest_id or pid");
 	}
@@ -208,7 +208,7 @@ async function checkContestValidate(req, originalContestID, originalPID, languag
 	if (typeof limit_address === "string") {
 		throw error.errorMaker(`根据管理员设置的策略，请从${limit_address}访问本页提交`);
 	}
-	let limit_classroom = await limitClassroomAccess(req, positiveContestID);
+	let limit_classroom = await limitClassroomAccess(connection, req, positiveContestID);
 	if (!limit_classroom) {
 		throw error.errorMaker("根据管理员的设置，您无权在本IP段提交\n为了在考试/测验期间准确验证您的身份，请在acm.cup.edu.cn提交。");
 	}
@@ -273,26 +273,27 @@ function dos2unix(plainText) {
 	return plainText.split("\r\n").join("\n");
 }
 
-async function insertTransaction({result, source_code, source_code_user, data}, testRun) {
+async function insertTransaction(connection, {result, source_code, source_code_user, data}, testRun) {
 	const solution_id = result.insertId;
-	let promiseArray = [query(`insert into source_code_user(solution_id,source,hash)
+	let promiseArray = [connection.query(`insert into source_code_user(solution_id,source,hash)
 		values(?,?,?)`, [solution_id, source_code_user, createCodeHash(source_code_user)]),
-	query(`insert into source_code(solution_id, source)
+	connection.query(`insert into source_code(solution_id, source)
 		values(?,?)`, [solution_id, source_code])
 	];
 	if (testRun) {
 		data.input_text = dos2unix(data.input_text);
-		promiseArray.push(query(`insert into custominput(solution_id, input_text)
+		promiseArray.push(connection.query(`insert into custominput(solution_id, input_text)
             values(?,?)`, [solution_id, data.input_text]));
 	}
 	await Promise.all(promiseArray);
+	await connection.query("COMMIT");
 	return {
 		status: "OK",
 		solution_id
 	};
 }
 
-async function normalSubmissionTransaction(req, data) {
+async function normalSubmissionTransaction(connection, req, data) {
 	const originalProblemId = parseInt(data.id);
 	const language = parseInt(data.language);
 	if (isNaN(originalProblemId)) {
@@ -322,60 +323,75 @@ async function normalSubmissionTransaction(req, data) {
 	const source_code = await makePrependAndAppendCode(positiveProblemId, data.source, language);
 	const [source_code_user, IP, judger, fingerprint, fingerprintRaw, share] = [deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw, Boolean(data.share)];
 	const code_length = source_code_user.length;
-	const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
+	const result = await connection.query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
 	return await insertTransaction({result, source_code, source_code_user, data}, originalProblemId !== positiveProblemId);
 }
 
 module.exports = async function (req, data, cookie) {
-	await prepareRequest(req, cookie);
-	dataErrorChecker(data);
-	const submissionType = classifySubmissionType(data);
-	if (submissionType === NORMAL_SUBMISSION) {
-		return normalSubmissionTransaction(req, data);
-	}
-	const language = parseInt(data.language);
-	const source_code_user = deepCopy(data.source);
-	const IP = getIP(req);
-	const judger = "待分配";
-	const fingerprint = data.fingerprint;
-	const fingerprintRaw = data.fingerprintRaw;
-	const code_length = source_code_user.length;
-	if (submissionType === CONTEST_SUBMISSION) {
-		const originalContestID = parseInt(data.cid);
-		const originalPID = parseInt(data.pid);
-		const positiveContestID = Math.abs(originalContestID);
-		const testRunFlag = originalContestID !== positiveContestID;
-		let problemId = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
-		const source_code = await makePrependAndAppendCode(problemId, data.source, language);
-		data.id = problemId;
-		await checkContestValidate(req, originalContestID, originalPID, language);
-		if (testRunFlag) {
-			problemId = -Math.abs(problemId);
+	const connection = await MySQLManager.transaction();
+	try {
+		await prepareRequest(req, cookie);
+		dataErrorChecker(data);
+		const submissionType = classifySubmissionType(data);
+		if (submissionType === NORMAL_SUBMISSION) {
+			return normalSubmissionTransaction(connection, req, data);
 		}
-		const result = await query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
+		const language = parseInt(data.language);
+		const source_code_user = deepCopy(data.source);
+		const IP = getIP(req);
+		const judger = "待分配";
+		const fingerprint = data.fingerprint;
+		const fingerprintRaw = data.fingerprintRaw;
+		const code_length = source_code_user.length;
+		if (submissionType === CONTEST_SUBMISSION) {
+			const originalContestID = parseInt(data.cid);
+			const originalPID = parseInt(data.pid);
+			const positiveContestID = Math.abs(originalContestID);
+			const testRunFlag = originalContestID !== positiveContestID;
+			let problemId = await contestIncludeProblem(positiveContestID, Math.abs(originalPID));
+			const source_code = await makePrependAndAppendCode(problemId, data.source, language);
+			data.id = problemId;
+			await checkContestValidate(connection, req, originalContestID, originalPID, language);
+			if (testRunFlag) {
+				problemId = -Math.abs(problemId);
+			}
+			const result = await connection.query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
 	    values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
-		return await insertTransaction({result, source_code, source_code_user, data}, testRunFlag);
-	} else if (submissionType === TOPIC_SUBMISSION) {
-		const originalTopicID = parseInt(data.tid);
-		const originalPID = parseInt(data.pid);
-		const positiveTopicID = Math.abs(originalTopicID);
-		const testRunFlag = originalTopicID !== positiveTopicID;
-		if (isNaN(originalTopicID) || isNaN(originalPID)) {
-			throw error.errorMaker("Invalid topic_id or pid");
-		}
-		let problemId = await TopicIncludeProblem(positiveTopicID, originalPID);
-		const sourceCode = await makePrependAndAppendCode(problemId, data.source, language);
-		await checkTopicPrivilege(req, positiveTopicID);
-		const topicLangmask = await getLangmaskForTopic(positiveTopicID);
-		if (!checkLangmask(language, topicLangmask)) {
-			throw error.errorMaker("Your submission's language is invalid");
-		}
-		if (testRunFlag) {
-			problemId = -Math.abs(problemId);
-		}
-		const result = await query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint,fingerprintRaw)
+			return await insertTransaction(connection, {result, source_code, source_code_user, data}, testRunFlag);
+		} else if (submissionType === TOPIC_SUBMISSION) {
+			const originalTopicID = parseInt(data.tid);
+			const originalPID = parseInt(data.pid);
+			const positiveTopicID = Math.abs(originalTopicID);
+			const testRunFlag = originalTopicID !== positiveTopicID;
+			if (isNaN(originalTopicID) || isNaN(originalPID)) {
+				throw error.errorMaker("Invalid topic_id or pid");
+			}
+			let problemId = await TopicIncludeProblem(positiveTopicID, originalPID);
+			const sourceCode = await makePrependAndAppendCode(problemId, data.source, language);
+			await checkTopicPrivilege(req, positiveTopicID);
+			const topicLangmask = await getLangmaskForTopic(positiveTopicID);
+			if (!checkLangmask(language, topicLangmask)) {
+				throw error.errorMaker("Your submission's language is invalid");
+			}
+			if (testRunFlag) {
+				problemId = -Math.abs(problemId);
+			}
+			const result = await connection.query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint,fingerprintRaw)
 		values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
-		return await insertTransaction({result, source_code: sourceCode, source_code_user, data}, testRunFlag);
+			return await insertTransaction(connection, {
+				result,
+				source_code: sourceCode,
+				source_code_user,
+				data
+			}, testRunFlag);
+		}
+	}
+	catch (err) {
+		await connection.query("ROLLBACK");
+		throw err;
+	}
+	finally {
+		await connection.release();
 	}
 };

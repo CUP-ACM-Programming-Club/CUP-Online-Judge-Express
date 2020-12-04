@@ -24,7 +24,7 @@ class SolutionManagerPrivilegeValidator {
         }
         const userId =  req.session!.user_id;
         const response = await SubmissionManager.getSolutionInfo(solutionId);
-        if (response.user_id !== userId) {
+        if (response!.user_id !== userId) {
             throw new Error("No privilege to access");
         }
     }
@@ -54,7 +54,7 @@ class SolutionManager {
         const solutionId  = parseInt(req.params.solutionId);
         await this.validator.validate(req, solutionId);
         const solutionDAO = await SubmissionManager.getSolutionInfo(solutionId);
-        return await this.convertDaoToDto(solutionDAO);
+        return await this.convertDaoToDto(solutionDAO!);
     }
 }
 

@@ -122,7 +122,7 @@ export async function storeSubmission(payload: SubmissionPayload) {
 	}
 	if (payload.state >= 4) {
 		await Maintainer.maintainUserInfo(payload.user_id);
-		await Maintainer.maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id)).problem_id);
+		await Maintainer.maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id))!.problem_id);
 	}
 	if (payload.runtime_info) {
 		delete payload.runtime_info;

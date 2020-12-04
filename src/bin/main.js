@@ -287,13 +287,19 @@ io.on("connection", async function (socket) {
 		// const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);
 		let localEnvJudge = true;
-		localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
-		if (!localEnvJudge) {
-			socket.emit("remoteJudge", {
-				solutionId: response.solution_id
-			});
+		try {
+			localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
+			if (!localEnvJudge) {
+				socket.emit("remoteJudge", {
+					solutionId: response.solution_id
+				});
+			}
+			BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 		}
-		BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
+		catch (err) {
+			socket.emit("reject_submit", response);
+			return;
+		}
 	});
 	/**
      * 全局推送功能

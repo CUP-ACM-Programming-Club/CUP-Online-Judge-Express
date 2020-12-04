@@ -11,7 +11,7 @@ class SourcePrivilegeCache {
         if (basePrivilege) {
             return basePrivilege;
         }
-        const contestId = (await SubmissionManager.getSolutionInfo(solutionId)).contest_id;
+        const contestId = (await SubmissionManager.getSolutionInfo(solutionId))!.contest_id;
         if (!contestId) {
             return false;
         }

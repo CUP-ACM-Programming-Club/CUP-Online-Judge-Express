@@ -26,18 +26,21 @@ export default function Cacheable(cachePool: CachePool, timeDelta: number, timeU
             else {
                 // console.log(`Miss cache data: ${propertyName}`);
                 const response = await method.apply(this, args);
-                try {
-                    await cacheLock.acquireAsync();
-                    await cachePool.set(cacheKey, response);
+                if (response !== null && response !== undefined) {
+                    try {
+                        await cacheLock.acquireAsync();
+                        await cachePool.set(cacheKey, response);
+                        return response;
+                    } catch (e) {
+                        console.error("Cacheable failed: ", propertyName);
+                        console.log(e);
+                        return null;
+                    } finally {
+                        cacheLock.release();
+                    }
+                }
+                else {
                     return response;
-                }
-                catch (e) {
-                    console.error("Cacheable failed: ", propertyName);
-                    console.log(e);
-                    return null;
-                }
-                finally {
-                    cacheLock.release();
                 }
             }
         }
