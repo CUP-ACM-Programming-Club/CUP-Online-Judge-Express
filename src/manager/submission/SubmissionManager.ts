@@ -36,7 +36,7 @@ interface ProblemInfo {
 }
 
 class SubmissionManager {
-    @RetryAsync(5)
+    //@RetryAsync(5)
     // @ErrorLogger
     async getSourceBySolutionId(solutionId: number) {
         const response: any[] = await cache_query("select source from source_code where solution_id = ?", [solutionId]);
@@ -51,7 +51,7 @@ class SubmissionManager {
         return response[0] as SolutionInfoDAO;
     }
 
-    @RetryAsync(5)
+    //@RetryAsync(5)
     // @ErrorLogger
     async getCustomInput(solutionId: number) {
         const response: any[] | undefined = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
@@ -61,7 +61,7 @@ class SubmissionManager {
         return response[0].input_text;
     }
 
-    @RetryAsync(5)
+    //@RetryAsync(5)
     // @ErrorLogger
     async getProblemInfo(problemId: number) {
         const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
