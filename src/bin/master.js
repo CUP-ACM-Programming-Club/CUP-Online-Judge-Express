@@ -76,7 +76,7 @@ async function bootStrap() {
 			.listen(port);
 
 	} else {
-		require("./main");
+		require("./websocket");
 	}
 }
 

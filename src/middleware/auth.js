@@ -1,5 +1,5 @@
 const [error] = require("../module/const_var");
-const client = require("../module/redis");
+const client = require("../module/redis").default;
 const contest_mode = require("./contest_mode");
 const ban_check = require("./ban_check");
 const generateToken = require("./generate_token");

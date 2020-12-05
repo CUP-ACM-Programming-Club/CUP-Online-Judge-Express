@@ -2,6 +2,7 @@ import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
 import ErrorLogger from "../../decorator/common/ErrorLogger";
 import RetryAsync from "../../decorator/RetryAsync";
+import {MySQLManager} from "../mysql/MySQLManager";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -36,34 +37,34 @@ interface ProblemInfo {
 }
 
 class SubmissionManager {
-    @RetryAsync(5, 500)
+    // @RetryAsync(5, 500)
     // @ErrorLogger
     async getSourceBySolutionId(solutionId: number) {
-        const response: any[] = await cache_query("select source from source_code where solution_id = ?", [solutionId]);
+        const response: any[] = await MySQLManager.execQuery("select source from source_code where solution_id = ?", [solutionId]);
         return response && response.length && response.length > 0 ? response[0].source : null;
     }
 
-    @Cacheable(new CachePool(), 1, "second")
-    @RetryAsync(5, 500)
+    // @Cacheable(new CachePool(), 1, "second")
+    // @RetryAsync(5, 500)
     async getSolutionInfo(solutionId: number) {
-        const response: any[] = await cache_query("select * from solution where solution_id = ?", [solutionId]);
+        const response: any[] = await MySQLManager.execQuery("select * from solution where solution_id = ?", [solutionId]);
         return response && response.length && response.length > 0 ? response[0] as SolutionInfoDAO : null;
     }
 
-    @RetryAsync(5, 500)
+    // @RetryAsync(5, 500)
     // @ErrorLogger
     async getCustomInput(solutionId: number) {
-        const response: any[] | undefined = await cache_query("select input_text from custominput where solution_id = ?", [solutionId]);
+        const response: any[] | undefined = await MySQLManager.execQuery("select input_text from custominput where solution_id = ?", [solutionId]);
         if (response === undefined || response.length === 0) {
             return "";
         }
         return response[0].input_text || "";
     }
 
-    @RetryAsync(5, 500)
+    // @RetryAsync(5, 500)
     // @ErrorLogger
     async getProblemInfo(problemId: number) {
-        const response: any[] = await cache_query("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
+        const response: any[] = await MySQLManager.execQuery("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
         const problemInfo: ProblemInfo = response[0];
         if (problemInfo.time_limit <= 0) {
             problemInfo.time_limit = 1;

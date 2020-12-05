@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
-export = function (TEST_MODE: boolean = false) {
+import {wait} from "../../decorator/RetryAsync";
+export = async function (TEST_MODE: boolean = false) {
 	global.config = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "config.json"), "utf-8"));
 	require("../../orm/instance/sequelize");
+	await wait(2000);
 	if(TEST_MODE) {
 		setTimeout(function(){
 			process.exit(0);

@@ -1,6 +1,6 @@
 import Logger from "../module/console/Logger";
 
-function wait(ms: number) {
+export function wait(ms: number) {
     return new Promise(resolve => setTimeout(() => { Logger.log(`failDelay: ${ms}`); resolve(null) }, ms));
 }
 

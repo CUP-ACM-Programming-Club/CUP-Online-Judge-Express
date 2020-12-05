@@ -43,6 +43,7 @@ export class JudgeManager implements IJudgeManager{
             memory_limit: 0
         };
         let solutionInfo: any = await SubmissionManager.getSolutionInfo(solutionId);
+        Logger.log("Get solutionInfo: ", solutionId);
         this.checkNotNull(solutionInfo, solutionId);
         Logger.log("SolutionInfo: ", solutionInfo);
         const {problem_id} = solutionInfo;

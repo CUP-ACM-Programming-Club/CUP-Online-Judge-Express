@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 /* eslint-disable require-atomic-updates */
+import Logger from "../module/console/Logger";
+
 const ENVIRONMENT = process.env.NODE_ENV;
-require("../module/init/preinstall")();
-require("../module/init/build_env")();
 const config = global.config;
 import UserValidatorMiddleware from "../module/websocket/UserValidatorMiddleware";
 import BindUserInfo from "../module/websocket/BindUserInfo";
@@ -297,6 +297,7 @@ io.on("connection", async function (socket) {
 			BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judger", localJudge.getStatus());
 		}
 		catch (err) {
+			Logger.log("err info", err);
 			socket.emit("reject_submit", response);
 			return;
 		}

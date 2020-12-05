@@ -1,7 +1,7 @@
 import {server} from "../../../init/http-server";
 import sequelize from "../../../../orm/instance/sequelize";
 const mysql = require("../../../mysql_query");
-const redis = require("../../../redis");
+const redis = require("../../../redis").default;
 
 module.exports = function () {
 	console.log(`Worker PID: ${process.pid} close:`);

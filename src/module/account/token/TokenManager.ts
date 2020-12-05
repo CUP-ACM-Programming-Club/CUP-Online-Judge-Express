@@ -1,4 +1,4 @@
-const client = require("../../redis");
+const client = require("../../redis").default;
 const ListSize = 50;
 
 class TokenManager {

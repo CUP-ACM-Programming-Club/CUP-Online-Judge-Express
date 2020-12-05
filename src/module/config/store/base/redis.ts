@@ -2,7 +2,7 @@ import {PersistenceStore} from "./store";
 import {Model} from "sequelize-typescript";
 import {config as Config, Switch} from "../../../../orm/ts-model";
 
-const client = require("../../../redis");
+const client = require("../../../redis").default;
 export default function<T extends (Config | Switch)> (hashMapKey: string) {
 	const RedisStore = function () {
 

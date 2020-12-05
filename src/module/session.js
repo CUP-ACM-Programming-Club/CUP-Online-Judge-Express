@@ -1,7 +1,7 @@
 const session = require("express-session");
 const RedisStore = require("connect-redis")(session);
 const Random = require("meteor-random");
-const redisClient = require("./redis");
+const redisClient = require("./redis").default;
 const secretKey = global.config.session_secret || Random.secret(128);
 const oneDay = 86400000;
 const sessionMiddleware = session({

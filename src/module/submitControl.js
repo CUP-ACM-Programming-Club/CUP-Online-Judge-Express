@@ -5,7 +5,7 @@ import Logger from "./console/Logger";
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
 const dayjs = require("dayjs");
-const client = require("./redis");
+const client = require("./redis").default;
 const detectClassroom = require("./detect_classroom");
 const getIP = require("./getIP");
 const [error] = require("../module/const_var");

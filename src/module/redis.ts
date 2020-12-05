@@ -1,6 +1,5 @@
 import bluebird from "bluebird";
-import * as redis from "redis";
-import {Worker} from "cluster";
+const redis = require("redis");
 import {RedisClient} from "redis";
 
 declare global {
@@ -16,9 +15,6 @@ const config = global.config;
 export interface IRedis extends RedisClient {
 	[x: string]: any
 }
-
-bluebird.promisifyAll(redis.RedisClient.prototype);
-bluebird.promisifyAll(redis.Multi.prototype);
 
 let redisClient: IRedis;
 
@@ -39,9 +35,12 @@ if (global.unit_test === "autotest") {
 	} as unknown as IRedis;
 } else {
 	redisClient = redis.createClient(config.redis) as IRedis;
+	bluebird.promisifyAll(redisClient);
+	bluebird.promisifyAll(redisClient);
 }
 
-module.exports = redisClient;
+
+export default redisClient;
 /*
 exports.lrange=(key,start,end)=>{
     return new Promise((resolve,reject)=>{
