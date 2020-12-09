@@ -28,6 +28,12 @@ const sequelize = new Sequelize("jol", mysqlConfig.user, mysqlConfig.password, {
 	},
 	dialectOptions: {
 		connectTimeout: 20000, // default is 10s which causes occasional ETIMEDOUT errors (see https://stackoverflow.com/a/52465919/491553)
+	},
+	pool: {
+		min: 1,
+		max: 5,
+		idle: 20000,
+		acquire: 20000
 	}
 });
 Logger.log(`add sequelize module`);
