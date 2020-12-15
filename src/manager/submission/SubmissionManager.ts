@@ -76,9 +76,8 @@ class SubmissionManager {
         return problemInfo;
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
     @Cacheable(new CachePool<any>(), 1, "hour")
-    async getSubmissionHourInfo(req: Request) {
+    async getSubmissionHourInfoCache() {
         const [submit, login] = await Promise.all([cache_query("select hour(in_date) as hour,count(hour(in_date)) as cnt from solution group by hour"),
             cache_query("select hour(time) as hour,count(hour(time)) as cnt from loginlog group by hour(time)")])
         return {
@@ -87,7 +86,10 @@ class SubmissionManager {
         }
     }
 
-
+    @ErrorHandlerFactory(ok.okMaker)
+    async getSubmissionHourInfo(req: Request) {
+        return await this.getSubmissionHourInfoCache();
+    }
 }
 
 export default new SubmissionManager();
