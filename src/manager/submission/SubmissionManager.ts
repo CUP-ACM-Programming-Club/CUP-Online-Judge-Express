@@ -3,6 +3,9 @@ import CachePool from "../../module/common/CachePool";
 import ErrorLogger from "../../decorator/common/ErrorLogger";
 import RetryAsync from "../../decorator/RetryAsync";
 import {MySQLManager} from "../mysql/MySQLManager";
+import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import {ok} from "../../module/constants/state";
+import {Request} from "express";
 
 const cache_query = require("../../module/mysql_cache");
 
@@ -71,6 +74,17 @@ class SubmissionManager {
         }
         problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         return problemInfo;
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    @Cacheable(new CachePool<any>(), 1, "hour")
+    async getSubmissionHourInfo(req: Request) {
+        const [submit, login] = await Promise.all([cache_query("select hour(in_date) as hour,count(hour(in_date)) as cnt from solution group by hour"),
+            cache_query("select hour(time) as hour,count(hour(time)) as cnt from loginlog group by hour(time)")])
+        return {
+            submit,
+            login
+        }
     }
 
 
