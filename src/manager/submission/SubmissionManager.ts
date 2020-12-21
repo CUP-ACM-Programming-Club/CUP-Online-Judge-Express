@@ -69,10 +69,12 @@ class SubmissionManager {
     async getProblemInfo(problemId: number) {
         const response: any[] = await MySQLManager.execQuery("select time_limit, memory_limit, spj from problem where problem_id = ?", [Math.abs(problemId)]);
         const problemInfo: ProblemInfo = response[0];
-        if (problemInfo.time_limit <= 0) {
-            problemInfo.time_limit = 1;
+        if (problemInfo) {
+            if (problemInfo.time_limit <= 0) {
+                problemInfo.time_limit = 1;
+            }
+            problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         }
-        problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         return problemInfo;
     }
 

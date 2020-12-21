@@ -2,6 +2,7 @@
 import mysql from "mysql2";
 import {Pool, PoolConnection, Query, queryCallback, QueryOptions} from "mysql";
 import Logger from "../../module/console/Logger";
+// @ts-ignore
 const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]) as any as Pool;
 
