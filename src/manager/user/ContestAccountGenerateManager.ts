@@ -1,7 +1,7 @@
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import {Request} from "express";
-import UserManager, {UserInfoPayload} from "./UserManager";
+import UserManager, {ContestUserInfoPayload} from "./UserManager";
 import PasswordManager from "./PasswordManager";
 
 interface GenerateAccountRequestPayload {
@@ -67,14 +67,15 @@ class ContestAccountGenerateManager {
     }
 
     async generateAccount(userId: string, nick: string, req: Request) {
-        const payload: UserInfoPayload = {
+        const payload: ContestUserInfoPayload = {
             userId,
             password: PasswordManager.generateRandomPassword(16),
             nick,
             confirmAnswer: PasswordManager.generateRandomPassword(8),
-            confirmQuestion: PasswordManager.generateRandomPassword(8)
+            confirmQuestion: PasswordManager.generateRandomPassword(8),
+            school: "your_own_school"
         };
-        await UserManager.addUser(payload, req);
+        await UserManager.addContestUser(payload, req);
         return {userId, password: payload.password, nick};
     }
 

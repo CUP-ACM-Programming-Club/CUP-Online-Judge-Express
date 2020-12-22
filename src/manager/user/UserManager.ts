@@ -14,6 +14,15 @@ export interface UserInfoPayload {
     confirmAnswer: string
 }
 
+export interface ContestUserInfoPayload {
+    userId: string,
+    password: string,
+    confirmQuestion: string,
+    nick: string,
+    confirmAnswer: string,
+    school: string
+}
+
 export interface UserInfoDAO {
     user_id: string,
     password: string,
@@ -32,6 +41,12 @@ export class UserManager {
         return await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email)values(?,?,?,?,?,?,NOW(),'','')`,
             [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
             encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request)]);
+    }
+
+    async addContestUser(userInfoPayload: ContestUserInfoPayload, request: Request) {
+        return await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email, school)values(?,?,?,?,?,?,NOW(),'','', ?)`,
+            [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
+                encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request), userInfoPayload.school]);
     }
 
     async changePassword(userId: string, password: string) {
