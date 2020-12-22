@@ -52,7 +52,7 @@ class ContestAccountGenerateManager {
         const prefix =  req.body.prefix;
         const len = `${num}`.length;
         const nickList = req.body.nickList;
-        ContestAccountGenerateManager.validateNickLengthEqualToGenerateCount(nickList, len);
+        ContestAccountGenerateManager.validateNickLengthEqualToGenerateCount(nickList, num);
         for (let i = 0; i < num; ++i) {
             const userId = ContestAccountGenerateManager.buildAccount(prefix, i, len);
             await ContestAccountGenerateManager.checkAccountRegistrable(userId);
