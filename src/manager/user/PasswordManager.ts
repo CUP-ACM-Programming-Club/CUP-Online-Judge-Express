@@ -2,6 +2,7 @@ import crypto from "crypto";
 import {decryptPassword} from "../../module/util";
 
 const AESSalt = global.config.salt || "thisissalt";
+
 class PasswordManager {
     checkPassword(originalPassword: string, inputPassword: string, newpassword: string) {
         originalPassword += "";
@@ -17,6 +18,27 @@ class PasswordManager {
             .digest() + salt;
         const decryptedPassword = decryptPassword(newpassword, AESSalt);
         return SHA1Password === convertedOriginalPassword || decryptedPassword === inputPassword;
+    }
+
+    generateRandomPassword(length: number) {
+        if (length <= 0) {
+            return '';
+        }
+        let rs = '';
+        try {
+            rs = crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+        } catch (ex) {
+            console.error('Exception generating random string: ' + ex);
+            rs = '';
+            let r = length % 8, q = (length - r) / 8, i;
+            for (i = 0; i < q; i++) {
+                rs += Math.random().toString(16).slice(2);
+            }
+            if (r > 0) {
+                rs += Math.random().toString(16).slice(2, i);
+            }
+        }
+        return rs;
     }
 }
 
