@@ -38,7 +38,7 @@ class ContestAccountGenerateManager {
 
     private static async checkAccountRegistrable(userId: string) {
         const user = await UserManager.getUser(userId);
-        if (user === null) {
+        if (user !== null) {
             throw new Error("存在已注册的用户名，请更换");
         }
     }
