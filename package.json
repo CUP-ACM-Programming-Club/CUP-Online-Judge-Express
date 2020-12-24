@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "3.25.5",
+  "version": "3.25.6",
   "engines": {
     "node": ">=12.0.0"
   },
@@ -84,17 +84,17 @@
   "main": "./dist/bin/main.js",
   "scripts": {
     "build": "tsc",
-    "debug": "DEBUG=* node --max-old-space-size=5000 ./dist/bin/main.js",
-    "front": "NODE_ENV=test node --max-old-space-size=5000 ./dist/bin/main.js",
+    "debug": "DEBUG=* node --max-old-space-size=5000 ./dist/bin/websocket.js",
+    "front": "NODE_ENV=test node --max-old-space-size=5000 ./dist/bin/websocket.js",
     "start": "NODE_LOG_DIR=/home/CUP-Online-Judge-Express/logs ENABLE_NODE_LOG=YES pm2 start pm2.json --node-args=\"--max-old-space-size=5000\"",
     "websocket:start": "NODE_LOG_DIR=/home/CUP-Online-Judge-Express/logs ENABLE_NODE_LOG=YES pm2 start websocket.pm2.json --node-args=\"--max-old-space-size=5000\"",
     "websocket:stop": "pm2 stop websocket.pm2.json --node-args=\"--max-old-space-size=5000\"",
     "websocket:restart": "npm run websocket:stop && npm run websocket:start",
     "reload": "pm2 reload pm2.json --node-args=\"--max-old-space-size=5000\"",
     "stop": "pm2 stop pm2.json",
-    "test": "NODE_ENV=autotest node --max-old-space-size=5000 npm run build && ./dist/bin/main.js && _mocha --recursive",
+    "test": "NODE_ENV=autotest node --max-old-space-size=5000 npm run build && ./dist/bin/websocket.js && _mocha --recursive",
     "restart": "pm2 stop pm2.json && pm2 start pm2.json --node-args=\"--max-old-space-size=5000\"",
-    "local": "NODE_ENV=local node --max-old-space-size=5000 ./dist/bin/main.js",
+    "local": "NODE_ENV=local node --max-old-space-size=5000 ./dist/bin/websocket.js",
     "lint": "eslint --fix ./",
     "calculate-line": "git ls-files | grep -v \"dist\" | grep -v \"semantic\" | grep -v \"static\" | xargs wc -l\n"
   },
