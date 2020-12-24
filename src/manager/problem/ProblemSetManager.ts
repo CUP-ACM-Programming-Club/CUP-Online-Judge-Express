@@ -68,7 +68,7 @@ class ProblemSetManager {
     }
 
     @ErrorHandlerFactory(ok.okFlatMaker)
-    @ContestModeChecker(1)
+    @ContestModeChecker(0)
     async getProblem(req: Request, res: Response) {
         const target = req.query.source || "local";
         let search_table = target === "local" ? "problem" : target === "virtual" ? "vjudge_problem" : "problem";
