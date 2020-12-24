@@ -13,9 +13,9 @@ const sessionMiddleware = function (req, res, next) {
 			ttl: oneDay * 31,
 			resave: false,
 			secret: secretKey,
-			cookie: {
+			cookie: Object.assign({
 				maxAge: oneDay * 31
-			}
+			}, global.config.cookie)
 		})(req, res, next);
 	}
 	return session({
@@ -24,9 +24,9 @@ const sessionMiddleware = function (req, res, next) {
 		ttl: oneDay * 31,
 		resave: false,
 		secret: secretKey,
-		cookie: Object.assign({
+		cookie: {
 			maxAge: oneDay * 31
-		}, global.config.cookie)
+		}
 	})(req, res, next);
 };
 
