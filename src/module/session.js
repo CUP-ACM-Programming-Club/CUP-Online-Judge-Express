@@ -7,12 +7,12 @@ const oneDay = 86400000;
 const sessionMiddleware = session({
 	store: new RedisStore({ client: redisClient }),
 	saveUninitialized: false,
-	ttl: oneDay * 31 * 12,
+	ttl: oneDay * 31,
 	resave: false,
 	secret: secretKey,
-	cookie: {
-		maxAge: oneDay * 31 * 12
-	}
+	cookie: Object.assign({
+		maxAge: oneDay * 31
+	}, global.config.cookie)
 });
 
 module.exports.sessionMiddleware = sessionMiddleware;

@@ -39,6 +39,11 @@
     "host": "127.0.0.1",
     "port": 5031
   },
+  "cookie": {
+    "path": "/",
+    "domain": "",
+    "httpOnly": true
+  },
   "session_secret": "YourSecretKeytoSession",
   "salt": "PleaseModifyThis",
   "init": false

@@ -45,6 +45,13 @@ export interface RPCConfig {
     port: number
 }
 
+export interface CookieConfig {
+    path?: string,
+    domain?: string,
+    httpOnly?: boolean,
+    maxAge?: number
+}
+
 export interface Config {
     mysql: MySQLConfig,
     judger: JudgerConfig,
@@ -57,7 +64,8 @@ export interface Config {
     redis: RedisConfig,
     webhook: WebhookConfig
     init: boolean,
-    rpc: RPCConfig
+    rpc: RPCConfig,
+    cookie: CookieConfig
 }
 
 declare global {
