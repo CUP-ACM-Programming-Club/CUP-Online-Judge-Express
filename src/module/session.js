@@ -5,7 +5,7 @@ const redisClient = require("./redis").default;
 const secretKey = global.config.session_secret || Random.secret(128);
 const oneDay = 86400000;
 const sessionMiddleware = function (req, res, next) {
-	const host = req.get("host");
+	const host = req && req.get && req.get("host");
 	if (typeof host === "string" && host.includes(global.config.cookie.domain || null)) {
 		return session({
 			store: new RedisStore({ client: redisClient }),
