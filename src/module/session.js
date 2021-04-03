@@ -6,7 +6,8 @@ const secretKey = global.config.session_secret || Random.secret(128);
 const oneDay = 86400000;
 const sessionMiddleware = function (req, res, next) {
 	const host = req && req.get && req.get("host");
-	if (typeof host === "string" && host.includes(global.config.cookie.domain || null)) {
+	const domain = global.config.cookie ? global.config.cookie.domain : null;
+	if (typeof host === "string" && host.includes(domain)) {
 		return session({
 			store: new RedisStore({ client: redisClient }),
 			saveUninitialized: false,
