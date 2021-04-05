@@ -12,7 +12,9 @@ module.exports = function (app: Express, _dir: string | undefined) {
 		if (typeof routerArray !== "undefined" && routerArray.length > 1 && typeof routerArray[0] === "string" && (<RegExpMatchArray>routerArray[0].match(/^\/[\s\S]*/)).length > 0) {
 			// routerArray[0] = path.join("/api",routerArray[0]);
 			app.use(...routerArray);
-			routerArray[0] = path.join("/api", routerArray[0]);
+			if (_dir === undefined) {
+				routerArray[0] = path.join("/api", routerArray[0]);
+			}
 			app.use(...routerArray);
 		}
 	});
