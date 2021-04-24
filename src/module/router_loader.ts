@@ -11,11 +11,18 @@ module.exports = function (app: Express, _dir: string | undefined) {
 		const routerArray = require(path.join(routerDir, fileName));
 		if (typeof routerArray !== "undefined" && routerArray.length > 1 && typeof routerArray[0] === "string" && (<RegExpMatchArray>routerArray[0].match(/^\/[\s\S]*/)).length > 0) {
 			// routerArray[0] = path.join("/api",routerArray[0]);
-			app.use(...routerArray);
-			if (_dir === undefined) {
-				routerArray[0] = path.join("/api", routerArray[0]);
+			try {
+				app.use(...routerArray);
+				if (_dir === undefined) {
+					routerArray[0] = path.join("/api", routerArray[0]);
+				}
+				app.use(...routerArray);
 			}
-			app.use(...routerArray);
+			catch (e) {
+				console.error(`Loading router caused error, routerArray: ${routerArray}`);
+				console.error(e);
+				console.error("");
+			}
 		}
 	});
 };
