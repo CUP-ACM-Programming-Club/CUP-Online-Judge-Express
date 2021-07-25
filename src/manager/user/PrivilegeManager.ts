@@ -18,7 +18,7 @@ class PrivilegeManager {
 
     async removePrivilege(userId: string, privilegeName: string) {
         privilegeName = privilegeName.trim();
-        await MySQLManager.execQuery("delete from privileges where user_id = ? and rightstr = ?", [userId, privilegeName]);
+        await MySQLManager.execQuery("delete from privilege where user_id = ? and rightstr = ?", [userId, privilegeName]);
         return true;
     }
 
@@ -39,7 +39,7 @@ class PrivilegeManager {
     }
 
     async isSomePrivilege(userId: number | string, privilegeCode: string) {
-        const result = await MySQLManager.execQuery(`select * from privileges where user_id = ? and rightstr = ?`, [userId, privilegeCode]);
+        const result = await MySQLManager.execQuery(`select * from privilege where user_id = ? and rightstr = ?`, [userId, privilegeCode]);
         return result && result.length && result.length > 0;
     }
 }
