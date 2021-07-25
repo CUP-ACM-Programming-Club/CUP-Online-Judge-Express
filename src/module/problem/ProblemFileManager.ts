@@ -42,7 +42,7 @@ class ProblemFileManager {
     @ErrorHandlerFactory(ok.okMaker)
     async setFileByRequest(req: Request) {
 		const problemId = req.params.problemId as string;
-		return await this.setSingleFile(problemId, req.file);
+		return await this.setSingleFile(problemId, req.file!);
     }
 
     async setSingleFile(problemId: string, file: Express.Multer.File) {
