@@ -9,6 +9,7 @@ import isNumber from "../../module/util/isNumber";
 import ResponseLogger from "../../decorator/ResponseLogger";
 import CachePool from "../../module/common/CachePool";
 import {MySQLManager} from "../mysql/MySQLManager";
+import PrivilegeManager from "../user/PrivilegeManager";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 const PAGE_SIZE = 50;
@@ -33,6 +34,11 @@ class ContestManager {
     @Cacheable(new CachePool(), 1, "second")
     getAllContest() {
         return cache_query(`select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest order by contest_id desc`);
+    }
+
+    async isContestSubmittable(contestId: number | string, userId: number | string) {
+        const checkResult = await Promise.all([PrivilegeManager.isAdmin(userId), PrivilegeManager.isContestMaker(userId, contestId), PrivilegeManager.isContestManager(userId, contestId), PrivilegeManager.isContester(userId, contestId)]);
+        return checkResult.reduce((a, b) => a || b);
     }
 
     @ResponseLogger

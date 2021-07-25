@@ -21,6 +21,27 @@ class PrivilegeManager {
         await MySQLManager.execQuery("delete from privileges where user_id = ? and rightstr = ?", [userId, privilegeName]);
         return true;
     }
+
+    async isAdmin(userId: number | string) {
+        return await this.isSomePrivilege(userId, "administrator");
+    }
+
+    async isContester(userId: number | string, contestId: number | string) {
+        return await this.isSomePrivilege(userId, `c${contestId}`);
+    }
+
+    async isContestMaker(userId: number | string, contestId: number | string) {
+        return await this.isSomePrivilege(userId, `m${contestId}`);
+    }
+
+    async isContestManager(userId: number | string, contestId: number | string) {
+        return await this.isSomePrivilege(userId, "contest_manager");
+    }
+
+    async isSomePrivilege(userId: number | string, privilegeCode: string) {
+        const result = await MySQLManager.execQuery(`select * from privileges where user_id = ? and rightstr = ?`, [userId, privilegeCode]);
+        return result && result.length && result.length > 0;
+    }
 }
 
 export default new PrivilegeManager();

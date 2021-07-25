@@ -1,6 +1,7 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import {MySQLManager} from "../manager/mysql/MySQLManager";
 import Logger from "./console/Logger";
+import ContestManager from "../manager/contest/ContestManager";
 
 const cache_query = require("./mysql_cache");
 const const_variable = require("./const_name");
@@ -58,21 +59,24 @@ async function getLangmaskForTopic(topic_id) {
 	return data[0].langmask;
 }
 
-function judgeContestPrivilege(req, contest_id) {
-	return !!(req.session.isadmin || req.session.contest[`c${contest_id}`] || req.session.contest_maker[`c${contest_id}`] || req.session.contest_manager);
-}
+// function judgeContestPrivilege(req, contest_id) {
+// 	return !!(req.session.isadmin || req.session.contest[`c${contest_id}`] || req.session.contest_maker[`c${contest_id}`] || req.session.contest_manager);
+// }
 
 async function checkContestPrivilege(req, contest_id) {
-	if (judgeContestPrivilege(req, contest_id)) {
+	if (await ContestManager.isContestSubmittable(contest_id, req.session.user_id)) {
 		return true;
 	}
+	// if (judgeContestPrivilege(req, contest_id)) {
+	// 	return true;
+	// }
 	if (await ContestAssistantManager.userIsContestAssistant(contest_id, req.session.user_id)) {
 		return true;
 	}
 	await login_action(req, req.session.user_id);
-	if (judgeContestPrivilege(req, contest_id)) {
-		return true;
-	}
+	// if (judgeContestPrivilege(req, contest_id)) {
+	// 	return true;
+	// }
 	const data = await cache_query("select private,defunct from contest where contest_id = ?", [contest_id]);
 	const _private = parseInt(data[0].private) === 1;
 	const defunct = data[0].defunct === "Y";
