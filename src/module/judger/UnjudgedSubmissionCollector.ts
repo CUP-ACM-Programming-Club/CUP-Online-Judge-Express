@@ -48,11 +48,12 @@ class UnjudgedSubmissionCollector {
             }
         }
         catch (e) {
-            if (e && e.noRetry && e.solutionId) {
-                Logger.log(`e, e.noRetry, e.solutionId: ${e.solutionId}`);
-                await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [e.solutionId]);
+            const exception = e as unknown as any;
+            if (exception && exception.noRetry && exception.solutionId) {
+                Logger.log(`e, e.noRetry, e.solutionId: ${exception.solutionId}`);
+                await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [exception.solutionId]);
             }
-            Logger.log(`e:${e}, e.noRetry:${e.noRetry}, e.solutionId:${e.solutionId}`);
+            Logger.log(`e:${exception}, e.noRetry:${exception.noRetry}, e.solutionId:${exception.solutionId}`);
         }
         this.collectFinished = true;
     }
