@@ -2,7 +2,16 @@ const cluster = require("cluster");
 const net = require("net");
 
 const num_processes = require("os").cpus().length;
+
+function buildProcessErrorEvent() {
+	process.on("unhandledRejection", error => {
+		// Prints "unhandledRejection woops!"
+		console.log("unhandledRejection", error);
+	});
+}
+
 async function bootStrap() {
+	buildProcessErrorEvent();
 
 	if (cluster.isMaster) {
 		const workers = [];
