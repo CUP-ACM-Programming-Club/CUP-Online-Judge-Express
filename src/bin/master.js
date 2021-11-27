@@ -11,6 +11,7 @@ function buildProcessErrorEvent() {
 }
 
 async function bootStrap() {
+	global.currentDaemonName = "backend";
 	buildProcessErrorEvent();
 
 	if (cluster.isMaster) {

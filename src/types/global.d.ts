@@ -73,7 +73,8 @@ declare global {
         interface Global {
             config: Config
             Application: Express,
-            clusterMode?: boolean
+            clusterMode?: boolean,
+            currentDaemonName?: String
         }
     }
 }

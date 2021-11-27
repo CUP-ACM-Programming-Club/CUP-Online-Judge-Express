@@ -3,6 +3,20 @@ import path from "path";
 import {wait} from "../../decorator/RetryAsync";
 import express from "express";
 import isPromise from "is-promise";
+import log4j from "./log4j"
+
+console.log = function (message: any, ...args: any[]) {
+	return log4j.info(message, args);
+}
+
+console.warn = function (message: any, ...args: any[]) {
+	return log4j.warn(message, args);
+}
+
+console.error = function (message: any, ...args: any[]) {
+	return log4j.error(message, args);
+}
+
 export = async function (TEST_MODE: boolean = false) {
 	const _get = express.Router.prototype.get;
 	const _post = express.Router.prototype.post;
