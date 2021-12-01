@@ -10,6 +10,7 @@ import StatusSet from "../../module/websocket/singleton/StatusSet";
 import ContestPagePushSet from "../../module/websocket/set/ContestPagePushSet";
 import {storeSubmission} from "../../module/judger/recorder";
 import BanUserManager from "../contest/BanUserManager";
+import log4j from "../../module/init/log4j";
 
 export class JudgeResultManager {
     setCollector = [ProblemFromContest
@@ -27,6 +28,13 @@ export class JudgeResultManager {
         const solutionPack = message;
         const finished = parseInt(solutionPack.finish);
         const solutionId = parseInt(solutionPack.solution_id);
+        if (parseInt(solutionPack.state) >= 32) {
+            log4j.log(`got state error: ${solutionPack}`)
+            if (finished) {
+                this.clearBinding(solutionId);
+            }
+            return;
+        }
         Object.assign(solutionPack, SubmitUserInfo.get(solutionId), ProblemFromContest.get(solutionId), ProblemFromSpecialSubject.get(solutionId), SolutionContext.get(solutionId));
         if (finished) {
             await BanUserManager.banUser(solutionPack);
