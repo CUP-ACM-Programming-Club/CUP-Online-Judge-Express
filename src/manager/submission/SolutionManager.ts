@@ -54,7 +54,7 @@ class SolutionManager {
     convertFormatToMustache (exportSolutionInfoList:　ExportSolutionInfo[]) {
         let output = "";
         const template = ConfigManager.getConfig("export_solution_template"
-            , `UserId: {{user_id}}\nProblem Id:{{problem_id}}\nSolutionId: {{solution_id}}\nNick:{{nick}}\nSource\n{{source}}\n`);
+            , `UserId: {{{user_id}}}\nProblem Id:{{{problem_id}}}\nSolutionId: {{{solution_id}}}\nNick:{{{nick}}}\nSource\n{{{source}}}\n`);
         for (let exportSolutionInfo of exportSolutionInfoList) {
             output += Mustache.render(template, exportSolutionInfo);
         }
