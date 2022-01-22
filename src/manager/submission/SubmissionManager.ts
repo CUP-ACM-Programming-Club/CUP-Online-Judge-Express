@@ -33,6 +33,14 @@ export interface SolutionInfoDAO {
     fingerprintRaw: string
 }
 
+export interface ExportSolutionInfo {
+    user_id: string,
+    problem_id: number,
+    solution_id: number,
+    nick: string,
+    source: string
+}
+
 interface ProblemInfo {
     time_limit: number,
     memory_limit: number,
@@ -76,6 +84,30 @@ class SubmissionManager {
             problemInfo.spj = !!parseInt(<string>problemInfo.spj);
         }
         return problemInfo;
+    }
+
+    async getSolutionExportInfoByUserId() {
+
+    }
+
+    async getSolutionExportInfoByContestId(contestId: number | string) {
+        const exportInfoList: ExportSolutionInfo[] = await MySQLManager.execQuery("select * from (select * from solution where contest_id = ? and in_date > '2021-05-30')a left join source_code_user on source_code_user.solution_id = a.solution_id left join users on users.user_id = a.user_id", [contestId]);
+        exportInfoList.sort((a, b) => {
+            if (a.user_id !== b.user_id) {
+                return a.user_id > b.user_id ? 1 : a.user_id === b.user_id ? 0 : -1;
+            }
+            else if (a.problem_id !== b.problem_id) {
+                return a.problem_id - b.problem_id;
+            }
+            else {
+                return a.solution_id - b.solution_id;
+            }
+        });
+        return exportInfoList;
+    }
+
+    async getSolutionExportInfoByTopicId() {
+
     }
 
     @Cacheable(new CachePool<any>(), 1, "hour")
