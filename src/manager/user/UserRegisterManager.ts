@@ -104,6 +104,7 @@ export class UserRegisterManager {
         const registerPayload = await this.validator(req.body);
         await InviteManager.consumeInviteCode(registerPayload.inviteCode);
         const inviteInfo = await InviteManager.getInviteInfoByInviteCode(registerPayload.inviteCode);
+        await InviteManager.deleteInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
         await InviteManager.addInviteRecord(registerPayload.inviteCode, inviteInfo!.user_id, registerPayload.userId);
         await UserManager.addUser(registerPayload, req);
     }

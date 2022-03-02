@@ -119,6 +119,10 @@ export class InviteManager {
             [userId, inviter, inviteCode]);
     }
 
+    async deleteInviteRecord(inviteCode: string, inviter: string, userId: string) {
+        return await query(`delete from invited_user where user_id = ? and inviter = ? and invite_code = ?`, [userId, inviter, inviteCode]);
+    }
+
     async addInviteCode (user_id: string, expireDate: string, validUserNumber: number) {
         const inviteCode = uuidV1();
         expireDate = timeToString(expireDate);
