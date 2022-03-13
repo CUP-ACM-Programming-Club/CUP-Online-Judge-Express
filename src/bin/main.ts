@@ -9,7 +9,7 @@ import BindUserInfo from "../module/websocket/BindUserInfo";
 require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
-let port;
+let port: number | string;
 // let dockerRunner;
 import localJudge from "../module/judger";
 import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
@@ -53,6 +53,7 @@ import SolutionContext from "../module/websocket/set/SolutionContext";
 import JudgeManager from "../manager/judge/JudgeManager";
 import whiteboard from "../module/websocket/whiteboard/SocketSet";
 import io from "../module/websocket/server/SocketServer";
+import {UserSocket} from "../module/websocket/Socket";
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 require("../module/init/express_loader")(app, io);
@@ -84,14 +85,14 @@ process.on("message", function (message, connection) {
 });
 
 
-localJudge.on("change", (freeJudger) => {
+localJudge.on("change", (freeJudger: any) => {
 	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "judgerChange", freeJudger);
 	BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judgerChange", freeJudger);
 	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "freeJudgerNumber", { num: freeJudger.length});
 	BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "freeJudgerNumber", { num: freeJudger.length });
 });
 
-function removeStatus(socket) {
+function removeStatus(socket: UserSocket) {
 	const contest_id = socket.contest_id;
 	if (contest_id) {
 		ContestPagePushSet.removeFromList(contest_id);
@@ -101,7 +102,7 @@ function removeStatus(socket) {
 	}
 }
 
-function whiteBoardBroadCast(socket, content) {
+function whiteBoardBroadCast(socket: UserSocket, content: string) {
 	for (let _socket of whiteboard.values()) {
 		if (_socket !== socket) {
 			_socket.emit("whiteboard", {
@@ -147,11 +148,11 @@ io.use(BuildSocketStatus);
 /**
  * Socket获得连接
  */
-io.on("connection", async function (socket) {
+io.on("connection", async function (socket: UserSocket) {
 	socket.on("auth", function (data) {
 		if (!socket.send_auth && socket.auth) {
 			socket.send_auth = true;
-			const pos = OnlineUserSet.get(socket.user_id);
+			const pos = OnlineUserSet.get(socket.user_id!);
 			pos.identity = socket.privilege ? "admin" : "normal";
 			//pos.intranet_ip = pos.intranet_ip || data["intranet_ip"] || socket.handshake.address || "未知";
 			//pos.ip = pos.ip || data["ip"] || "";
@@ -184,7 +185,7 @@ io.on("connection", async function (socket) {
 
 	socket.on("updateURL", function (data) {
 		removeStatus(socket);
-		const user = OnlineUserSet.get(socket.user_id);
+		const user = OnlineUserSet.get(socket.user_id!);
 		user.lastUpdated = Date.now();
 		const pos = user.url.indexOf(socket.url);
 		if (pos !== -1) {
@@ -230,7 +231,7 @@ io.on("connection", async function (socket) {
 		}
 		socket.emit("judge:solution_id", response);
 		data.submission_id = data.solution_id = response.solution_id;
-		const ip = OnlineUserSet.get(socket.user_id).ip;
+		const ip = OnlineUserSet.get(socket.user_id!).ip;
 		const fingerprint = data.val.fingerprint;
 		const fingerprintRaw = data.val.fingerprintRaw;
 		SolutionContext.set(data.submission_id, {
@@ -288,7 +289,7 @@ io.on("connection", async function (socket) {
 		SolutionUserCollector.set(data.submission_id, data);
 		let localEnvJudge = true;
 		try {
-			localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege);
+			localEnvJudge = await JudgeManager.addJudgeRequest(data.submission_id, socket.privilege!);
 			if (!localEnvJudge) {
 				socket.emit("remoteJudge", {
 					solutionId: response.solution_id
@@ -351,12 +352,12 @@ io.on("connection", async function (socket) {
      * 断开连接销毁所有保存的数据
      */
 	socket.on("disconnect", function () {
-		const userId = socket.user_id;
+		const userId = socket.user_id!;
 		let pos = OnlineUserSet.get(userId);
 		if (pos && !socket.hasClosed) {
 			socket.hasClosed = true;
 			removeWhiteboardRecord();
-			SocketSet.remove(socket.currentTimeStamp);
+			SocketSet.remove(socket.currentTimeStamp!.toString());
 			let url_pos = pos.url.indexOf(socket.url);
 			if (~url_pos)
 				pos.url.splice(url_pos, 1);

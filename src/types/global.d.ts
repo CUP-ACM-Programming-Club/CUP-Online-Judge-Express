@@ -6,8 +6,9 @@ export interface JudgerConfig {
 }
 
 export interface WebSocketConfig {
-    websocket_client_port: number
-    judger_port: number;
+    websocket_client_port: number,
+    judger_port: number,
+    http_client_port: number
 }
 
 export interface ProblemUploadDestConfig {

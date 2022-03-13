@@ -1,10 +1,9 @@
 import cookie from "cookie";
-import {Socket} from "socket.io"
+import SocketIO, {Socket} from "socket.io"
 import {UserSocket} from "./Socket";
 const client = require("../redis").default;
 
-export default async function userValidator(socket: UserSocket, next: (err?: any) => void) {
-
+async function doValidate(socket: UserSocket, next: (err?: any) => void) {
     if (typeof socket.handshake.headers.cookie !== "string") {
         next(new Error("cookie invalid"));
         console.log("Cookie invalid: socket.request.session:", socket.request.session);
@@ -31,4 +30,8 @@ export default async function userValidator(socket: UserSocket, next: (err?: any
     } else {
         next(new Error("Token Expired."));
     }
+}
+
+export default function userValidator(socket: SocketIO.Socket, next: (err?: any) => void) {
+    doValidate(socket as UserSocket, next);
 }

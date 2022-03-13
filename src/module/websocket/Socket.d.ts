@@ -9,5 +9,7 @@ export interface UserSocket extends Socket {
     status?: boolean,
     currentTimeStamp?: number
     request: any,
-    url?: string
+    url?: string,
+    send_auth?: boolean,
+    hasClosed?: boolean
 }

@@ -3,10 +3,12 @@ import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import _ from "lodash";
 import {ConfigManager} from "../../module/config/config-manager";
+import {IUserList} from "../../module/websocket/set/BaseUserSet";
 declare global {
     namespace NodeJS {
         interface Global {
-            contest_mode: boolean
+            contest_mode: boolean,
+            submissions: IUserList<any>
         }
     }
 }
