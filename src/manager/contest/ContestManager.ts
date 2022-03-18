@@ -20,14 +20,19 @@ function safeArrayParse(array: any[] | any) {
     return array.length ? array : Object.keys(array);
 }
 
+interface searchQuery {
+    sql: string | null,
+    sqlArr: any[]
+}
+
 class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 1, "second")
-    getContestListByConditional(admin_str: string, myContest: string, limit: number) {
-        const sql = this.buildSqlStructure(admin_str, myContest);
+    getContestListByConditional(admin_str: string, myContest: string, search: searchQuery, limit: number) {
+        const sql = this.buildSqlStructure(admin_str, myContest, search.sql);
         return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
          (IF(start_time < NOW() and end_time > NOW(), end_time, 0)),
-         (IF(start_time >= NOW() and end_time <= NOW(), contest_id, contest_id)) desc limit ?, ?`, [limit, PAGE_SIZE]);
+         (IF(start_time >= NOW() and end_time <= NOW(), contest_id, contest_id)) desc limit ?, ?`, [...search.sqlArr, limit, PAGE_SIZE]);
     }
 
     @Timer
@@ -42,8 +47,8 @@ class ContestManager {
     }
 
     @ResponseLogger
-    buildSqlStructure (...args: string[]) {
-        return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${args.join(" and ")}`;
+    buildSqlStructure (...args: (string|null|undefined)[]) {
+        return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${args.filter(e => typeof e === "string").join(" and ")}`;
     }
 
     @Timer
@@ -78,6 +83,23 @@ class ContestManager {
         return myContest;
     }
 
+    @Timer
+    getSearchSql(req: Request) {
+        let sql = " 1 = 1 ";
+        if (typeof req.query.search === "string") {
+            sql += ` and title = ? `;
+            return {
+                sql,
+                sqlArr: [req.query.search.trim()]
+            }
+        }
+
+        return {
+            sql: null,
+            sqlArr: []
+        }
+    }
+
     buildLimit(req: Request) {
         const page: any = req.query.page;
         const limit = (isNumber(page) ? parseInt(page) : 0) * PAGE_SIZE;
@@ -87,7 +109,7 @@ class ContestManager {
     @ErrorHandlerFactory(ok.okMaker)
     @Timer
     async getContestList(req: Request) {
-        return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.buildLimit(req));
+        return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req),this.getSearchSql(req) , this.buildLimit(req));
     }
 
     @ErrorHandlerFactory(ok.okMaker)

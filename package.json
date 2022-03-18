@@ -2,7 +2,7 @@
   "name": "CUP-Online-Judge-BackEnd",
   "author": "Ryan Lee <gxlhybh@gmail.com>",
   "homepage": "https://github.com/ryanlee2014",
-  "version": "3.28.2",
+  "version": "3.29.0",
   "engines": {
     "node": ">=12.0.0"
   },
@@ -72,7 +72,7 @@
     "sequelize-typescript": "1.1.0",
     "session-file-store": "^1.5.0",
     "sha1": "^1.1.1",
-    "simple-git": "^2.21.0",
+    "simple-git": "^3.3.0",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.1",
     "strip-bom": "^4.0.0",
