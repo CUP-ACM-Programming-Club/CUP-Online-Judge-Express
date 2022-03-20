@@ -87,7 +87,7 @@ class ContestManager {
     getSearchSql(req: Request) {
         let sql = " 1 = 1 ";
         if (typeof req.query.search === "string") {
-            sql += ` and title = ? `;
+            sql += ` and title like ? `;
             return {
                 sql,
                 sqlArr: [`%${req.query.search.trim()}%`]
