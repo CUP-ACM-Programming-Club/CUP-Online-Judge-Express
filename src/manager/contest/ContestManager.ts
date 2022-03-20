@@ -90,7 +90,7 @@ class ContestManager {
             sql += ` and title = ? `;
             return {
                 sql,
-                sqlArr: [req.query.search.trim()]
+                sqlArr: [`%${req.query.search.trim()}%`]
             }
         }
 
