@@ -38,8 +38,14 @@ class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 1, "second")
     getContestListCountByConditional(admin_str: string, myContest: string, search: searchQuery) {
-        const sql = this.buildSqlStructure(admin_str, myContest, search.sql);
-        return cache_query(`${sql}`, [...search.sqlArr]);
+        const sql = this.buildSqlCountStructure(admin_str, myContest, search.sql);
+        const countList = cache_query(`${sql}`, [...search.sqlArr]);
+        if (countList && countList.length && countList.length > 0) {
+            return countList[0].cnt;
+        }
+        else {
+            return 0;
+        }
     }
 
 
@@ -57,6 +63,11 @@ class ContestManager {
     @ResponseLogger
     buildSqlStructure (...args: (string|null|undefined)[]) {
         return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${args.filter(e => typeof e === "string").join(" and ")}`;
+    }
+
+    @ResponseLogger
+    buildSqlCountStructure (...args: (string|null|undefined)[]) {
+        return `select count(1) as cnt from contest where ${args.filter(e => typeof e === "string").join(" and ")}`;
     }
 
     @Timer
