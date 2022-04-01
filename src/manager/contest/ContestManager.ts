@@ -37,9 +37,9 @@ class ContestManager {
 
     @Timer
     @Cacheable(ContestCachePool, 1, "second")
-    getContestListCountByConditional(admin_str: string, myContest: string, search: searchQuery) {
+    async getContestListCountByConditional(admin_str: string, myContest: string, search: searchQuery) {
         const sql = this.buildSqlCountStructure(admin_str, myContest, search.sql);
-        const countList = cache_query(`${sql}`, [...search.sqlArr]);
+        const countList = await cache_query(`${sql}`, [...search.sqlArr]);
         if (countList && countList.length && countList.length > 0) {
             return countList[0].cnt;
         }
