@@ -36,6 +36,14 @@ class ContestManager {
     }
 
     @Timer
+    @Cacheable(ContestCachePool, 1, "second")
+    getContestListCountByConditional(admin_str: string, myContest: string, search: searchQuery) {
+        const sql = this.buildSqlStructure(admin_str, myContest, search.sql);
+        return cache_query(`${sql}`, [...search.sqlArr]);
+    }
+
+
+    @Timer
     @Cacheable(new CachePool(), 1, "second")
     getAllContest() {
         return cache_query(`select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest order by contest_id desc`);
@@ -110,6 +118,18 @@ class ContestManager {
     @Timer
     async getContestList(req: Request) {
         return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req),this.getSearchSql(req) , this.buildLimit(req));
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    @Timer
+    async getContestListAsObjectByRequest(req: Request) {
+        let resultList: any[];
+        let resultCount: any;
+        [resultList, resultCount] = await Promise.all([this.getContestList(req), this.getContestListCountByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.getSearchSql(req))]);
+        return {
+            contestInfoList: resultList,
+            total: resultCount
+        }
     }
 
     @ErrorHandlerFactory(ok.okMaker)
