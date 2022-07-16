@@ -46,5 +46,6 @@
   },
   "session_secret": "YourSecretKeytoSession",
   "salt": "PleaseModifyThis",
-  "init": false
+  "init": false,
+  "enable_cluster_transfer": true
 }

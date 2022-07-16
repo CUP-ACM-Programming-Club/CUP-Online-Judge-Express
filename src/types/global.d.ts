@@ -66,7 +66,8 @@ export interface Config {
     webhook: WebhookConfig
     init: boolean,
     rpc: RPCConfig,
-    cookie: CookieConfig
+    cookie: CookieConfig,
+    enable_cluster_transfer?: boolean
 }
 
 declare global {

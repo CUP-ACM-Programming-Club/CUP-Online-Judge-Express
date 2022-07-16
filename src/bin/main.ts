@@ -23,7 +23,7 @@ if (process.env.MODE === "websocket") {
 	localJudge.setErrorHandler(new RuntimeErrorHandler());
 	UnjudgedSubmissionCollector.setJudger(localJudge).start();
 } else {
-	port = process.env.PORT || 0;
+	port = process.env.PORT || config.ws.http_client_port;
 	app.use(initEnv);
 }
 const cache_query = require("../module/mysql_cache");
