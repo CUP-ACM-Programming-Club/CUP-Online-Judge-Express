@@ -1,7 +1,7 @@
 import cluster from "cluster";
 import os from "os";
 
-const num_processes = Math.min(os.cpus().length, 16);
+const num_processes = Math.min(os.cpus().length, 32);
 
 function buildProcessErrorEvent() {
     process.on("unhandledRejection", error => {
