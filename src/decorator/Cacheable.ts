@@ -1,10 +1,10 @@
 import CachePool from "../module/common/CachePool";
 import AwaitLock from "await-lock";
-import dayjs, {OpUnitType} from "dayjs";
+import dayjs, {ManipulateType, OpUnitType} from "dayjs";
 import parameterHash from "../module/util/parameterHash";
 import CacheScheduler from "../manager/cache/scheduler/CacheScheduler";
 
-export default function Cacheable(cachePool: CachePool, timeDelta: number, timeUnit: OpUnitType) {
+export default function Cacheable(cachePool: CachePool, timeDelta: number, timeUnit?: ManipulateType) {
     const cacheLock = new AwaitLock();
     CacheScheduler.addCacheContainer({
         cacheContainer: cachePool,

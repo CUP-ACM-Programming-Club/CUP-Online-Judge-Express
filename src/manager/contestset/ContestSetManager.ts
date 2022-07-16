@@ -145,7 +145,7 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
 
     async mergeContestSetInfoAndTopicAssistantInfo(contestSetId: number | string) {
         const [contestSetInfo, topicAssistantInfoList, userList] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId), this.getAllCompetitorByContestSetId(contestSetId)]) ;
-        return Object.assign(contestSetInfo, {assistant: topicAssistantInfoList}, {userList});
+        return Object.assign(contestSetInfo as any, {assistant: topicAssistantInfoList}, {userList});
     }
 
     @ErrorHandlerFactory(ok.okMaker)

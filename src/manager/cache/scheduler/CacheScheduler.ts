@@ -1,10 +1,10 @@
 import {ICachePool} from "../../../module/common/CachePool";
-import dayjs, {OpUnitType} from "dayjs";
+import dayjs, {ManipulateType, OpUnitType} from "dayjs";
 
 interface ICacheContainer {
     cacheContainer: ICachePool,
     timeDelta: number,
-    timeUnit: OpUnitType
+    timeUnit?: ManipulateType
 }
 
 class CacheScheduler {
