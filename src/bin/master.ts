@@ -2,7 +2,7 @@ import cluster from "cluster";
 import net from "net";
 import os from "os";
 
-const num_processes = os.cpus().length;
+const num_processes = Math.min(os.cpus().length, 16);
 
 function buildProcessErrorEvent() {
     process.on("unhandledRejection", error => {
