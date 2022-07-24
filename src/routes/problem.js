@@ -38,9 +38,6 @@ const check = require("../module/contest/check");
 const {error, ok} = require("../module/constants/state");
 require("../module/router_loader")(router, path.resolve(__dirname, "./problem"));
 
-const isLocal = (str) => {
-	return str === "local" || str === "default";
-};
 
 const checkEmpty = (str) => {
 	if (str === "" || str === null) {
@@ -470,7 +467,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
 };
 
 router.get("/:source/:id", function (req, res) {
-	const source = isLocal(req.params.source) ? "" : req.params.source.toUpperCase();
+	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
 	const _res = cache.get("source/id/" + source + id);
 	if (_res === undefined) {
@@ -491,7 +488,7 @@ function queryValidate(val) {
 
 
 router.get("/:source/", async function (req, res) {
-	const source = isLocal(req.params.source) ? "" : req.params.source.toUpperCase();
+	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	let {cid, tid, pid, id, sid: solution_id} = queryValidate(req.query);
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
@@ -539,7 +536,7 @@ router.post("/:source/:id", function (req, res) {
 	const problem_id = parseInt(req.params.id);
 	const from = req.params.source || "";
 	let local = false;
-	if (from.length <= 2 || isLocal(from)) {
+	if (from.length <= 2 || from === "local") {
 		local = true;
 	}
 	if (req.session.isadmin || req.session.editor) {
@@ -609,7 +606,7 @@ async function getSourceCode(req, res, obj, opt = {}) {
 }
 
 router.get("/:source/:id/:sid", async function (req, res) {
-	const source = isLocal(req.params.source) ? "" : req.params.source.toUpperCase();
+	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
 	const sid = parseInt(req.params.sid);
 	const _res = cache.get("source/id/" + source + id + "/" + sid);
