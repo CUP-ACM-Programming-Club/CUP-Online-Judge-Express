@@ -38,57 +38,41 @@ function timeToString(time) {
 router.post("/", privilegeMiddleware, async (req, res) => {
 	const rawConnection = await MySQLManager.getConnection();
 	const connection = rawConnection.promise();
-	await new Promise((resolve, reject) => {
-		connection.beginTransaction(async (err) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-			try {
-				let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
-				let {startTime, endTime, password, problemSelected, userList, showAllRanklist, showSim} = trimProperty(req.body);
-				startTime = timeToString(startTime);
-				endTime = timeToString(endTime);
-				if (hostname.length === 0 || hostname === "null") {
-					hostname = "";
-				}
-				if (defunct) {
-					defunct = "Y";
-				} else {
-					defunct = "N";
-				}
-				let sql = `update contest set title = ?,description = ?, start_time = ?, end_time = ?, private = ?, langmask = ?,
+	try {
+		await connection.beginTransaction();
+		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
+		let {startTime, endTime, password, problemSelected, userList, showAllRanklist, showSim} = trimProperty(req.body);
+		startTime = timeToString(startTime);
+		endTime = timeToString(endTime);
+		if (hostname.length === 0 || hostname === "null") {
+			hostname = "";
+		}
+		if (defunct) {
+			defunct = "Y";
+		} else {
+			defunct = "N";
+		}
+		let sql = `update contest set title = ?,description = ?, start_time = ?, end_time = ?, private = ?, langmask = ?,
 	limit_hostname = ?, password = ?, vjudge = 0, cmod_visible = ?, ip_policy = ?, defunct = ?,
 	 show_all_ranklist = ?, show_sim = ? where contest_id = ?`;
-				await new Promise((resolve, reject) => {
-					connection.query(sql, [title, description, startTime, endTime, Public ? "0" : "1", langmask, hostname, password, ContestMode, classroomSelected,
-						defunct, showAllRanklist, showSim, contest_id], (error, result) => {
-						if (error) {
-							return connection.rollback(() => {
-								reject("update contest failed.");
-							});
-						}
-						resolve(result);
-					});
-				});
-				await removeAllContestProblemWithTransaction(connection, contest_id).then(() => console.log("removeAllContestFinished", contest_id));
-				await addContestProblemWithTransaction(connection, contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
-				await removeAllCompetitorPrivilegeWithTransaction(connection, contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
-				await addContestCompetitorWithTransaction(connection, contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
-				ProblemSetCachePool.removeAll();
-				ContestCachePool.removeAll();
-				res.json(ok.ok);
-				resolve(null);
-			} catch (e) {
-				console.log(e);
-				res.json(error.database);
-				connection.rollback((err) => {
-					reject(err);
-				});
-			}
+		await connection.query(sql, [title, description, startTime, endTime, Public ? "0" : "1", langmask, hostname, password, ContestMode, classroomSelected,
+			defunct, showAllRanklist, showSim, contest_id]);
+		await removeAllContestProblemWithTransaction(connection, contest_id).then(() => console.log("removeAllContestFinished", contest_id));
+		await addContestProblemWithTransaction(connection, contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
+		await removeAllCompetitorPrivilegeWithTransaction(connection, contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
+		await addContestCompetitorWithTransaction(connection, contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
+		ProblemSetCachePool.removeAll();
+		ContestCachePool.removeAll();
+		res.json(ok.ok);
+	} catch (e) {
+		console.log(e);
+		res.json(error.database);
+		connection.rollback((err) => {
+			console.log("error: ", err);
 		});
-	});
-	connection.release();
+	} finally {
+		connection.release();
+	}
 });
 
 router.get("/user/:id", privilegeMiddleware, async (req, res) => {
