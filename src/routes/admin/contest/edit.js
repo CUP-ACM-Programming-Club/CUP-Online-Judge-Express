@@ -36,7 +36,8 @@ function timeToString(time) {
 }
 
 router.post("/", privilegeMiddleware, async (req, res) => {
-	const connection = await MySQLManager.getConnection();
+	const rawConnection = await MySQLManager.getConnection();
+	const connection = rawConnection.promise();
 	await new Promise((resolve, reject) => {
 		connection.beginTransaction(async (err) => {
 			if (err) {
