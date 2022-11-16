@@ -8,11 +8,13 @@ import SocketIoClient from "socket.io-client";
 import JudgeManager from "../manager/judge/JudgeManager";
 import JudgeResultManager from "../manager/websocket/JudgeResultManager";
 import SubmissionSet from "./websocket/set/SubmissionSet";
+import UnjudgedSubmissionCollector from "./judger/UnjudgedSubmissionCollector";
 const os = require("os");
 const eventEmitter = require("events").EventEmitter;
 interface IRejectInfo {
 	reason: string,
-	solutionId: number | string
+	solutionId: number | string,
+	problemId: number | string
 }
 
 export class localJudger extends eventEmitter {
@@ -51,6 +53,7 @@ export class localJudger extends eventEmitter {
 		});
 
 		socket.on("reject_judge", (payload: IRejectInfo) => {
+			UnjudgedSubmissionCollector.addNewNoDataProblemId(payload.problemId);
 			const userSocket = SubmissionSet.get(payload.solutionId);
 			if (userSocket) {
 				userSocket.emit("remoteJudge", {
