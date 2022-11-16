@@ -55,6 +55,7 @@ export interface CookieConfig {
 
 export interface Config {
     mysql: MySQLConfig,
+    name: string,
     judger: JudgerConfig,
     ws: WebSocketConfig,
     salt: string,

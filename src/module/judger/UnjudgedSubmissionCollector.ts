@@ -32,8 +32,10 @@ class UnjudgedSubmissionCollector {
     async collectHandler () {
         try {
             this.collectFinished = false;
-            const waitingResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=0 and language not in (15,22) and problem_id != 0 order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
-            const rejudgeResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=1 and language not in (15,22) and problem_id != 0 order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
+            const today = dayjs();
+            const yesterday = today.subtract(1, "day").format("yyyy-MM-dd HH:mm:ss");
+            const waitingResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=0 and language not in (15,22) and problem_id != 0 and in_date > ? order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT), yesterday]);
+            const rejudgeResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=1 and language not in (15,22) and problem_id != 0 and in_date > ? order by solution_id limit ?", [ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT), yesterday]);
             const result = [...waitingResult, ...rejudgeResult];
             await wait(2000);
             for (let i in result) {
