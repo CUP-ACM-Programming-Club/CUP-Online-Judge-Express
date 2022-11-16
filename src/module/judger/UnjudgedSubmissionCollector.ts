@@ -23,6 +23,7 @@ class UnjudgedSubmissionCollector {
     }
 
     start () {
+        this.noDataProblemIdSet.add("0");
         this.collectHandler();
         if (!this.interval) {
             this.collectFinished = true;
