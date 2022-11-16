@@ -64,6 +64,7 @@ class UnjudgedSubmissionCollector {
                 await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [exception.solutionId]);
             }
             Logger.log(`e:${exception}, e.noRetry:${exception.noRetry}, e.solutionId:${exception.solutionId}`);
+            Logger.log("unjudgedSubmissionCollector exception: ", exception);
         }
         this.collectFinished = true;
     }
