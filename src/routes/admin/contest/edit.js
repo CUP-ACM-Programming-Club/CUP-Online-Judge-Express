@@ -61,6 +61,7 @@ router.post("/", privilegeMiddleware, async (req, res) => {
 		await addContestProblemWithTransaction(connection, contest_id, problemSelected).then(() => console.log("addContestProblemFinished", contest_id, problemSelected));
 		await removeAllCompetitorPrivilegeWithTransaction(connection, contest_id).then(() => console.log("removeAllConpetitorPrivilegeFinished", contest_id));
 		await addContestCompetitorWithTransaction(connection, contest_id, userList).then(() => console.log("addContestConpetitorFinished", contest_id, userList));
+		await connection.commit();
 		ProblemSetCachePool.removeAll();
 		ContestCachePool.removeAll();
 		res.json(ok.ok);
