@@ -6,6 +6,7 @@ import {
 	removeAllCompetitorPrivilegeWithTransaction,
 	removeAllContestProblemWithTransaction
 } from "../../../module/util";
+import {ConfigManager} from "../../module/config/config-manager";
 
 const isNumber = require("../../../module/util/isNumber").default;
 const query = require("../../../module/mysql_query");
@@ -42,6 +43,11 @@ router.post("/", privilegeMiddleware, async (req, res) => {
 		await connection.beginTransaction();
 		let {ContestMode, Public, classroomSelected, title, contest_id, defunct, description, hostname, langmask} = trimProperty(req.body);
 		let {startTime, endTime, password, problemSelected, userList, showAllRanklist, showSim} = trimProperty(req.body);
+		let defaultLangmask = ConfigManager.getConfig("default_langmask", "0");
+		if (isNumber(defaultLangmask)) {
+			defaultLangmask = parseInt(defaultLangmask);
+			langmask ^= defaultLangmask;
+		}
 		startTime = timeToString(startTime);
 		endTime = timeToString(endTime);
 		if (hostname.length === 0 || hostname === "null") {
