@@ -6,7 +6,7 @@ import {
 	removeAllCompetitorPrivilegeWithTransaction,
 	removeAllContestProblemWithTransaction
 } from "../../../module/util";
-import {ConfigManager} from "../../module/config/config-manager";
+import {ConfigManager} from "../../../module/config/config-manager";
 
 const isNumber = require("../../../module/util/isNumber").default;
 const query = require("../../../module/mysql_query");
