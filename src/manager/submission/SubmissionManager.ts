@@ -91,7 +91,7 @@ class SubmissionManager {
     }
 
     async getSolutionExportInfoByContestId(contestId: number | string) {
-        const exportInfoList: ExportSolutionInfo[] = await MySQLManager.execQuery("select * from (select * from solution where contest_id = ? and in_date > '2021-05-30')a left join source_code_user on source_code_user.solution_id = a.solution_id left join users on users.user_id = a.user_id", [contestId]);
+        const exportInfoList: ExportSolutionInfo[] = await MySQLManager.execQuery("select * from (select * from solution where contest_id = ?)a left join source_code_user on source_code_user.solution_id = a.solution_id left join users on users.user_id = a.user_id", [contestId]);
         exportInfoList.sort((a, b) => {
             if (a.user_id !== b.user_id) {
                 return a.user_id > b.user_id ? 1 : a.user_id === b.user_id ? 0 : -1;
