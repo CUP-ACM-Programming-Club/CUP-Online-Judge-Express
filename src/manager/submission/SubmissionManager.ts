@@ -38,7 +38,9 @@ export interface ExportSolutionInfo {
     problem_id: number,
     solution_id: number,
     nick: string,
-    source: string
+    source: string,
+    in_date: string,
+    result: number
 }
 
 interface ProblemInfo {

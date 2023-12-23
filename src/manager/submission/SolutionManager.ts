@@ -6,6 +6,7 @@ import CompileInfoManager from "../judge/CompileInfoManager";
 import RuntimeInfoManager from "../judge/RuntimeInfoManager";
 import {ConfigManager} from "../../module/config/config-manager";
 import Mustache from "mustache";
+import dayjs from "dayjs";
 
 const COMPILE_ERROR = 11;
 const TEST_RUN = 13;
@@ -61,6 +62,16 @@ class SolutionManager {
         return output;
     }
 
+    convertLastFormatToMustache (exportSolutionInfoList: ExportSolutionInfo[]) {
+        let output = "";
+        const template = ConfigManager.getConfig("export_last_solution_template"
+            , `UserId: {{{user_id}}}\nProblem Id:{{{problem_id}}}\nSolutionId: {{{solution_id}}}\nNick:{{{nick}}}\nSource\n{{{source}}}\n`);
+        for (let exportSolutionInfo of exportSolutionInfoList) {
+            output += Mustache.render(template, exportSolutionInfo);
+        }
+        return output;
+    }
+
     @ErrorHandlerFactory(ok.okMaker)
     async getSolutionInfoByRequest(req: Request) {
         const solutionId  = parseInt(req.params.solutionId);
@@ -73,6 +84,65 @@ class SolutionManager {
         const contestId = parseInt(req.params.contestId);
         const exportSolutionInfoList = await SubmissionManager.getSolutionExportInfoByContestId(contestId);
         return this.convertFormatToMustache(exportSolutionInfoList);
+    }
+
+    async getLastSolutionExportInfoByContestId(req: Request) {
+        const contestId = parseInt(req.params.contestId);
+        const exportSolutionInfoList = await SubmissionManager.getSolutionExportInfoByContestId(contestId);
+        const userProblemInfoMap: {[id: string]: {[id: string]: ExportSolutionInfo[] | undefined } | undefined} = {};
+        const resultProblemInfoMap: {[id: string]: {[id: string]: ExportSolutionInfo } | undefined} = {};
+        const resultSolutionInfoList: ExportSolutionInfo[] = [];
+        for (let exportSolutionInfo of exportSolutionInfoList) {
+            const {user_id, problem_id} = exportSolutionInfo;
+            if (userProblemInfoMap[user_id] === undefined) {
+                userProblemInfoMap[user_id] = {};
+                resultProblemInfoMap[user_id] = {};
+            }
+            if (userProblemInfoMap[user_id]![problem_id] === undefined) {
+                userProblemInfoMap[user_id]![problem_id] = [];
+            }
+            userProblemInfoMap[user_id]![problem_id]!.push(exportSolutionInfo);
+        }
+        for (let userProblemInfoMapKey in userProblemInfoMap) {
+            for (let userProblemInfoMapElementKey in userProblemInfoMap[userProblemInfoMapKey]) {
+                const list = userProblemInfoMap[userProblemInfoMapKey]![userProblemInfoMapElementKey]!
+                list.sort((a, b) => {
+                    const left = dayjs(a.in_date);
+                    const right = dayjs(b.in_date);
+                    if (left.isBefore(right)) {
+                        return -1;
+                    }
+                    else if (left.isAfter(right)) {
+                        return 1;
+                    }
+                    else {
+                        return 0;
+                    }
+                })
+                let firstErrorSolution: ExportSolutionInfo | undefined = undefined;
+                let firstAcceptSolution: ExportSolutionInfo | undefined = undefined;
+                for (let exportSolutionInfo of list) {
+                    if (exportSolutionInfo.result === 4) {
+                        firstAcceptSolution = exportSolutionInfo;
+                        break;
+                    }
+                    else if (firstErrorSolution === undefined){
+                        firstErrorSolution = exportSolutionInfo;
+                    }
+                }
+                if (firstAcceptSolution !== undefined) {
+                    resultProblemInfoMap[userProblemInfoMapKey]![userProblemInfoMapElementKey] = firstAcceptSolution;
+                }
+                else if (firstErrorSolution !== undefined) {
+                    resultProblemInfoMap[userProblemInfoMapKey]![userProblemInfoMapElementKey] = firstErrorSolution;
+                }
+            }
+        }
+        for (let resultProblemInfoMapKey in resultProblemInfoMap) {
+            const res = Object.values(resultProblemInfoMap[resultProblemInfoMapKey]!)
+            resultSolutionInfoList.push(...res)
+        }
+        return this.convertLastFormatToMustache(resultSolutionInfoList);
     }
 }
 
