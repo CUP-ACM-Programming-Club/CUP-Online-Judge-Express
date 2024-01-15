@@ -95,6 +95,9 @@ class SolutionManager {
         const resultSolutionInfoList: ExportSolutionInfo[] = [];
         for (let exportSolutionInfo of exportSolutionInfoList) {
             const {user_id, problem_id} = exportSolutionInfo;
+            if (problem_id < 0) {
+                continue;
+            }
             if (userProblemInfoMap[user_id] === undefined) {
                 userProblemInfoMap[user_id] = {};
                 resultProblemInfoMap[user_id] = {};
