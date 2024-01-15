@@ -1,5 +1,5 @@
 import {Request} from "express";
-import SubmissionManager, {ExportSolutionInfo, SolutionInfoDAO} from "./SubmissionManager";
+import SubmissionManager, {ExportSolutionInfo, RESULT_CHINESE_STRING, SolutionInfoDAO} from "./SubmissionManager";
 import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import CompileInfoManager from "../judge/CompileInfoManager";
@@ -83,6 +83,7 @@ class SolutionManager {
     async getSolutionExportInfoByContestId(req: Request) {
         const contestId = parseInt(req.params.contestId);
         const exportSolutionInfoList = await SubmissionManager.getSolutionExportInfoByContestId(contestId);
+        this.enhanceResultString(exportSolutionInfoList)
         return this.convertFormatToMustache(exportSolutionInfoList);
     }
 
@@ -142,7 +143,14 @@ class SolutionManager {
             const res = Object.values(resultProblemInfoMap[resultProblemInfoMapKey]!)
             resultSolutionInfoList.push(...res)
         }
+        this.enhanceResultString(resultSolutionInfoList)
         return this.convertLastFormatToMustache(resultSolutionInfoList);
+    }
+
+    enhanceResultString(exportSolutionInfoList: ExportSolutionInfo[]) {
+        exportSolutionInfoList.forEach(e => {
+            e.result_string = RESULT_CHINESE_STRING[e.result]
+        })
     }
 }
 

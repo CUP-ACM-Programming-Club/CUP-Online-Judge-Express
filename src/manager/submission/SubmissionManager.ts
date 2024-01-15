@@ -9,6 +9,27 @@ import {Request} from "express";
 
 const cache_query = require("../../module/mysql_cache");
 
+export const RESULT_CHINESE_STRING = [
+    "等待",
+    "等待重判",
+    "编译中",
+    "运行并评判",
+    "答案正确",
+    "格式错误",
+    "答案错误",
+    "时间超限",
+    "内存超限",
+    "输出超限",
+    "运行错误",
+    "编译错误",
+    "编译成功",
+    "运行完成",
+    "已加入队列",
+    "提交被拒绝",
+    "系统错误",
+    ""
+]
+
 export interface SolutionInfoDAO {
     problem_id: number,
     user_id: string,
@@ -40,7 +61,8 @@ export interface ExportSolutionInfo {
     nick: string,
     source: string,
     in_date: string,
-    result: number
+    result: number,
+    result_string?: string,
 }
 
 interface ProblemInfo {
