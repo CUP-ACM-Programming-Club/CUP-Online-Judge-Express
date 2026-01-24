@@ -15,17 +15,17 @@ const error_cb = {
 	statement: "No such problem_id or contest_id"
 };
 
-const readDir = async (dir) => {
+const readDir = async (dir: any) => {
 	let _dir = {
-		input: [],
-		output: [],
+		input: [] as any[],
+		output: [] as any[],
 		spj: "",
-		prepend: [],
-		append: [],
-		solution: []
+		prepend: [] as any[],
+		append: [] as any[],
+		solution: [] as any[]
 	};
 	const fileList = await fs.readdirAsync(dir);
-	fileList.forEach((name) => {
+	fileList.forEach((name: string) => {
 		if (name.match(/\.in$/)) {
 			_dir.input.push(path.join(dir, name));
 		} else if (name.match(/\.out$/)) {
@@ -41,11 +41,11 @@ const readDir = async (dir) => {
 	return _dir;
 };
 
-const readFile = async (file_list) => {
+const readFile = async (file_list: any) => {
 	try {
-		return Promise.all(file_list.map(async i => {
+		return Promise.all(file_list.map(async (i: any) => {
 			if (typeof i === "string" && i.length > 0) {
-				return {name: path.basename(i), content: (await fs.readFileAsync(i)).toString("base64")};
+				return { name: path.basename(i), content: (await fs.readFileAsync(i)).toString("base64") };
 			}
 			return "";
 		}));
@@ -55,14 +55,14 @@ const readFile = async (file_list) => {
 	}
 };
 
-async function prependAppendCodePacker(prefix, problem_id) {
+async function prependAppendCodePacker(prefix: any, problem_id: any) {
 	return (await query("select * from prefile where problem_id = ?", [problem_id]))
-		.map(i => {
-			return {name: `${prefix}.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64")};
+		.map((i: any) => {
+			return { name: `${prefix}.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64") };
 		});
 }
 
-const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
+const pack_problem = async (_problem_detail: any, problem_dir: any, problem_id: any) => {
 	const problem_details = {
 		title: _problem_detail.title,
 		time: _problem_detail.time_limit,
@@ -74,12 +74,12 @@ const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
 		sample_input: _problem_detail.sample_input,
 		sample_output: _problem_detail.sample_output,
 		hint: _problem_detail.hint,
-		input_files: [],
-		output_files: [],
-		prepend: [],
-		append: [],
+		input_files: [] as any[],
+		output_files: [] as any[],
+		prepend: [] as any[],
+		append: [] as any[],
 		spj: "",
-		solution: [],
+		solution: [] as any[],
 	};
 	const dirFileList = await readDir(problem_dir);
 	[problem_details.input_files, problem_details.output_files, problem_details.prepend, problem_details.append]
@@ -91,7 +91,7 @@ const pack_problem = async (_problem_detail, problem_dir, problem_id) => {
 	return problem_details;
 };
 
-function packProblemObject(_solution, problem_details) {
+function packProblemObject(_solution: any, problem_details: any) {
 	if (_solution.length > 0) {
 		_solution = _solution[0];
 		problem_details.solution.push({
@@ -102,8 +102,8 @@ function packProblemObject(_solution, problem_details) {
 	}
 }
 
-const send_file = (req, res, data, filename) => {
-	zlib.gzip(JSON.stringify(data), (err, result) => {
+const send_file = (req: any, res: any, data: any, filename: any) => {
+	zlib.gzip(JSON.stringify(data), (err: any, result: any) => {
 		if (err) {
 			res.json(err);
 			return;
@@ -117,7 +117,7 @@ const send_file = (req, res, data, filename) => {
 	});
 };
 
-const pack_file = async (req, res, opt = {}) => {
+const pack_file = async (req: any, res: any, opt: any = {}) => {
 	if ((typeof opt.problem_id === "undefined" && typeof opt.contest_id === "undefined") || (isNaN(opt.problem_id) && isNaN(opt.contest_id))) {
 		res.json(error_cb);
 	} else {
@@ -142,15 +142,15 @@ sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 				res.json(error_cb);
 				return;
 			}
-			let result = [],len = contest_detail.length;
-			await Promise.all(contest_detail.map(i => packHandler({req, res}, {i, contest_id, result, len})));
+			let result: any[] = [], len = contest_detail.length;
+			await Promise.all(contest_detail.map((i: any) => packHandler({ req, res }, { i, contest_id, result, len })));
 			send_file(req, res, result, `Contest ${contest_id}`);
 		}
 	}
 };
 
-async function packHandler(httpInstance, val = {}) {
-	let {res} = httpInstance, {i, result} = val;
+async function packHandler(httpInstance: any, val: any = {}) {
+	let { res } = httpInstance, { i, result } = val;
 	const problem_id = i.problem_id;
 	const problem_dir = path.join(home_dir, problem_id.toString());
 	let _problem_detail = await query("SELECT * FROM problem WHERE problem_id = ?", [problem_id]);
@@ -167,7 +167,7 @@ sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
 	result.push(problem_details);
 }
 
-router.get("/", middleWare, (req, res) => {
+router.get("/", middleWare, (req: any, res: any) => {
 	const problem_id = req.query.problem_id;
 	const contest_id = req.query.contest_id;
 	pack_file(req, res, {
@@ -176,4 +176,4 @@ router.get("/", middleWare, (req, res) => {
 	});
 });
 
-module.exports = ["/export", auth, router];
+export = ["/export", auth, router];

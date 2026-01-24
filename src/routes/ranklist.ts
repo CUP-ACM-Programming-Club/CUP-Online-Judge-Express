@@ -8,14 +8,14 @@ const auth = require("../middleware/auth");
 
 const page_cnt = 50;
 
-function generateMemberSql(opt = {}) {
-	if(typeof opt !== "object") {
+function generateMemberSql(opt: any = {}) {
+	if (typeof opt !== "object") {
 		return "";
 	}
-	else if(opt.acm_member === true) {
+	else if (opt.acm_member === true) {
 		return " user_id in (select user_id from acm_member where level = 1) and";
 	}
-	else if(opt.retired_member === true) {
+	else if (opt.retired_member === true) {
 		return " user_id in (select user_id from acm_member where level = 2) and";
 	}
 	else {
@@ -23,7 +23,7 @@ function generateMemberSql(opt = {}) {
 	}
 }
 
-function parseQuery(req) {
+function parseQuery(req: any) {
 	return {
 		page: req.query.page || 0,
 		search: req.query.search || "",
@@ -32,7 +32,7 @@ function parseQuery(req) {
 	};
 }
 
-const get_ranklist = async (req, res, opt = {}) => {
+const get_ranklist = async (req: any, res: any, opt: any = {}) => {
 	let page = opt.page * 50;
 	let result;
 	if (!opt.search && !opt.time_stamp) {
@@ -110,7 +110,7 @@ const get_ranklist = async (req, res, opt = {}) => {
 		) t
 		ON users.user_id = t.user_id
 		ORDER BY s.solved DESC,t.submit,reg_time LIMIT ?,?`,
-			[time_start, time_start, page, page_cnt]);
+				[time_start, time_start, page, page_cnt]);
 		}
 	} else if (!opt.time_stamp) {
 		let search_name = `%${opt.search}%`;
@@ -118,12 +118,12 @@ const get_ranklist = async (req, res, opt = {}) => {
 			result = await cache_query(`SELECT user_id,nick,biography,vjudge_submit,vjudge_accept,avatar,avatarUrl,email FROM users WHERE user_id
 		LIKE ? OR nick LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
-			[search_name, search_name, page, page_cnt]);
+				[search_name, search_name, page, page_cnt]);
 		} else {
 			result = await cache_query(`SELECT user_id,nick,biography,solved,vjudge_solved,submit,avatar,avatarUrl,email FROM users WHERE user_id
 		LIKE ? OR nick LIKE ? ORDER BY solved DESC,submit,user_id
 		LIMIT ?,?`,
-			[search_name, search_name, page, page_cnt]);
+				[search_name, search_name, page, page_cnt]);
 		}
 	} else {
 		res.json(error.errorMaker("invalid parameter"));
@@ -135,30 +135,30 @@ const get_ranklist = async (req, res, opt = {}) => {
 	});
 };
 
-router.get("/", async function (req, res) {
+router.get("/", async function (req: any, res: any) {
 	await get_ranklist(req, res, parseQuery(req));
 });
 
-router.get("/acmmember", async function (req, res) {
-	await get_ranklist(req, res, Object.assign(parseQuery(req),{acm_member: true}));
+router.get("/acmmember", async function (req: any, res: any) {
+	await get_ranklist(req, res, Object.assign(parseQuery(req), { acm_member: true }));
 });
 
-router.get("/oldmember", async function (req, res) {
-	await get_ranklist(req, res, Object.assign(parseQuery(req),{retired_member: true}));
+router.get("/oldmember", async function (req: any, res: any) {
+	await get_ranklist(req, res, Object.assign(parseQuery(req), { retired_member: true }));
 });
 
-router.get("/user", async function (req, res) {
+router.get("/user", async function (req: any, res: any) {
 	try {
-		let [result1, result2] = await Promise.all([cache_query("SELECT count(1) as tot_user FROM users where school != 'your_own_school'"),cache_query("SELECT count(1) as acm_user FROM acm_member")]);
+		let [result1, result2] = await Promise.all([cache_query("SELECT count(1) as tot_user FROM users where school != 'your_own_school'"), cache_query("SELECT count(1) as acm_user FROM acm_member")]);
 		res.json([{
 			tot_user: result1[0].tot_user,
 			acm_user: result2[0].acm_user
 		}]);
 	}
-	catch(e) {
+	catch (e) {
 		res.json(error.database);
 		console.log(e);
 	}
 });
 
-module.exports = ["/ranklist", auth, router];
+export = ["/ranklist", auth, router];

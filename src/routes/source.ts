@@ -1,13 +1,10 @@
-/* eslint-disable no-cond-assign */
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
-import {error} from "../module/constants/state";
+const { error } = require("../module/constants/state");
 import SubmissionManager from "../manager/submission/SubmissionManager";
 import Cacheable from "../decorator/Cacheable";
 import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
 
-const express = require("express");
-//const NodeCache = require('node-cache');
-//const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
+import express from "express";
 const md = require("markdown-it")({
 	html: true,
 	breaks: true
@@ -23,19 +20,19 @@ const language_name = cnameList.language_name;
 const result = cnameList.result.cn;
 const judge_color = cnameList.judge_color;
 const icon_list = cnameList.icon_list;
-const markdownPack = (html) => {
+const markdownPack = (html: any) => {
 	return `<div class="markdown-body">${html}</div>`;
 };
 
 
-const make_code = (data, source = "local") => {
+const make_code = (data: any, source: any = "local") => {
 	return markdownPack(md.render(["```" + const_name[source.toLowerCase()][data.language], data.source, "```"].join("\n")));
 };
 
-router.get("/:source/:id", async (req, res, next) => {
-	const id = isNaN(req.params.id) ? -1 : parseInt(req.params.id);
-	if(!await SourcePrivilegeCache.checkPrivilege(req.session, id)) {
-		if(global.contest_mode) {
+router.get("/:source/:id", async (req: any, res: any, next: any) => {
+	const id = isNaN(Number(req.params.id)) ? -1 : parseInt(req.params.id);
+	if (!await SourcePrivilegeCache.checkPrivilege(req.session, id)) {
+		if (global.contest_mode) {
 			res.json(error.contestMode);
 			return;
 		}
@@ -50,13 +47,13 @@ router.get("/:source/:id", async (req, res, next) => {
 	}
 });
 
-router.get("/:source/:id", async (req, res) => {
+router.get("/:source/:id", async (req: any, res: any) => {
 	let local;
 	const source = (local = req.params.source === "local") ? "source_code_user" : "vjudge_source_code";
 	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
 	const id = parseInt(req.params.id);
 	const raw = !!req.query.raw;
-	const browse_code = await SourcePrivilegeCache.checkPrivilege(req.session, id);
+	const browse_code = await SourcePrivilegeCache.checkPrivilege(req.session as any, id);
 	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
   ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
 where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or solution_id in 

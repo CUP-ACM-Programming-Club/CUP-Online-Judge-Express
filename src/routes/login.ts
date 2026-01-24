@@ -1,4 +1,4 @@
-const express = require("express");
+import express from "express";
 const query = require("../module/mysql_query");
 const router = express.Router();
 const checkPassword = require("../module/check_password");
@@ -7,12 +7,12 @@ const log = log4js.logger("cheese", "info");
 const memcache = require("../module/memcached");
 const [error, ok] = require("../module/const_var");
 const salt = global.config.salt || "thisissalt";
-const login_action = require("../module/login_action");
-const {checkCaptcha} = require("../module/captcha_checker");
-const {checkJSON, generateNewEncryptPassword} = require("../module/util");
+import login_action = require("../module/login_action");
+const { checkCaptcha } = require("../module/captcha_checker");
+import { checkJSON, generateNewEncryptPassword } from "../module/util";
 const banChecker = require("../middleware/ban_check");
 
-router.get("/", function (req, res) {
+router.get("/", function (req: any, res: any) {
 	res.json({
 		status: "OK",
 		logined: Boolean(req.session && req.session.auth),
@@ -20,21 +20,21 @@ router.get("/", function (req, res) {
 	});
 });
 
-router.post("/token", function (req, res, next) {
+router.post("/token", function (req: any, res: any, next: any) {
 	if (typeof req.body.token !== "string") {
 		res.json(error.invalidToken);
 	} else {
 		next("route");
 	}
 });
-router.post("/token", async function (req, res) {
+router.post("/token", async function (req: any, res: any) {
 	if (req.session.auth) {
 		res.json(ok.logined);
 	} else {
 		let receive = "";
 		try {
 			receive = Buffer.from(req.body.token, "base64").toString();
-		} catch (e) {
+		} catch (e: any) {
 			log.fatal(e);
 			return;
 		}
@@ -54,19 +54,19 @@ router.post("/token", async function (req, res) {
 });
 
 
-async function storeNewTypePassword(res, password, user_id, newpass) {
+async function storeNewTypePassword(res: any, password: any, user_id: any, newpass: any) {
 	try {
 		await generateNewEncryptPassword(user_id, password, salt);
-	} catch (e) {
+	} catch (e: any) {
 		res.json(error.database);
 		console.log(e);
 		log.fatal(e);
 	}
 }
 
-router.post("/newlogin", async function(req, res) {
-	let {user_id, password} = req.body;
-	if(!checkCaptcha(req, "login")) {
+router.post("/newlogin", async function (req: any, res: any) {
+	let { user_id, password } = req.body;
+	if (!checkCaptcha(req, "login")) {
 		res.json(error.invalidCaptcha);
 		return;
 	}
@@ -96,7 +96,7 @@ router.post("/newlogin", async function(req, res) {
 	}
 });
 
-router.post("/", async function (req, res) {
+router.post("/", async function (req: any, res: any) {
 	let receive = req.body.msg;
 	if (typeof receive === "undefined") {
 		res.json(error.invalidParams);
@@ -105,7 +105,7 @@ router.post("/", async function (req, res) {
 	try {
 		receive = Buffer.from(receive, "base64").toString();
 		receive = Buffer.from(receive, "base64").toString();
-	} catch (e) {
+	} catch (e: any) {
 		console.log(e);
 		log.fatal(e);
 		return;
@@ -117,7 +117,7 @@ router.post("/", async function (req, res) {
 	}
 	try {
 		receive = JSON.parse(receive);
-	} catch (e) {
+	} catch (e: any) {
 		log.fatal(`Error:${e.name}\n
 		Error message:${e.message}`);
 	}

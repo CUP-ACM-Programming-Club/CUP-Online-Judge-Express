@@ -44,7 +44,7 @@ const GREATER = 4;
 const LESSER = 5;
 const compareSymbol = ["!=", "=", "<=", ">=", ">", "<"];
 
-function isCompareFlag(flag) {
+function isCompareFlag(flag: any) {
 	return flag >= 0 && flag <= 5;
 }
 
@@ -101,7 +101,7 @@ const graphDataSql = [`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as
       ON sub.month = accept.month AND sub.day = accept.day AND
          sub.year = accept.year
  ORDER BY sub.year,sub.month,sub.day`,
-`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted
+	`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted
  FROM (SELECT count(1) as cnt,
               YEAR(in_date) as year,
               MONTH(in_date) as month,
@@ -141,7 +141,7 @@ const graphDataSql = [`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as
        GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)) accept
       ON sub.day = accept.day AND sub.hour = accept.hour AND
          sub.year = accept.year AND sub.month = accept.month`,
-`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted
+	`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted
  FROM (SELECT count(1) as cnt,HOUR(in_date) as hour,
               MINUTE(in_date) as minute
        FROM solution
@@ -168,7 +168,7 @@ const graphDataSql = [`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as
          AND contest_id = ?
        GROUP BY HOUR(in_date),MINUTE(in_date)) accept
       ON sub.hour = accept.hour AND sub.minute = accept.minute`,
-`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted
+	`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted
  FROM (SELECT count(1) as cnt,MINUTE(in_date) as minute,
               SECOND(in_date) as second
        FROM solution
@@ -195,7 +195,7 @@ const graphDataSql = [`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as
          AND contest_id = ?
        GROUP BY MINUTE(in_date),SECOND(in_date)) accept
       ON sub.minute = accept.minute AND sub.second = accept.second`,
-`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
+	`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
                                               FROM (SELECT count(1)       as cnt,YEAR(in_date) as year,
       MONTH(in_date) as month
    FROM solution
@@ -208,7 +208,7 @@ LEFT JOIN
   ON sub.year = accept.year AND sub.month = accept.month`
 ];
 
-const check_owner = (data, owner) => {
+const check_owner = (data: any, owner: any) => {
 	if (owner) {
 		return data;
 	} else {
@@ -216,7 +216,7 @@ const check_owner = (data, owner) => {
 	}
 };
 
-const infoHandler = async (sid, table_name, sendmsg) => {
+const infoHandler = async (sid: any, table_name: any, sendmsg: any) => {
 	const data = await cache_query(`select error from ${table_name} where solution_id=?`, [sid]);
 	if (data.length > 0) {
 		sendmsg.data["tr"] = escape(data[0].error);
@@ -224,12 +224,12 @@ const infoHandler = async (sid, table_name, sendmsg) => {
 	}
 };
 
-function renameProperty(element, newProperty, oldProperty) {
+function renameProperty(element: any, newProperty: any, oldProperty: any) {
 	element[newProperty] = element[oldProperty];
 	delete element[oldProperty];
 }
 
-function validateProblemId(req) {
+function validateProblemId(req: any) {
 	if (isNaN(req.params.problem_id)) {
 		if (req.params.problem_id === "null" || !req.params.problem_id) {
 			return undefined;
@@ -241,8 +241,8 @@ function validateProblemId(req) {
 	}
 }
 
-function invalidProblemIdHandler(httpInstance, problem_id, result) {
-	const {req, res} = httpInstance;
+function invalidProblemIdHandler(httpInstance: any, problem_id: any, result: any) {
+	const { req, res } = httpInstance;
 	if (isNaN(problem_id) && problem_id !== undefined) {
 		res.json({
 			result: result,
@@ -256,7 +256,7 @@ function invalidProblemIdHandler(httpInstance, problem_id, result) {
 	}
 }
 
-function generateSqlData(request_query) {
+function generateSqlData(request_query: any) {
 	let where_sql = [], sql_arr = [];
 	for (let i in request_query) {
 		if (!Object.prototype.hasOwnProperty.call(request_query, i)) {
@@ -266,7 +266,7 @@ function generateSqlData(request_query) {
 			continue;
 		}
 		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
-			where_sql.push( ` ${i} = ?`);
+			where_sql.push(` ${i} = ?`);
 			sql_arr.push(request_query[i]);
 		} else if (typeof request_query[i] === "object") {
 			const ele = request_query[i];
@@ -294,14 +294,14 @@ function generateSqlData(request_query) {
 	return [where_sql, sql_arr];
 }
 
-async function buildResponse(req, val, request_query, browser_privilege, _end) {
+async function buildResponse(req: any, val: any, request_query: any, browser_privilege: any, _end: any) {
 	const _user_info = await cache_query("SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?", [val.user_id]);
 	if (_user_info.length > 0) {
 		const nick = _user_info[0].nick.trim();
 		const avatar = Boolean(_user_info[0].avatar);
 		const avatarUrl = _user_info[0].avatarUrl || "";
 		const email = _user_info[0].email || "";
-		let element = Object.assign({nick, avatar, avatarUrl, email}, val);
+		let element = Object.assign({ nick, avatar, avatarUrl, email }, val);
 		renameProperty(element, "sim_id", "sim_s_id");
 		renameProperty(element, "length", "code_length");
 		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
@@ -317,9 +317,11 @@ async function buildResponse(req, val, request_query, browser_privilege, _end) {
 	}
 }
 
-async function get_status(req, res, next, request_query = {}, limit = 0) {
+async function get_status(req: any, res: any, next: any, request_query: any = {}, limit: any = 0) {
 	let _res;
-	let [where_sql, sql_arr] = generateSqlData(request_query);
+	let sql_data_result = generateSqlData(request_query);
+	let where_sql: any = sql_data_result[0];
+	let sql_arr = sql_data_result[1];
 	let pre_sim = "", end_sim = "";
 	if (request_query.sim) {
 		if (request_query.user_id) {
@@ -328,13 +330,13 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 				user_id_sql = " where s_user_id = ?";
 				sql_arr.push(request_query.user_id);
 			}
-			where_sql.push( ` solution_id in (select s_id as solution_id from sim${user_id_sql})`);
+			where_sql.push(` solution_id in (select s_id as solution_id from sim${user_id_sql})`);
 		} else {
 			pre_sim = "select * from(";
 			end_sim = ")t where sim is not null";
 		}
 	}
-	let _end = false;
+	let _end: any = false;
 	const browser_privilege = req.session.isadmin || req.session.source_browser || (request_query.contest_id && await ContestAssistantManager.userIsContestAssistant(request_query.contest_id, req.session.user_id));
 	if (browser_privilege) {
 		where_sql = where_sql.join(" and ").trim();
@@ -386,7 +388,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 								left join sim on sim.s_id = sol.solution_id
 								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
 	}
-	let result = await Promise.all(_res.map(e => buildResponse(req, e, request_query, browser_privilege, _end)));
+	let result = await Promise.all(_res.map((e: any) => buildResponse(req, e, request_query, browser_privilege, _end)));
 	res.json({
 		result: result,
 		const_list: const_name,
@@ -397,7 +399,7 @@ async function get_status(req, res, next, request_query = {}, limit = 0) {
 	});
 }
 
-function calculateDiffTimeMilliseconds(diff_time) {
+function calculateDiffTimeMilliseconds(diff_time: any) {
 	return diff_time.years * YEARS
 		+ diff_time.months * MONTH
 		+ diff_time.weeks * WEEKS
@@ -409,7 +411,7 @@ function calculateDiffTimeMilliseconds(diff_time) {
 
 const graphLabel = [["year", "month"], ["month", "day"], ["day", "hour"], ["hour", "minute"], ["minute", "second"]];
 
-async function graphDataHandler(res, request_query, idx) {
+async function graphDataHandler(res: any, request_query: any, idx: any) {
 	res.json({
 		result: await cache_query(graphDataSql[idx],
 			[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]),
@@ -417,13 +419,13 @@ async function graphDataHandler(res, request_query, idx) {
 	});
 }
 
-async function getGraphData(req, res, request_query = {}) {
+async function getGraphData(req: any, res: any, request_query: any = {}) {
 	try {
 		if (request_query.contest_id) {
 			const result = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [request_query.contest_id]);
 			if (result.length) {
 				const start_time = new Date(result[0].start_time), end_time = new Date(result[0].end_time);
-				const diffMilliseconds = calculateDiffTimeMilliseconds(timediff(start_time, new Date(Math.min(new Date(), end_time))));
+				const diffMilliseconds = calculateDiffTimeMilliseconds(timediff(start_time, new Date(Math.min(new Date().getTime(), end_time.getTime()))));
 				if (diffMilliseconds > 10 * MONTH) {
 					graphDataHandler(res, request_query, 0);
 				} else if (diffMilliseconds > 12 * DAYS) {
@@ -448,15 +450,15 @@ async function getGraphData(req, res, request_query = {}) {
 	}
 }
 
-router.get("/", async function (req, res, next) {
+router.get("/", async function (req: any, res: any, next: any) {
 	await get_status(req, res, next);
 });
 
-function validateUserId(req) {
-	if(req.params.user_id === "null") {
+function validateUserId(req: any) {
+	if (req.params.user_id === "null") {
 		return undefined;
 	}
-	else if(req.params.user_id === "my"){
+	else if (req.params.user_id === "my") {
 		return req.session.user_id;
 	}
 	else {
@@ -465,13 +467,13 @@ function validateUserId(req) {
 }
 
 
-router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req: any, res: any, next: any) {
 	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
 	const user_id = validateUserId(req);
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
-	if (invalidProblemIdHandler({req, res}, problem_id, result)) {
+	if (invalidProblemIdHandler({ req, res }, problem_id, result)) {
 		return;
 	}
 	await get_status(req, res, next, {
@@ -483,7 +485,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async function (req
 
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async function (req: any, res: any, next: any) {
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
@@ -503,14 +505,14 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async f
 	}, limit);
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:sim", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim", async function (req: any, res: any, next: any) {
 	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
 	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
-	if (invalidProblemIdHandler({req, res}, problem_id, result)) {
+	if (invalidProblemIdHandler({ req, res }, problem_id, result)) {
 		return;
 	}
 	await get_status(req, res, next, {
@@ -523,7 +525,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim", async function
 
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", async function (req: any, res: any, next: any) {
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
@@ -545,7 +547,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", as
 	}, limit);
 });
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", async function (req: any, res: any, next: any) {
 	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
 	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
 	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
@@ -553,11 +555,11 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
 	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
-	if (invalidProblemIdHandler({req, res}, problem_id, result)) {
+	if (invalidProblemIdHandler({ req, res }, problem_id, result)) {
 		return;
 	}
 	await get_status(req, res, next, {
-		problem_id: [problem_id, privilege ? {type: GREATER, value: 0} : undefined],
+		problem_id: [problem_id, privilege ? { type: GREATER, value: 0 } : undefined],
 		user_id: user_id,
 		language: language,
 		result: result,
@@ -567,7 +569,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", asy
 });
 
 
-router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req, res, next) {
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async function (req: any, res: any, next: any) {
 	let problem_id;
 	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
 	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
@@ -582,7 +584,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
 	await get_status(req, res, next, {
 		num: [problem_id],
-		problem_id: [privilege ? {type: GREATER, value: 0} : undefined],
+		problem_id: [privilege ? { type: GREATER, value: 0 } : undefined],
 		user_id: user_id,
 		language: language,
 		result: result,
@@ -591,7 +593,7 @@ router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:pri
 	}, limit);
 });
 
-router.get("/graph", async function (req, res) {
+router.get("/graph", async function (req: any, res: any) {
 	const cid = req.query.cid ? parseInt(req.query.cid) : null;
 	const date_flag = req.query.date;
 	await getGraphData(req, res, {
@@ -600,7 +602,7 @@ router.get("/graph", async function (req, res) {
 	});
 });
 
-router.get("/solution", async function (req, res) {
+router.get("/solution", async function (req: any, res: any) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
 	const browse_privilege = sid !== null && await SourcePrivilegeCache.checkPrivilege(req.session, sid);
 	if (sid) {
@@ -631,14 +633,14 @@ router.get("/solution", async function (req, res) {
 	}
 });
 
-router.get("/:sid/:tr", function (req, res, next) {
+router.get("/:sid/:tr", function (req: any, res: any, next: any) {
 	const sid = parseInt(req.params.sid);
 	if (isNaN(sid)) {
 		next();
 	} else {
 		next("route");
 	}
-}, function (req, res) {
+}, function (req: any, res: any) {
 	const errmsg = {
 		status: "error",
 		statement: "invalid parameter"
@@ -647,10 +649,10 @@ router.get("/:sid/:tr", function (req, res, next) {
 	res.json(errmsg);
 });
 
-router.get("/:sid/:tr", async function (req, res) {
+router.get("/:sid/:tr", async function (req: any, res: any) {
 	const sid = parseInt(req.params.sid);
 	const test_run = req.params.tr;
-	await cache_query("select * from solution where solution_id=?", [sid]).then(async (val) => {
+	await cache_query("select * from solution where solution_id=?", [sid]).then(async (val: any) => {
 		const dataPack = val[0];
 		const sendmsg = {
 			status: "OK",
@@ -666,10 +668,10 @@ router.get("/:sid/:tr", async function (req, res) {
 			await infoHandler(sid, result_flag === 11 ? "compileinfo" : "runtimeinfo", sendmsg);
 		}
 		res.json(sendmsg);
-	}).catch((val) => {
+	}).catch((val: any) => {
 		res.json(error.errorMaker(val));
 	});
 });
 
 
-module.exports = ["/status", auth, router];
+export = ["/status", auth, router];

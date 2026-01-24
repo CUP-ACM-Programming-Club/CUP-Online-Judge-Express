@@ -20,14 +20,9 @@ class SegmentLock implements ILock{
 	}
 
 	release(key: string) {
-		try {
-			const lock = this.__lock__[key];
-			if (lock) {
-				lock.release();
-			}
-
-		} catch (e) {
-			console.log(e);
+		const lock = this.__lock__[key];
+		if (lock && lock.acquired) {
+			lock.release();
 		}
 	}
 }

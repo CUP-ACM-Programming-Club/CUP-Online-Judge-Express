@@ -1,0 +1,29 @@
+import express from "express";
+const router = express.Router();
+const [error, ok] = require("../../../module/const_var");
+const { rejudgeBySolution, rejudgeByContest, rejudgeByProblem } = require("../../../module/status/update_solution_result");
+
+async function rejudgeHandler(res: any, id: any, func: any) {
+	try {
+		await func(id, 1);
+		res.json(ok.ok);
+	} catch (e) {
+		console.log(e);
+		res.json(error.database);
+	}
+}
+
+router.post("/contest", async (req: any, res: any) => {
+	await rejudgeHandler(res, req.body.contest_id, rejudgeByContest);
+});
+
+router.post("/solution", async (req: any, res: any) => {
+	await rejudgeHandler(res, req.body.solution_id, rejudgeBySolution);
+});
+
+router.post("/problem", async (req: any, res: any) => {
+	await rejudgeHandler(res, req.body.problem_id, rejudgeByProblem);
+});
+
+
+module.exports = ["/rejudge", router];

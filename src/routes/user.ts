@@ -1,4 +1,4 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 const query = require("../module/mysql_cache");
 const auth = require("../middleware/auth");
@@ -13,7 +13,7 @@ router.use(...require("./user/update"));
 router.use(...require("./user/lost"));
 router.use(...require("./user/tutorial"));
 router.use(...require("./user/email"));
-router.get("/:user_id", async (req, res) => {
+router.get("/:user_id", async (req: any, res: any) => {
 	const user_id = req.params.user_id;
 	let sqlQueue = [];
 	sqlQueue.push(query(`
@@ -81,7 +81,7 @@ group by browser_name,browser_version`, [user_id]));
 	});
 });
 
-router.get("/nick/:nick", async (req, res) => {
+router.get("/nick/:nick", async (req: any, res: any) => {
 	const nick = req.params.nick;
 	const data = await query("select user_id from users where nick = ?", [nick]);
 	if (data && data.length > 0) {
@@ -95,4 +95,4 @@ router.get("/nick/:nick", async (req, res) => {
 	}
 });
 
-module.exports = ["/user", auth, router];
+export = ["/user", auth, router];

@@ -1,22 +1,16 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 const auth = require("../middleware/auth");
 const Promise = require("bluebird");
 const fs = Promise.promisifyAll(require("fs"));
-const {error, ok} = require("../module/constants/state");
+const { error, ok } = require("../module/constants/state");
 import ProblemFileManager from "../module/problem/ProblemFileManager";
 
-if(!String.exist) {
-	String.prototype.exist = function(str) {
-		return str.indexOf(str) !== -1;
-	};
-}
-
-function isSpjFile(file_name) {
+function isSpjFile(file_name: string) {
 	return file_name.indexOf(".") === file_name.lastIndexOf(".") && file_name.indexOf("spj") === 0 && file_name.substring(3).indexOf(".") === 0;
 }
 
-router.get("/:problem_id",async (req, res) => {
+router.get("/:problem_id", async (req, res) => {
 	try {
 		const problem_id = parseInt(req.params.problem_id);
 		if (isNaN(problem_id)) {
@@ -30,9 +24,9 @@ router.get("/:problem_id",async (req, res) => {
 			if (file === "ac") {
 				continue;
 			}
-			if (file.exist(".in") && file.lastIndexOf(".in") + 3 === file.length) {
+			if (file.endsWith(".in")) {
 				validFile.push(file);
-			} else if (file.exist(".out") && file.lastIndexOf(".out") + 4 === file.length) {
+			} else if (file.endsWith(".out")) {
 				validFile.push(file);
 			} else if (isSpjFile(file)) {
 				validFile.push(file);

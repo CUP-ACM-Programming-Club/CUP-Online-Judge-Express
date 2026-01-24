@@ -1,23 +1,23 @@
 /* eslint-disable no-console */
 import TutorialInterceptor from "../module/tutorial/interceptor";
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
 const auth = require("../middleware/auth");
 const cache_query = require("../module/mysql_cache");
-const {checkCaptcha} = require("../module/captcha_checker");
-const {error, ok} = require("../module/constants/state");
+const { checkCaptcha } = require("../module/captcha_checker");
+const { error, ok } = require("../module/constants/state");
 const const_variable = require("../module/const_name");
-const checkSourceId = (req) => {
+const checkSourceId = (req: any) => {
 	const source = req.params.source;
 	let id = req.params.id;
 	if (isNaN(id)) {
 		return false;
 	}
-	return {source: source.toUpperCase(), id};
+	return { source: source.toUpperCase(), id };
 };
 
-const checkSolutionId = async (solution_id, problem_id, local = true, source = "") => {
+const checkSolutionId = async (solution_id: any, problem_id: any, local = true, source = "") => {
 	solution_id = parseInt(solution_id);
 	if (isNaN(solution_id)) {
 		return false;
@@ -27,7 +27,7 @@ const checkSolutionId = async (solution_id, problem_id, local = true, source = "
 	return _data.length > 0 && parseInt(_data[0].result) === 4 && parseInt(problem_id) === parseInt(_data[0].problem_id) && (!_data[0].oj_name || source === _data[0].oj_name);
 };
 
-const checkHandler = async (id, req, table_name) => {
+const checkHandler = async (id: any, req: any, table_name: string) => {
 	const _data = await cache_query(`select user_id from ${table_name} where ${table_name}_id = ?`, [id]);
 	if (!_data || _data.length <= 0) {
 		console.log("checkOwner false");
@@ -37,15 +37,15 @@ const checkHandler = async (id, req, table_name) => {
 	return user_id === req.session.user_id;
 };
 
-const checkOwner = async (solution_id, req) => {
+const checkOwner = async (solution_id: any, req: any) => {
 	return await checkHandler(solution_id, req, "solution");
 };
 
-const checkTutorialOwner = async (tutorial_id, req) => {
+const checkTutorialOwner = async (tutorial_id: any, req: any) => {
 	return await checkHandler(tutorial_id, req, "tutorial");
 };
 
-const getSourceProblemId = async (tutorial_id) => {
+const getSourceProblemId = async (tutorial_id: any) => {
 	const _data = await cache_query("select source,problem_id from tutorial where tutorial_id = ?", [tutorial_id]);
 	if (_data && _data.length > 0) {
 		return {
@@ -57,8 +57,8 @@ const getSourceProblemId = async (tutorial_id) => {
 	}
 };
 
-router.get("/:source/:id", async (req, res) => {
-	const _sourceId = checkSourceId(req);
+router.get("/:source/:id", async (req: any, res: any) => {
+	const _sourceId: any = checkSourceId(req);
 	const source = _sourceId.source;
 	const id = _sourceId.id;
 	let sqlQuery = [];
@@ -93,7 +93,7 @@ where tutorial.source = ? and tutorial.problem_id = ? order by 'like' desc, disl
 	});
 });
 
-const getTutorialController = async (req, res, opt = {}) => {
+const getTutorialController = async (req: any, res: any, opt: any = {}) => {
 	try {
 		let tutorial_id = opt.tid;
 		let sql = "select solution_id,content,tutorial_id,user_id,in_date,problem_id,source from tutorial ";
@@ -111,12 +111,12 @@ const getTutorialController = async (req, res, opt = {}) => {
 		const data = await cache_query(sql, sqlArr);
 		if (data && data.length > 0) {
 			if (data.length === 1) {
-				res.json({status: "OK", data: data[0]});
+				res.json({ status: "OK", data: data[0] });
 			} else {
-				res.json({status: "OK", data});
+				res.json({ status: "OK", data });
 			}
 		} else {
-			res.json({status: "OK", data: {solution_id: null, content: null}});
+			res.json({ status: "OK", data: { solution_id: null, content: null } });
 		}
 	} catch (e) {
 		res.json(error.database);
@@ -124,17 +124,17 @@ const getTutorialController = async (req, res, opt = {}) => {
 	}
 };
 
-router.get("/:tutorial_id", async (req, res) => {
-	getTutorialController(req, res, {tid: req.params.tutorial_id});
+router.get("/:tutorial_id", async (req: any, res: any) => {
+	getTutorialController(req, res, { tid: req.params.tutorial_id });
 });
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: any, res: any) => {
 	getTutorialController(req, res);
 });
 
-router.post("/new/:source/:id", async (req, res) => {
+router.post("/new/:source/:id", async (req: any, res: any) => {
 	checkCaptcha(req, "tutorial");
-	const _sourceId = checkSourceId(req);
+	const _sourceId: any = checkSourceId(req);
 	const source = _sourceId.source;
 	const id = _sourceId.id;
 	const content = req.body.content;
@@ -144,11 +144,11 @@ router.post("/new/:source/:id", async (req, res) => {
 	if (_data[0] && _data[1]) {
 		cache_query(`insert into tutorial(source,problem_id,user_id,solution_id,content)
         values(?,?,?,?,?)`,
-		[source, id, req.session.user_id, solution_id, content])
+			[source, id, req.session.user_id, solution_id, content])
 			.then(() => {
 				res.json(ok.serverReceived);
 			})
-			.catch(err => {
+			.catch((err: any) => {
 				res.json(error.database);
 				console.log(err);
 			});
@@ -157,7 +157,7 @@ router.post("/new/:source/:id", async (req, res) => {
 	}
 });
 
-router.post("/edit/:tutorial_id", async (req, res) => {
+router.post("/edit/:tutorial_id", async (req: any, res: any) => {
 	try {
 		checkCaptcha(req, "tutorial");
 		let tid = req.params.tutorial_id;
@@ -168,7 +168,7 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 		const content = req.body.content;
 		const solution_id = req.body.solution_id;
 		const sourceProblemId = await getSourceProblemId(tid);
-		const {source, problem_id} = sourceProblemId;
+		const { source, problem_id } = sourceProblemId;
 		let sqlQuery = [checkSolutionId(solution_id, problem_id, source.toUpperCase() === "LOCAL", source), checkOwner(solution_id, req), checkTutorialOwner(tid, req)];
 		const _data = await Promise.all(sqlQuery);
 		console.log(sqlQuery);
@@ -182,14 +182,14 @@ router.post("/edit/:tutorial_id", async (req, res) => {
 				.then(() => {
 					res.json(ok.serverReceived);
 				})
-				.catch(err => {
+				.catch((err: any) => {
 					res.json(error.database);
 					console.log(err);
 				});
 		}
-	} catch (e) {
+	} catch (e: any) {
 		res.json(error.errorMaker(e));
 	}
 });
 
-module.exports = ["/tutorial", auth, TutorialInterceptor, router];
+export = ["/tutorial", auth, TutorialInterceptor, router];

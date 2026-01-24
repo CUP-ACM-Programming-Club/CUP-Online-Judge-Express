@@ -2,14 +2,14 @@
 /**
  * Class LocalJudger
  */
-//const query = require("../module/mysql_query");
-const log4js = require("../module/logger");
-//const logger = log4js.logger("normal", "info");
-const path = require("path");
-const Promise = require("bluebird");
+import * as path from "path";
+import { EventEmitter } from "events";
+import * as fsSync from "fs";
+
+const Bluebird = require("bluebird");
 const query = require("./mysql_query");
-const fs = Promise.promisifyAll(require("fs"));
-const eventEmitter = require("events").EventEmitter;
+const fs = Bluebird.promisifyAll(fsSync);
+
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
 const PRESENTATION_ERROR = 1;
@@ -20,19 +20,19 @@ const TIME_LIMIT_EXCEEDED = 5;
 const MEMORY_LIMIT_EXCEEDED = 6;
 const CLOCK_LIMIT_EXCEEDED = 7;
 
-let cache = [];
+const cache: Record<string, any> = {};
 
-
-async function cache_query(sql, sqlArr) {
-	if (cache[sql + sqlArr.toString()]) {
-		return cache[sql + sqlArr.toString()];
+async function cache_query(sql: string, sqlArr: any[]): Promise<any> {
+	const key = sql + sqlArr.toString();
+	if (cache[key]) {
+		return cache[key];
 	}
 	else {
-		return (cache[sql + sqlArr.toString()] = await query(sql, sqlArr));
+		return (cache[key] = await query(sql, sqlArr));
 	}
 }
 
-function parseResult(code, time, memory, pass_point, compile_msg, compile_error_msg) {
+function parseResult(code: number, time: number, memory: number, pass_point: number, compile_msg: string, compile_error_msg: string) {
 	return {
 		status: code,
 		time: time,
@@ -43,14 +43,31 @@ function parseResult(code, time, memory, pass_point, compile_msg, compile_error_
 	};
 }
 
-class dockerJudger extends eventEmitter {
+class dockerJudger extends EventEmitter {
+	oj_home: string;
+	inputFile: any[];
+	outputFile: any[];
+	Sandbox: any;
+	submit: any;
+	language: number;
+	submit_id: number;
+	mode: number;
+	problem_id: number | undefined;
+	time_limit!: number;
+	time_limit_reserve!: number;
+	memory_limit!: number;
+	memory_limit_reserve!: number;
+	compare_fn: Function | undefined;
+	code!: string;
+	user_id!: string;
+	result: any;
 
-	constructor(oj_home) {
+	constructor(oj_home: string) {
 		super();
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
-		if(fs.existsSync("./module/docker/index.js")) {
+		if (fs.existsSync("./module/docker/index.js")) {
 			this.Sandbox = require("./docker/index");
 			this.submit = this.Sandbox.createSubmit();
 		}
@@ -62,8 +79,8 @@ class dockerJudger extends eventEmitter {
 		this.mode = 0;
 	}
 
-	static parseJudgerCodeToWeb(code) {
-		const status = {
+	static parseJudgerCodeToWeb(code: number): number | undefined {
+		const status: Record<string, number> = {
 			"2": 4,
 			"1": 5,
 			"0": 6,
@@ -76,26 +93,26 @@ class dockerJudger extends eventEmitter {
 		return status[code.toString()];
 	}
 
-	static parseLanguage(language) {
-		language = parseInt(language);
+	static parseLanguage(language: number | string): string | undefined {
+		const lang = parseInt(language as string);
 		const languageToName =
-			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99","kotlin"];
-		if (language > -1 && language < languageToName.length) {
-			return languageToName[language];
+			["c11", "c++17", "pascal", "java", "ruby", "bash", "python2", "php", "perl", "csharp", "objc", "freebasic", "schema", "clang", "clang++", "lua", "nodejs", "go", "python3", "c++11", "c++98", "c99", "kotlin"];
+		if (lang > -1 && lang < languageToName.length) {
+			return languageToName[lang];
 		}
 	}
 
-	static LanguageBonus(language){
-		if(language<3||language === 13||language===14||language>18){
+	static LanguageBonus(language: number): number {
+		if (language < 3 || language === 13 || language === 14 || language > 18) {
 			return 1;
 		}
-		else{
+		else {
 			return 2;
 		}
 	}
 
-	static parseLanguageSuffix(language) {
-		let languageSuffix = {
+	static parseLanguageSuffix(language: string): string | undefined {
+		const languageSuffix: Record<string, string> = {
 			"c": ".c",
 			"c11": ".c",
 			"c99": ".c",
@@ -117,28 +134,29 @@ class dockerJudger extends eventEmitter {
 			"bash": ".sh",
 			"pascal": ".pas",
 			"go": ".go",
-			"java":".java"
+			"java": ".java"
 		};
 		return languageSuffix[language];
 	}
 
-	static sandboxCodeToJudger(code) {
+	static sandboxCodeToJudger(code: number): number {
 		const status = [ACCEPTED, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED,
 			OUTPUT_LIMIT_EXCEEDED, RUNTIME_ERROR];
 		return status[code];
 	}
 
-	async setProblemID(problem_id) {
-		this.problem_id = parseInt(problem_id);
-		if (isNaN(this.problem_id) || this.problem_id < 1000) {
+	async setProblemID(problem_id: number | string): Promise<void> {
+		const parsedId = parseInt(problem_id as string);
+		if (isNaN(parsedId) || parsedId < 1000) {
 			this.problem_id = undefined;
-			if (isNaN(this.problem_id)) {
+			if (isNaN(parsedId)) {
 				throw new TypeError("problem_id should be a integer");
 			}
 			else {
 				throw new Error("problem_id should larger than 1000");
 			}
 		}
+		this.problem_id = parsedId;
 		const problem_status = await cache_query("SELECT * FROM problem WHERE problem_id=?", [this.problem_id]);
 		let time_limit = parseFloat(problem_status[0].time_limit);
 		let memory_limit = parseInt(problem_status[0].memory_limit);
@@ -148,28 +166,28 @@ class dockerJudger extends eventEmitter {
 		this.setMemoryLimitReserve(memory_limit / 4);
 	}
 
-	setTimeLimit(time_limit) {
-		this.time_limit = parseFloat(time_limit);
+	setTimeLimit(time_limit: number): void {
+		this.time_limit = parseFloat(time_limit as any);
 	}
 
-	setSolutionID(solution_id) {
+	setSolutionID(solution_id: number): void {
 		this.submit_id = solution_id;
 	}
 
-	setTimeLimitReserve(time_limit_reserve) {
-		this.time_limit_reserve = parseFloat(time_limit_reserve);
+	setTimeLimitReserve(time_limit_reserve: number): void {
+		this.time_limit_reserve = parseFloat(time_limit_reserve as any);
 	}
 
-	setMemoryLimit(memory_limit) {
-		this.memory_limit = parseInt(memory_limit);
+	setMemoryLimit(memory_limit: number): void {
+		this.memory_limit = parseInt(memory_limit as any);
 	}
 
-	setMemoryLimitReserve(memory_limit_reserve) {
-		this.memory_limit_reserve = parseInt(memory_limit_reserve);
+	setMemoryLimitReserve(memory_limit_reserve: number): void {
+		this.memory_limit_reserve = parseInt(memory_limit_reserve as any);
 	}
 
 
-	setCompareFn(fn) {
+	setCompareFn(fn: Function): TypeError | void {
 		if (typeof fn === "function") {
 			this.compare_fn = fn;
 		}
@@ -178,10 +196,10 @@ class dockerJudger extends eventEmitter {
 		}
 	}
 
-	on(event, callback) {
+	registerEventListener(event: string, callback: (...args: any[]) => void): TypeError | void {
 		if (typeof event === "string") {
 			if (typeof callback === "function") {
-				if(this.submit) {
+				if (this.submit) {
 					this.submit.on(event, callback);
 				}
 			}
@@ -194,34 +212,34 @@ class dockerJudger extends eventEmitter {
 		}
 	}
 
-	setSpecialJudge(file, language) {
+	setSpecialJudge(file: string, language: number): void {
 		// TODO:complete set special judge module in docker
 	}
 
-	setCustomInput(input) {
+	setCustomInput(input: string): void {
 		this.submit.pushInputRawFiles({
 			name: "custominput.in",
 			data: input
 		});
 	}
 
-	setLanguage(language) {
+	setLanguage(language: number): void {
 		this.language = language;
 	}
 
-	setMode(mode) {
+	setMode(mode: number): void {
 		this.mode = mode;
 	}
 
-	setCode(code) {
+	setCode(code: string): void {
 		this.code = code;
 	}
 
-	setUserID(user_id) {
+	setUserID(user_id: string): void {
 		this.user_id = user_id;
 	}
 
-	pushRawFile(file) {
+	pushRawFile(file: { name: string; data: string }): void {
 		this.submit.pushInputRawFiles({
 			name: file.name,
 			data: file.data
@@ -230,7 +248,7 @@ class dockerJudger extends eventEmitter {
 
 	async run() {
 		if (this.mode === 0) {
-			const dirname = path.join(this.oj_home, "data", this.problem_id.toString());
+			const dirname = path.join(this.oj_home, "data", this.problem_id!.toString());
 			const filelist = await fs.readdirAsync(dirname);
 			const outfilelist = [];
 			for (let i in filelist) {
@@ -244,24 +262,24 @@ class dockerJudger extends eventEmitter {
 				}
 			}
 		}
-		else{
+		else {
 			this.submit.setFileStdin("custominput.in");
 		}
 		this.submit.setLanguage(dockerJudger.parseLanguage(this.language));
-		this.submit.setTimeLimit(this.time_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setTimeLimit(this.time_limit * dockerJudger.LanguageBonus(this.language));
 		this.submit.setTimeLimitReserve(this.time_limit_reserve);
-		this.submit.setMemoryLimit(this.memory_limit*dockerJudger.LanguageBonus(this.language));
+		this.submit.setMemoryLimit(this.memory_limit * dockerJudger.LanguageBonus(this.language));
 		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
 		if (this.mode === 0) {
-			if(fs.existsSync("./docker/checker")) {
+			if (fs.existsSync("./docker/checker")) {
 				this.submit.setCompareFunction(require("./docker/checker").compareDiff);
 			}
 		}
 		await this.submit.pushInputRawFiles({
-			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language))}`,
+			name: `Main${dockerJudger.parseLanguageSuffix(dockerJudger.parseLanguage(this.language)!)}`,
 			data: this.code
 		});
-		if(this.Sandbox) {
+		if (this.Sandbox) {
 			this.result = await this.Sandbox.runner(this.submit);
 		}
 		this.submit.emit("finish");
@@ -270,4 +288,4 @@ class dockerJudger extends eventEmitter {
 }
 
 
-module.exports = dockerJudger;
+export = dockerJudger;

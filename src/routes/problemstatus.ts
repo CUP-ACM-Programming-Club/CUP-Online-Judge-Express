@@ -5,15 +5,15 @@ const [error] = require("../module/const_var");
 const auth = require("../middleware/auth");
 const cache_query = require("../module/mysql_cache");
 const const_variable = require("../module/const_name");
-const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, from: "", page_cnt: 20}) => {
+const getProblemStatus = async (req: any, res: any, opt: any = { source: true, id: 0, page: 0, from: "", page_cnt: 20 }) => {
 	if (opt.id === 0) {
 		res.json(error.invalidParams);
 	}
 	else {
-		let _opt = {source: true, id: 0, page: 0, from: "", page_cnt: 20};
+		let _opt = { source: true, id: 0, page: 0, from: "", page_cnt: 20 };
 		Object.assign(_opt, opt);
 		Object.assign(opt, _opt);
-		const hasOJName = (from) => {
+		const hasOJName = (from: any) => {
 			if (!from) {
 				return "and oj_name = ?";
 			}
@@ -28,12 +28,12 @@ const getProblemStatus = async (req, res, opt = {source: true, id: 0, page: 0, f
 		const problem_limit = await cache_query("select time_limit,memory_limit from problem where problem_id = ?", [opt.id]);
 		const time_limit = Math.max(1, problem_limit[0].time_limit * 1000);
 		const memory_limit = Math.max(32, problem_limit[0].memory_limit * 1024);
-		const time_step = parseFloat(time_limit) * 2 / 25;
-		const memory_step = parseFloat(memory_limit) * 2 / 25;
+		const time_step = parseFloat(String(time_limit)) * 2 / 25;
+		const memory_step = parseFloat(String(memory_limit)) * 2 / 25;
 		let sql1 = `select count(1)total,language,diff from
   (select case`;
 		for (let i = 0; i <= time_limit; i += time_step) {
-			sql1 += ` when time between ${parseInt(i)} and ${parseInt(i + time_step)} then '${parseInt(i)}-${parseInt(i + time_step)}' `;
+			sql1 += ` when time between ${parseInt(String(i))} and ${parseInt(String(i + time_step))} then '${parseInt(String(i))}-${parseInt(String(i + time_step))}' `;
 		}
 		sql1 += `else '>${time_limit}' end as diff ,language `;
 		sql1 += ` from solution where problem_id = ? and result = 4)t
@@ -41,7 +41,7 @@ group by diff,language`;
 		let sql2 = `select count(1)total,language,diff from
   (select case`;
 		for (let i = 0; i <= memory_limit; i += memory_step) {
-			sql2 += ` when memory between ${parseInt(i)} and ${parseInt(i + memory_step)} then '${parseInt(i)}-${parseInt(i + memory_step)}' `;
+			sql2 += ` when memory between ${parseInt(String(i))} and ${parseInt(String(i + memory_step))} then '${parseInt(String(i))}-${parseInt(String(i + memory_step))}' `;
 		}
 
 		sql2 += `else '>${memory_limit}' end as diff,language `;
@@ -64,7 +64,7 @@ order by time,memory,code_length,in_date,solution_id limit ?,?`, (() => {
 		cache_query(`select count(distinct user_id)solveuser from solution where problem_id = ?
 and result = 4`, [opt.id]),
 		cache_query("select count(1)passed from solution where problem_id = ? and user_id = ? and result = 4", [opt.id,
-			req.session.user_id]),
+		req.session.user_id]),
 		cache_query(`select max(end_time) as end_time from contest where contest_id in
                             (select contest_problem.contest_id from contest_problem
                             where problem_id = ?)`, [opt.id]),
@@ -93,7 +93,7 @@ and result = 4`, [opt.id]),
 				i.memory = "----";
 			}
 		}
-		let sendJSON = {
+		let sendJSON: any = {
 			status: "OK",
 			data: {
 				problem_status: _result,
@@ -113,18 +113,18 @@ and result = 4`, [opt.id]),
 	}
 };
 
-router.get("/:id", (req, res) => {
+router.get("/:id", (req: any, res: any) => {
 	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
 	const page = isNaN(req.query.page) ? 0 : parseInt(req.query.page);
 	if (id && id < 1000) {
 		res.json(error.invalidParams);
 	}
 	else {
-		getProblemStatus(req, res, {id, page});
+		getProblemStatus(req, res, { id, page });
 	}
 });
 
-router.get("/:source/:id", (req, res) => {
+router.get("/:source/:id", (req: any, res: any) => {
 	const source = req.params.source === "local";
 	const page = isNaN(req.query.page) ? 0 : parseInt(req.query.page);
 	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
@@ -132,8 +132,8 @@ router.get("/:source/:id", (req, res) => {
 		res.json(error.invalidParams);
 	}
 	else {
-		getProblemStatus(req, res, {source, id, page, from: req.params.source.toUpperCase()});
+		getProblemStatus(req, res, { source, id, page, from: req.params.source.toUpperCase() });
 	}
 });
 
-module.exports = ["/problemstatus", auth, router];
+export = ["/problemstatus", auth, router];

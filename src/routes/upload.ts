@@ -1,47 +1,47 @@
 /* eslint-disable no-console */
-const express = require("express");
+import express, { Request, Response } from "express";
 const router = express.Router();
-const multer = require("multer");
-const Promise = require("bluebird");
-const fsPromise = Promise.promisifyAll(require("fs"));
+import multer from "multer";
+import Bluebird from "bluebird";
+const fsPromise = Bluebird.promisifyAll(require("fs"));
 const fs = require("fs");
 const zlib = require("zlib");
 const rimraf = require("rimraf");
 const query = require("../module/mysql_query");
 const config = global.config;
 const D2UConverter = require("dos2unix").dos2unix;
-const d2u = new D2UConverter({ glob: { cwd: __dirname } })
-	.on("error", function(err) {
+const d2u: any = new D2UConverter({ glob: { cwd: __dirname } })
+	.on("error", function (err: any) {
 		console.error(err);
 	})
-	.on("end", function(stats) {
+	.on("end", function (stats: any) {
 		console.log(stats);
 	});
-let upload = false;
+let upload: any = false;
 try {
-	upload = multer({dest: config.problem_upload_dest.dir});
+	upload = multer({ dest: config.problem_upload_dest.dir });
 } catch (e) {
 	console.error("Your upload directory in your config.json is invalid.Please modify it to a valid path.\nError message:", e);
 }
 const path = require("path");
 const auth = require("../middleware/auth");
-const {checkCaptcha} = require("../module/captcha_checker");
+const { checkCaptcha } = require("../module/captcha_checker");
 const [error] = require("../module/const_var");
 const jschardet = require("jschardet");
 const iconv = require("iconv-lite");
 const stripBom = require("strip-bom");
 
 
-const base64ToString = (base64) => {
-	let data = Buffer.from(base64, "base64");
+const base64ToString = (base64: string) => {
+	let data: any = Buffer.from(base64, "base64");
 	if (jschardet.detect(data).encoding === "GB2312") {
 		data = iconv.decode(data, "gb2312");
 	}
 	return stripBom(data.toString());
 };
 
-const convertLanguage = (language_name) => {
-	const language_file_name = {
+const convertLanguage = (language_name: string) => {
+	const language_file_name: any = {
 		".c": [0, 13, 21],
 		".cpp": [1, 14, 19, 20],
 		".cc": [1, 14, 19, 20],
@@ -51,13 +51,40 @@ const convertLanguage = (language_name) => {
 		".lua": [15]
 	};
 	for (let i in language_file_name) {
-		if (/*language_name.indexOf(i) !== -1*/path.extname(language_name) === i) {
+		if (path.extname(language_name) === i) {
 			return language_file_name[i];
 		}
 	}
 	return [19];
 };
-const make_problem = async (problem_id, problems = {}, req) => {
+
+interface Problem {
+	title: string;
+	description: string;
+	input: string;
+	output: string;
+	sample_input: string;
+	sample_output: string;
+	spj: number;
+	hint: string;
+	source: string;
+	label: string | string[];
+	in_date: string;
+	time: number;
+	memory: number;
+	defunct: string;
+	accepted: number;
+	submit: number;
+	solved: number;
+	special_judge?: any;
+	input_files?: any[];
+	output_files?: any[];
+	prepend_files?: any[];
+	append_files?: any[];
+	solution?: any[];
+}
+
+const make_problem = async (problem_id: number, problems: any = {}, req: any) => {
 	const save_problem = Object.assign({
 		title: "",
 		description: "",
@@ -85,7 +112,7 @@ const make_problem = async (problem_id, problems = {}, req) => {
 		`, [problem_id, save_problem.title, save_problem.description, save_problem.input,
 			save_problem.output, save_problem.sample_input, save_problem.sample_output,
 			Number(Boolean(save_problem.special_judge && save_problem.special_judge.length > 0)),
-			save_problem.hint, save_problem.source, save_problem.label.length > 0 ? save_problem.label.join(" ") : "", save_problem.time,
+			save_problem.hint, save_problem.source, Array.isArray(save_problem.label) ? save_problem.label.join(" ") : save_problem.label, save_problem.time,
 			save_problem.memory, save_problem.defunct, 0, 0, 0]);
 		await query("DELETE FROM privilege where rightstr = ?", [`p${problem_id}`]);
 		await query("INSERT INTO privilege (user_id,rightstr,defunct) values(?,?,?)", [req.session.user_id, `p${problem_id}`, "N"]);
@@ -97,7 +124,7 @@ const make_problem = async (problem_id, problems = {}, req) => {
 	}
 };
 
-const writeFiles = async (_path, files) => {
+const writeFiles = async (_path: string, files: any[]) => {
 	try {
 		for (let i of files) {
 			if (!i || !i.name || !i.content) {
@@ -109,12 +136,12 @@ const writeFiles = async (_path, files) => {
 			await fsPromise.chownAsync(path.join(_path, name), 48, 48);
 		}
 	}
-	catch(e) {
+	catch (e) {
 		console.log(e);
 	}
 };
 
-const submitProblem = async (req, pid, files, prepend = [], append = []) => {
+const submitProblem = async (req: any, pid: number, files: any[], prepend: any[] = [], append: any[] = []) => {
 	for (let i of files) {
 		const content = Buffer.from(i.content, "base64").toString();
 		const language = JSON.stringify(convertLanguage(i.name));
@@ -135,23 +162,22 @@ const submitProblem = async (req, pid, files, prepend = [], append = []) => {
 	}
 };
 
-const make_files = async (req, pid, problems = {}) => {
+const make_files = async (req: any, pid: number, problems: any = {}) => {
 	const inputFiles = problems.input_files;
 	const outputFiles = problems.output_files;
-	const prependFiles = problems.prepend_files;
-	const appendFiles = problems.append_files;
+	const prependFiles = problems.prepend_files || [];
+	const appendFiles = problems.append_files || [];
 	const special_judge = [problems.special_judge];
-	// const sample_input = problems.sample_input;
-	// const sample_output = problems.sample_output;
 	const solutionFiles = problems.solution;
 	const save_path = path.join("/home/judge/data", pid.toString());
 	if (fs.existsSync(save_path)) {
-		await Promise.promisify(rimraf)(save_path);
+		// @ts-ignore
+		await Bluebird.promisify(rimraf)(save_path);
 	}
 	await fsPromise.mkdirAsync(save_path, 0o755);
 	await writeFiles(save_path, inputFiles);
 	await writeFiles(save_path, outputFiles);
-	d2u.process([`${save_path}/*`]);
+	(d2u as any).process([`${save_path}/*`]);
 	await writeFiles(save_path, special_judge);
 	const special_judge_file = special_judge[0];
 
@@ -161,9 +187,6 @@ const make_files = async (req, pid, problems = {}) => {
 			// check administrator privilege
 		}
 	}
-	// sample maybe have wrong data
-	// await writeFiles(save_path, [{name: "sample.in", content: Buffer.from(sample_input).toString("base64")}]);
-	// await writeFiles(save_path, [{name: "sample.out", content: Buffer.from(sample_output).toString("base64")}]);
 	for (let i of prependFiles) {
 		const languageSet = convertLanguage(i.name);
 		for (let lang of languageSet) {
@@ -177,16 +200,15 @@ const make_files = async (req, pid, problems = {}) => {
 			query("insert into prefile (problem_id,prepend,code,type) VALUES(?,?,?,?)", [pid, 0, base64ToString(i.content), lang]);
 		}
 	}
-	// await writeFiles(save_path, prependFiles);
-	// await writeFiles(save_path, appendFiles);
 	await fsPromise.chownAsync(save_path, 48, 48);
 	await submitProblem(req, pid, solutionFiles, prependFiles, appendFiles);
 };
 
-const make_file = async (req, res, file_path, pid) => {
+const make_file = async (req: any, res: any, file_path?: string, pid?: number) => {
 	const fpath = file_path || req.file.path;
 	const data = await fsPromise.readFileAsync(fpath);
-	const unzip_data = (await Promise.promisify(zlib.gunzip)(data)).toString();
+	// @ts-ignore
+	const unzip_data = (await Bluebird.promisify(zlib.gunzip as any)(data)).toString();
 	const problems = JSON.parse(unzip_data);
 	let max_pid;
 
@@ -208,7 +230,7 @@ const make_file = async (req, res, file_path, pid) => {
 	return problem_list;
 };
 
-const createProblemModule = (req, res) => {
+const createProblemModule = (req: Request, res: Response) => {
 	make_file(req, res)
 		.then(problem_list => {
 			res.json({
@@ -223,11 +245,11 @@ const createProblemModule = (req, res) => {
 };
 
 if (upload !== false) {
-	router.post("/", upload.single("fps"), (req, res) => {
+	router.post("/", upload.single("fps"), (req: any, res: any) => {
 		createProblemModule(req, res);
 	});
 
-	router.post("/user", upload.single("fps"), (req, res) => {
+	router.post("/user", upload.single("fps"), (req: any, res: any) => {
 		if (!checkCaptcha(req, "upload")) {
 			res.json(error.invalidCaptcha);
 		} else {
@@ -239,8 +261,8 @@ if (upload !== false) {
 router.get("/", async (req, res) => {
 	const problem_dir = "/home/upload_problems";
 	const dir_list = await fsPromise.readdirAsync(problem_dir);
-	let file_list = [];
-	dir_list.forEach((el) => {
+	let file_list: string[] = [];
+	dir_list.forEach((el: any) => {
 		if (el.match(/\.rpk/)) {
 			file_list.push(el);
 		}
@@ -248,7 +270,7 @@ router.get("/", async (req, res) => {
 	dir_list.sort();
 	const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
 	let max_pid = parseInt(_max_pid[0].max_id);
-	let problem_lists = [];
+	let problem_lists: any[] = [];
 	let start_id = max_pid + 1;
 	for (let el of file_list) {
 		const filename = path.join(problem_dir, el);
@@ -262,4 +284,4 @@ router.get("/", async (req, res) => {
 	});
 });
 
-module.exports = ["/upload", auth, router];
+export = ["/upload", auth, router];

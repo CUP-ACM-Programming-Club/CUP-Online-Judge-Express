@@ -1,11 +1,10 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+
 const router = express.Router();
 const auth = require("../middleware/auth");
-const cache_query = require("../module/mysql_cache");
-const [error] = require("../module/const_var");
 
-router.get("/:id", (req, res) => {
-
+router.get("/:id", (req: Request, res: Response) => {
+    // Placeholder for runtime info
 });
 
-module.exports = ["/runtime", auth, router];
+export = ["/runtime", auth, router];

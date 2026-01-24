@@ -1,7 +1,9 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+
 const router = express.Router();
-router.get("/", function (req, res) {
-	res.render("index", {title: "CUP Online Judge", header: "API"});
+
+router.get("/", function (req: Request, res: Response) {
+	res.render("index", { title: "CUP Online Judge", header: "API" });
 });
 
-module.exports = ["/", router];
+export = ["/", router];

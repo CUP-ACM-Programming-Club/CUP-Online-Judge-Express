@@ -1,17 +1,19 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+
 const router = express.Router();
 const auth = require("../middleware/auth");
 const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
-router.get("/", async (req, res) => {
+
+router.get("/", async (req: Request, res: Response) => {
 	let wheresql = "";
 	let andsql = "";
-	let sqlArr = [];
+	let sqlArr: string[] = [];
 	if (req.query.name) {
 		wheresql = " where user_id = ? ";
 		andsql = " and user_id = ? ";
 		for (let i = 0; i < 3; ++i) {
-			sqlArr.push(req.query.name);
+			sqlArr.push(req.query.name as string);
 		}
 	}
 
@@ -31,16 +33,16 @@ union all
 order by time desc limit 500)t
 left join users
   on users.user_id = t.user_id`;
-	const data = await cache_query(sql,sqlArr);
+	const data = await cache_query(sql, sqlArr);
 	res.json({
 		status: "OK",
-		admin: req.session.isadmin,
+		admin: (req.session as any)?.isadmin,
 		data: data,
 		const_data: const_variable.result.cn,
 		language_name: const_variable.language_name,
-		judge_color:const_variable.judge_color,
-		icon_list:const_variable.icon_list
+		judge_color: const_variable.judge_color,
+		icon_list: const_variable.icon_list
 	});
 });
 
-module.exports = ["/acmsubmit", auth, router];
+export = ["/acmsubmit", auth, router];

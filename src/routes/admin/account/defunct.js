@@ -1,1 +1,0 @@
-module.exports = require("../../../module/admin/defunct")("users", "user_id");

@@ -1,0 +1,91 @@
+import express from "express";
+const router = express.Router();
+const [error, ok] = require("../../../module/const_var");
+const query = require("../../../module/mysql_query");
+const LENGTH_LIMIT = 100;
+const checkPassword = require("../../../module/check_password");
+const loginAction = require("../../../module/login_action");
+const { encryptPassword } = require("../../../module/util");
+const salt = global.config.salt || "thisissalt";
+
+function checkLength(str: any, size = LENGTH_LIMIT) {
+	str += "";
+	return str.length <= size;
+}
+
+function buildUpdateQuery(name: any, val: any, user_id: any) {
+	return query(`update users set ${name} = ? where user_id = ?`, [val, user_id]);
+}
+
+function checkExists(str: any) {
+	return !!(str && typeof str === "string" && str.trim().length && str.trim().length > 0);
+}
+
+function checkRequestBodyProperties(body: any) {
+	for (let index in body) {
+		if (Object.hasOwnProperty.call(body, index)) {
+			if (index !== "biography" && !checkLength(body[index])) {
+				return false;
+			}
+			else if (index === "biography" && !checkLength(body[index], 5 * LENGTH_LIMIT)) {
+				return false;
+			}
+			if (body[index] && body[index].trim) {
+				body[index] = body[index].trim();
+			}
+		}
+	}
+	return true;
+}
+
+async function checkPasswordAdapter(user_id: any, password: any) {
+	const res = await query("select password,newpassword from users where user_id = ?", [user_id]);
+	return checkPassword(res[0].password, password, res[0].newpassword);
+}
+
+router.post("/", async (req: any, res: any) => {
+	const user_id = req.session.user_id;
+	if (!checkRequestBodyProperties(req.body)) {
+		res.json(error.invalidParams);
+		return;
+	}
+	let { blog, github, biography, confirmquestion, confirmanswer, password, newpassword, repeatpassword, email, school, nick, avatarUrl } = req.body;
+	if (!await checkPasswordAdapter(user_id, password)) {
+		res.json(error.errorMaker("Password wrong"));
+		return;
+	}
+	if (newpassword !== repeatpassword) {
+		res.json(error.errorMaker("Two password not same"));
+		return;
+	}
+	newpassword = checkExists(newpassword) ? encryptPassword(newpassword, salt) : "";
+	confirmanswer = checkExists(confirmanswer) ? encryptPassword(confirmanswer, salt) : "";
+	try {
+		let Queue: any[] = [];
+		let Property: any = {
+			newpassword,
+			nick,
+			school,
+			email,
+			blog,
+			github,
+			biography,
+			confirmquestion,
+			confirmanswer,
+			avatarUrl
+		};
+		Object.keys(Property).forEach(el => {
+			if (checkExists(Property[el])) {
+				Queue.push(buildUpdateQuery(el, Property[el], user_id));
+			}
+		});
+		await Promise.all(Queue);
+		await loginAction(req, req.session.user_id);
+		res.json(ok.ok);
+	} catch (e) {
+		res.json(error.database);
+		console.log(e);
+	}
+});
+
+module.exports = ["/profile", router];

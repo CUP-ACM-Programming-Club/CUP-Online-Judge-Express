@@ -1,5 +1,5 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
-import {error, ok} from "../module/constants/state";
+const { error, ok } = require("../module/constants/state");
 import express from "express";
 const router = express.Router();
 const query = require("../module/mysql_cache");
@@ -7,8 +7,8 @@ const cache_query = query;
 const auth = require("../middleware/auth");
 const check = require("../module/contest/check");
 
-router.get("/:cid", (req, res, next) => {
-	const cid = isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
+router.get("/:cid", (req: any, res: any, next: any) => {
+	const cid = isNaN(Number(req.params.cid)) ? -1 : parseInt(req.params.cid);
 	if (cid === -1) {
 		res.json(error.errorMaker("contest_id is not a number"));
 	} else if (cid < 1000) {
@@ -18,7 +18,7 @@ router.get("/:cid", (req, res, next) => {
 	}
 });
 
-async function submitHandler(cid, browserPrivilege = false) {
+async function submitHandler(cid: any, browserPrivilege = false) {
 	const sql = `SELECT users.user_id,
        users.nick,
        users.avatar,
@@ -68,13 +68,13 @@ ORDER BY user_id, in_date`;
 	return await query(sql, [cid, cid]);
 }
 
-async function contestUserHandler(cid) {
+async function contestUserHandler(cid: any) {
 	const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
 left join users on users.user_id = t.user_id`;
 	return query(sql4, ["c" + cid]);
 }
 
-async function scoreboardHandler(cid, browsePrivilege = false) {
+async function scoreboardHandler(cid: any, browsePrivilege = false) {
 
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
 	const sql3 = "select start_time,title,show_all_ranklist from contest where contest_id = ?";
@@ -99,7 +99,7 @@ async function scoreboardHandler(cid, browsePrivilege = false) {
 	}
 }
 
-async function lineBreakHandler(cid) {
+async function lineBreakHandler(cid: any) {
 	const sql = `select code_stat.solution_id,
        code_stat.line,
        user.user_id, user.problem_id
@@ -119,7 +119,7 @@ from (select solution_id,
 	return await cache_query(sql, [cid, cid]);
 }
 
-router.get("/:cid", async (req, res) => {
+router.get("/:cid", async (req: any, res: any) => {
 	const cid = parseInt(req.params.cid);
 	if (!await check(req, res, cid)) {
 		return;
@@ -127,17 +127,17 @@ router.get("/:cid", async (req, res) => {
 	res.json(await scoreboardHandler(cid, req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id)));
 });
 
-router.get("/:cid/line", async (req, res) => {
+router.get("/:cid/line", async (req: any, res: any) => {
 	const cid = parseInt(req.params.cid);
-	if(!await check(req, res, cid)) {
+	if (!await check(req, res, cid)) {
 		return;
 	}
 	let [submitStat, line_break, contest_user] = await Promise.all([submitHandler(cid), lineBreakHandler(cid), contestUserHandler(cid)]);
-	let map = {};
-	for(const i of submitStat) {
+	let map: any = {};
+	for (const i of submitStat) {
 		map[i.solution_id] = i;
 	}
-	for(const i of line_break) {
+	for (const i of line_break) {
 		map[i.solution_id] = Object.assign(map[i.solution_id], i);
 	}
 	res.json(ok.okMaker({

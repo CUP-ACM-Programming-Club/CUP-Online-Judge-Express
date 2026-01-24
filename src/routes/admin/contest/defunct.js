@@ -1,1 +1,0 @@
-module.exports = require("../../../module/admin/defunct")("contest", "contest_id");

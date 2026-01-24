@@ -1,1 +1,0 @@
-module.exports = require("../../../module/admin/defunct")("special_subject", "topic_id");

@@ -17,12 +17,12 @@ md.use(mh);
 const cache_query = require("../module/mysql_cache");
 const query = require("../module/mysql_query");
 const getProblemData = require("../module/contest/problem");
-const {error, ok} = require("../module/constants/state");
+const { error, ok } = require("../module/constants/state");
 const auth = require("../middleware/auth");
 const check = require("../module/contest/check");
 
 
-router.get("/general/:cid", async (req, res) => {
+router.get("/general/:cid", async (req: any, res: any) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && await check(req, res, cid)) {
 		const cacheKey = `Contest:info:${cid}`;
@@ -45,7 +45,7 @@ router.get("/general/:cid", async (req, res) => {
 	}
 });
 
-router.get("/problem/:cid", async (req, res) => {
+router.get("/problem/:cid", async (req: any, res: any) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	let contest_detail = null;
 	try {
@@ -53,7 +53,7 @@ router.get("/problem/:cid", async (req, res) => {
 			if (contest_detail.length > 0) contest_detail = contest_detail[0];
 			let contest_general_detail;
 			const contest_is_end = dayjs(contest_detail.end_time).isBefore(dayjs());
-			let sqlQueue = [];
+			let sqlQueue: any[] = [];
 			sqlQueue.push(getProblemData(cid, contest_detail.vjudge));
 			sqlQueue.push(cache_query(`select count(1) as cnt,problem_id,result from solution where 
 			user_id = ? and contest_id = ?
@@ -64,7 +64,7 @@ group by problem_id,result`, [req.session.user_id, cid]));
 			let limit_data;
 			[contest_general_detail, submission_data, limit_data] = await Promise.all(sqlQueue);
 			let browse_privilege = req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id);
-			let submission_map = {};
+			let submission_map: any = {};
 			for (let i of submission_data) {
 				if (typeof submission_map[i.problem_id] === "undefined") {
 					submission_map[i.problem_id] = {};
@@ -104,23 +104,23 @@ group by problem_id,result`, [req.session.user_id, cid]));
 	}
 });
 
-router.get("/list", async (req, res) => {
+router.get("/list", async (req: any, res: any) => {
 	res.json(await ContestManager.getContestList(req));
 });
 
-router.get("/v2/list", async (req, res) => {
+router.get("/v2/list", async (req: any, res: any) => {
 	res.json(await ContestManager.getContestListAsObjectByRequest(req));
 });
 
-router.get("/list/all", async (req, res) => {
+router.get("/list/all", async (req: any, res: any) => {
 	res.json(await ContestManager.getAllContestList());
 });
 
-router.get("/total", async (req, res) => {
+router.get("/total", async (req: any, res: any) => {
 	res.json(await ContestManager.getTotalNumber(req));
 });
 
-router.get("/statistics/:cid", async (req, res) => {
+router.get("/statistics/:cid", async (req: any, res: any) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && cid >= 1000) {
 		const [contest_statistics_detail, total] = await Promise.all([
@@ -139,7 +139,7 @@ union all SELECT
 			,
 			cache_query("select count(1)total_problem,contest_id from contest_problem where contest_id = ?", [cid])
 		])
-        ;
+			;
 		res.json({
 			status: "OK",
 			data: contest_statistics_detail,
@@ -150,7 +150,7 @@ union all SELECT
 	}
 });
 
-router.post("/password/:cid", async (req, res) => {
+router.post("/password/:cid", async (req: any, res: any) => {
 	let cid = req.params.cid === undefined || isNaN(req.params.cid) ? -1 : parseInt(req.params.cid);
 	if (~cid && cid >= 1000) {
 		const contest_detail = await cache_query("select * from contest where contest_id = ?", [cid]);
@@ -166,7 +166,7 @@ router.post("/password/:cid", async (req, res) => {
 					status: "OK"
 				});
 				query("select * from privilege where user_id = ? and rightstr = ?", [req.session.user_id, `c${cid}`])
-					.then(rows => (rows.length === 0) ?
+					.then((rows: any) => (rows.length === 0) ?
 						query("insert into privilege(user_id,rightstr)values(?,?)", [req.session.user_id, `c${cid}`]) : false
 					);
 			} else {
@@ -178,4 +178,4 @@ router.post("/password/:cid", async (req, res) => {
 	}
 });
 
-module.exports = ["/contest", auth, router];
+export = ["/contest", auth, router];

@@ -6,14 +6,14 @@ const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 const auth = require("../middleware/auth");
 const DiscussInterceptor = require("../module/discuss/interceptor");
-const {checkCaptcha} = require("../module/captcha_checker");
+const { checkCaptcha } = require("../module/captcha_checker");
 
-const checkPrivilege = (req) => {
+const checkPrivilege = (req: any) => {
 	return req.session.isadmin || req.session.source_browser;
 };
 
 
-const checkValidation = (number) => {
+const checkValidation = (number: any) => {
 	number = parseInt(number);
 	if (isNaN(number) || number <= 0) {
 		return 0;
@@ -22,7 +22,7 @@ const checkValidation = (number) => {
 	}
 };
 
-router.get("/my", async (req, res) => {
+router.get("/my", async (req: any, res: any) => {
 	let page = checkValidation(req.query.page);
 	const user_id = req.session.user_id;
 	try {
@@ -38,12 +38,12 @@ router.get("/my", async (req, res) => {
 			discuss: _discuss_list,
 			total: _tot[0].cnt
 		});
-	} catch (e) {
+	} catch (e: any) {
 		res.json(error.invalidParams);
 	}
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: any, res: any) => {
 	if (!checkPrivilege(req)) {
 		if (global.contest_mode) {
 			res.json(error.contestMode);
@@ -79,7 +79,7 @@ router.get("/:id", async (req, res) => {
 		admin: req.session.isadmin
 	});
 });
-router.get("/", async (req, res) => {
+router.get("/", async (req: any, res: any) => {
 	let page = checkValidation(req.query.page);
 	if (!checkPrivilege(req)) {
 		if (global.contest_mode) {
@@ -87,7 +87,7 @@ router.get("/", async (req, res) => {
 			return;
 		}
 	}
-	let discuss_list;
+	let discuss_list: any;
 	let tot = 0;
 	let count = 0;
 	const resolve = () => {
@@ -103,20 +103,20 @@ router.get("/", async (req, res) => {
 	cache_query(`select user_id, title, last_post, edit_time, create_time, article_id from article ${req.session.isadmin ? "" : "where defunct = 'N'"}
 	order by last_post desc,edit_time desc,create_time desc,article_id desc
 	limit ?,?`, [page, page_cnt])
-		.then(rows => {
+		.then((rows: any) => {
 			discuss_list = rows;
 			resolve();
 		});
 	cache_query(`select count(1) as cnt from article 
 	${req.session.isadmin ? "" : "where defunct = 'N'"}`)
-		.then(rows => {
+		.then((rows: any) => {
 			tot = parseInt(rows[0].cnt);
 			resolve();
 		});
 });
 
 
-router.post("/reply/:id", (req, res) => {
+router.post("/reply/:id", (req: any, res: any) => {
 	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
 	if (id < 1) {
 		res.json(error.invalidParams);
@@ -132,11 +132,11 @@ router.post("/reply/:id", (req, res) => {
 	}
 });
 
-router.get("/search/:search_val", async (req, res) => {
+router.get("/search/:search_val", async (req: any, res: any) => {
 	const search_val = `%${req.params.search_val}%`;
 	let sql = "select * from article where title like ?";
 	let page = checkValidation(req.query.page);
-	let sqlArr = [search_val];
+	let sqlArr: (string | number)[] = [search_val];
 	if (search_val.length === 2 || typeof req.params.search_val === "undefined") {
 		sql = `select * from article 
 	    order by last_post desc,edit_time desc,create_time desc,article_id desc limit ?,?`;
@@ -150,14 +150,14 @@ router.get("/search/:search_val", async (req, res) => {
 	});
 });
 
-router.post("/newpost", (req, res) => {
+router.post("/newpost", (req: any, res: any) => {
 	if (!checkCaptcha(req, "newpost")) {
 		res.json(error.invalidCaptcha);
 	} else {
 		const content = req.body.content;
 		const title = req.body.title;
 		query("insert into article(user_id,title,content)values(?,?,?)", [req.session.user_id, title, content])
-			.then(rows => {
+			.then((rows: any) => {
 				res.json({
 					status: "OK",
 					data: rows.insertId
@@ -173,7 +173,7 @@ router.post("/newpost", (req, res) => {
 	}
 });
 
-router.post("/update/main/:id", (req, res) => {
+router.post("/update/main/:id", (req: any, res: any) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
 	} else {
@@ -185,7 +185,7 @@ router.post("/update/main/:id", (req, res) => {
 			.then(() => {
 				res.json(ok.ok);
 			})
-			.catch((e) => {
+			.catch((e: any) => {
 				console.log(e);
 				res.json({
 					status: "error",
@@ -195,7 +195,7 @@ router.post("/update/main/:id", (req, res) => {
 	}
 });
 
-router.get("/update/main/:id", async (req, res) => {
+router.post("/update/:id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
 	const _main_content = await query(`select content,title from article 
 	where article_id = ?`, [article_id]);
@@ -205,7 +205,7 @@ router.get("/update/main/:id", async (req, res) => {
 	});
 });
 
-router.post("/update/reply/:id/:comment_id", (req, res) => {
+router.post("/update/reply/:id/:comment_id", (req: any, res: any) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
 	} else {
@@ -227,7 +227,7 @@ router.post("/update/reply/:id/:comment_id", (req, res) => {
 	}
 });
 
-router.get("/update/reply/:id/:comment_id", async (req, res) => {
+router.get("/update/reply/:id/:comment_id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
 	const comment_id = parseInt(req.params.comment_id);
 	const _reply_content = await query(`select content from article_content 
@@ -238,7 +238,7 @@ router.get("/update/reply/:id/:comment_id", async (req, res) => {
 	});
 });
 
-router.get("/update/reply/block/:id/:comment_id", async (req, res) => {
+router.get("/update/reply/block/:id/:comment_id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
 	const comment_id = parseInt(req.params.comment_id);
 	await query(`update article_content set content = "该回复经管理员审核，已被屏蔽" where article_id = ? and
@@ -251,4 +251,4 @@ router.get("/update/reply/block/:id/:comment_id", async (req, res) => {
 		});
 });
 
-module.exports = ["/discuss", auth, DiscussInterceptor, router];
+export = ["/discuss", auth, DiscussInterceptor, router];
