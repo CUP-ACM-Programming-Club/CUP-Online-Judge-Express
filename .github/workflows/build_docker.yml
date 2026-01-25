@@ -4,37 +4,49 @@ on:
   push:
     branches:
       - typescript
+      - master
+      - main
     paths:
       - 'package.json'
       - 'src/**'
       - 'docker/**'
       - '.github/workflows/**'
+  pull_request:
+    branches:
+      - typescript
+      - master
+      - main
 
 jobs:
-  publish:
-    if: github.repository == 'CUP-ACM-Programming-Club/CUP-Online-Judge-Express'
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [12.x]
-
+  test:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
-        name: Checkout code
+      - uses: actions/checkout@v4
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v4
         with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+          node-version: 18.x
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Unit Tests
+        run: npm run test:unit
 
-      - name: Use Node.js environment
-        uses: actions/setup-node@v1
+  publish:
+    needs: test
+    if: github.event_name == 'push' && github.repository == 'CUP-ACM-Programming-Club/CUP-Online-Judge-Express'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 18.x
       - name: Build env
         run: |
           echo "PKG_VERSION=$(node script/get_version.js)" >> $GITHUB_ENV
           echo "BACKEND_ENV_VERSION=$(cat docker/base/VERSION)" >> $GITHUB_ENV
-      - uses: mr-smithers-excellent/docker-build-push@v2
+      - uses: mr-smithers-excellent/docker-build-push@v6
         name: Build Backend service image
         with:
           image: ryanlee2014/cupoj-backend-env
@@ -43,7 +55,7 @@ jobs:
           dockerfile: ./docker/base/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: mr-smithers-excellent/docker-build-push@v2
+      - uses: mr-smithers-excellent/docker-build-push@v6
         name: Build Backend service image
         with:
           image: ryanlee2014/cupoj-backend
@@ -52,7 +64,7 @@ jobs:
           dockerfile: ./docker/backend/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: mr-smithers-excellent/docker-build-push@v2
+      - uses: mr-smithers-excellent/docker-build-push@v6
         name: Update Backend service image
         with:
           image: ryanlee2014/cupoj-backend
@@ -61,7 +73,7 @@ jobs:
           dockerfile: ./docker/backend/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: mr-smithers-excellent/docker-build-push@v2
+      - uses: mr-smithers-excellent/docker-build-push@v6
         name: Build Websocket service image
         with:
           image: ryanlee2014/cupoj-websocket
@@ -70,7 +82,7 @@ jobs:
           dockerfile: ./docker/websocket/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: mr-smithers-excellent/docker-build-push@v2
+      - uses: mr-smithers-excellent/docker-build-push@v6
         name: Update latest image
         with:
           image: ryanlee2014/cupoj-websocket

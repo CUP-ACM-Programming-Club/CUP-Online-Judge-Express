@@ -45,7 +45,7 @@
     "hash-generator": "^0.1.0",
     "helmet": "^4.1.1",
     "iconv-lite": "^0.6.2",
-    "inversify": "^7.11.0",
+    "inversify": "^5.1.1",
     "ip": "^2.0.0",
     "is-image": "^3.0.0",
     "is-promise": "^4.0.0",
@@ -81,7 +81,6 @@
     "svg-captcha": "^1.4.0",
     "timediff": "^1.1.1",
     "tinyqueue": "^2.0.3",
-    "typescript": "^4.1.2",
     "uuid": "^8.3.1",
     "ws": "^7.3.1"
   },
@@ -128,6 +127,7 @@
     "mysql-import": "^4.0.24",
     "nyc": "^15.1.0",
     "supertest": "^6.0.0",
-    "ts-node": "^9.0.0"
+    "ts-node": "^9.0.0",
+    "typescript": "^4.1.2"
   }
 }

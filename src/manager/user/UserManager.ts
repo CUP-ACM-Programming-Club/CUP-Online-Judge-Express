@@ -1,10 +1,14 @@
-import {Request} from "express";
-import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
-import {ok} from "../../module/constants/state";
+import { Request } from "express";
+import { ErrorHandlerFactory } from "../../decorator/ErrorHandler";
+import { ok } from "../../module/constants/state";
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../di/types";
+import { ConfigService } from "../../service/ConfigService";
+
 const query = require("../../module/mysql_cache");
 const encryptPassword = require("../../module/util").encryptPassword;
 const getIP = require("../../module/getIP");
-const salt = global.config.salt || "thisissalt";
+const legacySalt = global.config.salt || "thisissalt";
 
 export interface UserInfoPayload {
     userId: string,
@@ -36,21 +40,32 @@ export interface UserInfoDAO {
     confirmanswer: string
 }
 
+@injectable()
 export class UserManager {
+    private _configService?: ConfigService;
+
+    constructor(@inject(TYPES.ConfigService) configService?: ConfigService) {
+        this._configService = configService;
+    }
+
+    private get salt() {
+        return this._configService ? this._configService.config.salt : legacySalt;
+    }
+
     async addUser(userInfoPayload: UserInfoPayload, request: Request) {
         return await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email)values(?,?,?,?,?,?,NOW(),'','')`,
-            [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
-            encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request)]);
+            [userInfoPayload.userId, encryptPassword(userInfoPayload.password, this.salt), userInfoPayload.confirmQuestion,
+            encryptPassword(userInfoPayload.confirmAnswer, this.salt), userInfoPayload.nick, getIP(request)]);
     }
 
     async addContestUser(userInfoPayload: ContestUserInfoPayload, request: Request) {
         return await query(`insert into users(user_id, newpassword, confirmquestion, confirmanswer, nick, ip, reg_time, password, email, school)values(?,?,?,?,?,?,NOW(),'','', ?)`,
-            [userInfoPayload.userId, encryptPassword(userInfoPayload.password, salt), userInfoPayload.confirmQuestion,
-                encryptPassword(userInfoPayload.confirmAnswer, salt), userInfoPayload.nick, getIP(request), userInfoPayload.school]);
+            [userInfoPayload.userId, encryptPassword(userInfoPayload.password, this.salt), userInfoPayload.confirmQuestion,
+            encryptPassword(userInfoPayload.confirmAnswer, this.salt), userInfoPayload.nick, getIP(request), userInfoPayload.school]);
     }
 
     async changePassword(userId: string, password: string) {
-        return await query(`update users set newpassword = ? where user_id = ?`, [encryptPassword(password, salt), userId]);
+        return await query(`update users set newpassword = ? where user_id = ?`, [encryptPassword(password, this.salt), userId]);
     }
 
     async getUser(userId: string): Promise<UserInfoDAO | null> {

@@ -83,6 +83,7 @@ const modelProxy = new Proxy({}, {
 });
 
 const mockMysqlQuery = Object.assign(function (sql, params, callback) {
+	console.log("MockMysqlQuery called:", sql);
 	return fakeDb.query(sql, params, callback);
 }, { pool: fakeDb.pool });
 
@@ -170,7 +171,33 @@ registerOverride(path.join(srcRoot, "orm", "ts-model", "index.ts"), modelProxy);
 registerOverride(path.join(srcRoot, "module", "memcached.ts"), mockMemcachedModule);
 registerOverride(path.join(srcRoot, "module", "init", "build_env.ts"), mockBuildEnv);
 registerOverride(path.join(srcRoot, "module", "redis.ts"), mockRedisModule);
+registerOverride(path.join(srcRoot, "module", "redis.ts"), mockRedisModule);
 registerOverride(path.join(srcRoot, "manager", "cache", "scheduler", "CacheScheduler.ts"), mockCacheScheduler);
+registerOverride(path.join(srcRoot, "manager", "user", "UserRegisterManager.ts"), {
+	UserRegisterValidator: class {
+		async validate(payload: any) { }
+		async validateWithoutInviteCode(payload: any) { }
+	},
+	UserRegisterManager: class {
+		userRegisterValidator: any;
+		constructor() {
+			this.userRegisterValidator = {
+				validate: async () => { },
+				validateWithoutInviteCode: async () => { }
+			};
+		}
+		async registerUserRequest(req: any) { return { status: "OK" }; }
+		async initSystemAdminUserRequest(req: any) { }
+	},
+	default: {
+		registerUserRequest: () => Promise.resolve({ status: "OK" })
+	}
+});
+registerOverride(path.join(srcRoot, "manager", "init", "InitManager.ts"), {
+	default: {
+		setInitFlag: () => { }
+	}
+});
 
 const originalLoad = (Module as any)._load;
 (Module as any)._load = function (request: any, parent: any, isMain: any) {

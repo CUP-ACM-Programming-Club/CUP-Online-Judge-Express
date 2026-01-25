@@ -10,6 +10,12 @@ const salt = global.config.salt || "thisissalt";
 import login_action = require("../module/login_action");
 const { checkCaptcha } = require("../module/captcha_checker");
 import { checkJSON, generateNewEncryptPassword } from "../module/util";
+import { container } from "../di/container";
+import { TYPES } from "../di/types";
+import { AuthService } from "../module/auth/AuthService";
+
+const authService = container.get<AuthService>(TYPES.AuthService);
+
 const banChecker = require("../middleware/ban_check");
 
 router.get("/", function (req: any, res: any) {
@@ -71,20 +77,13 @@ router.post("/newlogin", async function (req: any, res: any) {
 		return;
 	}
 	if (user_id !== "" && password !== "") {
-		const val = await query("select password,newpassword from users where user_id=?", [user_id]);
-		let ans;
-		let newpass;
-		if (val.length && val.length > 0) {
-			ans = val[0].password;
-			newpass = val[0].newpassword;
-			if (checkPassword(ans, password, newpass)) {
-				await storeNewTypePassword(res, password, user_id, newpass);
-				await login_action(req, user_id);
-				if (await banChecker(req, res)) {
-					res.json(ok.ok);
-				}
-			} else {
-				res.json(error.invalidUser);
+		const user = await authService.validateUser(user_id, password);
+		if (user) {
+			const { password: ans, newpassword: newpass } = user;
+			await storeNewTypePassword(res, password, user_id, newpass);
+			await login_action(req, user_id);
+			if (await banChecker(req, res)) {
+				res.json(ok.ok);
 			}
 		}
 		else {
@@ -124,21 +123,16 @@ router.post("/", async function (req: any, res: any) {
 	const json = receive;
 	const user_id = json["user_id"] || "", password = json["password"] || "";
 	if (user_id !== "" && password !== "") {
-		const val = await query("select password,newpassword from users where user_id=?", [user_id]);
-		let ans;
-		let newpass;
-		if (val.length && val.length > 0) {
-			ans = val[0].password;
-			newpass = val[0].newpassword;
-			if (checkPassword(ans, password, newpass /*reverse(crypto.decryptAES(newpass, reverse(salt))).substring(salt.length)*/)) {
-				await storeNewTypePassword(res, password, user_id, newpass);
-				await login_action(req, user_id);
-				if (await banChecker(req, res)) {
-					res.json(ok.ok);
-				}
-			} else {
-				res.json(error.invalidUser);
+		const user = await authService.validateUser(user_id, password);
+		if (user) {
+			const { password: ans, newpassword: newpass } = user;
+			await storeNewTypePassword(res, password, user_id, newpass);
+			await login_action(req, user_id);
+			if (await banChecker(req, res)) {
+				res.json(ok.ok);
 			}
+		} else {
+			res.json(error.invalidUser);
 		}
 	}
 	else {

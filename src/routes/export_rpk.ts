@@ -84,7 +84,7 @@ const pack_problem = async (_problem_detail: any, problem_dir: any, problem_id: 
 	const dirFileList = await readDir(problem_dir);
 	[problem_details.input_files, problem_details.output_files, problem_details.prepend, problem_details.append]
 		= await Promise.all([readFile(dirFileList.input), readFile(dirFileList.output), readFile(dirFileList.prepend), readFile(dirFileList.append)]);
-	problem_details.spj = (await readFile([dirFileList.spj]))[0];
+	problem_details.spj = (await readFile([dirFileList.spj]))[0] as any;
 	const [prepend_file_database, append_file_database] = await Promise.all([prependAppendCodePacker("prepend", problem_id), prependAppendCodePacker("append", problem_id)]);
 	problem_details.prepend.push(...prepend_file_database);
 	problem_details.append.push(...append_file_database);
