@@ -1,14 +1,14 @@
 import AwaitLock from "await-lock";
 import Cacheable from "../../decorator/Cacheable";
-import {Request} from "express";
+import { Request } from "express";
 import "express-session";
 import Timer from "../../decorator/Timer";
-import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
-import {ok} from "../../module/constants/state";
+import { ErrorHandlerFactory } from "../../decorator/ErrorHandler";
+import { ok } from "../../module/constants/state";
 import isNumber from "../../module/util/isNumber";
 import ResponseLogger from "../../decorator/ResponseLogger";
 import CachePool from "../../module/common/CachePool";
-import {MySQLManager} from "../mysql/MySQLManager";
+import { MySQLManager } from "../mysql/MySQLManager";
 import PrivilegeManager from "../user/PrivilegeManager";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
@@ -25,6 +25,10 @@ interface searchQuery {
     sqlArr: any[]
 }
 
+/**
+ * @deprecated Use src/service/ContestService.ts instead.
+ * This class is kept for backward compatibility and internal usage by ContestService.
+ */
 class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 1, "second")
@@ -61,12 +65,12 @@ class ContestManager {
     }
 
     @ResponseLogger
-    buildSqlStructure (...args: (string|null|undefined)[]) {
+    buildSqlStructure(...args: (string | null | undefined)[]) {
         return `select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest where ${args.filter(e => typeof e === "string").join(" and ")}`;
     }
 
     @ResponseLogger
-    buildSqlCountStructure (...args: (string|null|undefined)[]) {
+    buildSqlCountStructure(...args: (string | null | undefined)[]) {
         return `select count(1) as cnt from contest where ${args.filter(e => typeof e === "string").join(" and ")}`;
     }
 
@@ -128,7 +132,7 @@ class ContestManager {
     @ErrorHandlerFactory(ok.okMaker)
     @Timer
     async getContestList(req: Request) {
-        return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req),this.getSearchSql(req) , this.buildLimit(req));
+        return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.getSearchSql(req), this.buildLimit(req));
     }
 
     @ErrorHandlerFactory(ok.okMaker)

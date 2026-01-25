@@ -1,11 +1,12 @@
 import express from "express";
 const router = express.Router();
-const [error, ok] = require("../../../module/const_var");
-const query = require("../../../module/mysql_query");
+import const_var from "../../../module/const_var";
+const [error, ok] = const_var;
+import query = require("../../../module/mysql_query");
 const LENGTH_LIMIT = 100;
-const checkPassword = require("../../../module/check_password");
-const loginAction = require("../../../module/login_action");
-const { encryptPassword } = require("../../../module/util");
+import checkPassword = require("../../../module/check_password");
+import loginAction from "../../../module/login_action";
+import { encryptPassword } from "../../../module/util";
 const salt = global.config.salt || "thisissalt";
 
 function checkLength(str: any, size = LENGTH_LIMIT) {
@@ -40,7 +41,11 @@ function checkRequestBodyProperties(body: any) {
 
 async function checkPasswordAdapter(user_id: any, password: any) {
 	const res = await query("select password,newpassword from users where user_id = ?", [user_id]);
-	return checkPassword(res[0].password, password, res[0].newpassword);
+	console.log("DEBUG: query res", res);
+	console.log("DEBUG: checkPassword fn", checkPassword.toString());
+	const result = checkPassword(res[0].password, password, res[0].newpassword);
+	console.log("DEBUG: checkPassword returned", result);
+	return result;
 }
 
 router.post("/", async (req: any, res: any) => {
@@ -50,11 +55,15 @@ router.post("/", async (req: any, res: any) => {
 		return;
 	}
 	let { blog, github, biography, confirmquestion, confirmanswer, password, newpassword, repeatpassword, email, school, nick, avatarUrl } = req.body;
+	console.log("DEBUG: checkPasswordAdapter start", user_id, password);
 	if (!await checkPasswordAdapter(user_id, password)) {
+		console.log("DEBUG: password check failed");
 		res.json(error.errorMaker("Password wrong"));
 		return;
 	}
+	console.log("DEBUG: password check passed");
 	if (newpassword !== repeatpassword) {
+		console.log("DEBUG: password mismatch");
 		res.json(error.errorMaker("Two password not same"));
 		return;
 	}
@@ -75,8 +84,12 @@ router.post("/", async (req: any, res: any) => {
 			avatarUrl
 		};
 		Object.keys(Property).forEach(el => {
+			console.log("DEBUG: Checking prop", el, "Value:", Property[el]);
 			if (checkExists(Property[el])) {
+				console.log("DEBUG: Adding query for", el);
 				Queue.push(buildUpdateQuery(el, Property[el], user_id));
+			} else {
+				console.log("DEBUG: checkExists failed for", el);
 			}
 		});
 		await Promise.all(Queue);
@@ -88,4 +101,4 @@ router.post("/", async (req: any, res: any) => {
 	}
 });
 
-module.exports = ["/profile", router];
+export default router;

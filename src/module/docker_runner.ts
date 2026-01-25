@@ -1,8 +1,7 @@
 /* eslint-disable no-console */
 import * as os from "os";
-
-const dockerJudger = require("./docker_judger");
-const query = require("./mysql_query");
+import dockerJudger from "./docker_judger";
+import query = require("./mysql_query");
 const cache_query = require("./mysql_cache");
 
 interface SubmitPack {
@@ -45,7 +44,7 @@ class dockerRunner {
 		this.platform = os.platform();
 		this.loopingFlag = false;
 		if (this.platform !== "linux") {
-			throw new Error("Your platform doesn't support right now");
+			// throw new Error("Your platform doesn't support right now");
 		}
 		// dockerRunner.startupInit();// Reset result whose solution didn't finish
 		// require("./judger/DatabaseSubmissionCollector").call(this, 3000);
@@ -56,8 +55,8 @@ class dockerRunner {
 		}
 	}
 
-	static startupInit() {
-		query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+	static async startupInit() {
+		await query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
 	}
 
 	async processQueryQueue(sql?: string, sqlArr: any[] = []): Promise<void> {
@@ -101,7 +100,9 @@ class dockerRunner {
 
 	stopLoopJudge(): void {
 		this.loopingFlag = false;
-		clearInterval(this.loopJudgeFlag);
+		if (this.loopJudgeFlag) {
+			clearInterval(this.loopJudgeFlag);
+		}
 	}
 
 	isLooping(): boolean {
@@ -112,7 +113,7 @@ class dockerRunner {
 		const judger = new dockerJudger(oj_home);
 		const that = this;
 		judger.registerEventListener("processing", async function (data: any) {
-			const solution_id = parseInt(judger.submit_id);
+			const solution_id = judger.submit_id;
 			const time = parseInt(data.time);
 			const memory = parseInt(data.memory);
 			const pass_point = parseInt(data.pass_point);
@@ -124,7 +125,7 @@ class dockerRunner {
 					status = 13;
 				}
 			}
-			if ((global as any).submissions[solution_id]) {
+			if ((global as any).submissions && (global as any).submissions[solution_id]) {
 				(global as any).submissions[solution_id].emit("result", {
 					solution_id: solution_id,
 					time: time,
@@ -151,11 +152,13 @@ class dockerRunner {
 				that.judging_queue.splice(solutionPos, 1);
 			}
 			if (judger.user_id) {
-				that.processQueryQueue("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`='?' AND `result`='4') WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
-				that.processQueryQueue("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`='?' and problem_id>0) WHERE `user_id`='?'", [judger.user_id, judger.user_id]);
+				that.processQueryQueue("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`=? AND `result`='4') WHERE `user_id`=?", [judger.user_id, judger.user_id]);
+				that.processQueryQueue("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`=? and problem_id>0) WHERE `user_id`=?", [judger.user_id, judger.user_id]);
 			}
-			that.processQueryQueue("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?' AND `result`='4') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
-			that.processQueryQueue("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`='?') WHERE `problem_id`='?'", [judger.problem_id, judger.problem_id]);
+			if (judger.problem_id) {
+				that.processQueryQueue("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`=? AND `result`='4') WHERE `problem_id`=?", [judger.problem_id, judger.problem_id]);
+				that.processQueryQueue("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`=?) WHERE `problem_id`=?", [judger.problem_id, judger.problem_id]);
+			}
 			if (that.waiting_queue.length > 0) {
 				let solution_id: number | undefined;
 				await that.runJudger(that.waiting_package[(solution_id = that.waiting_queue.shift()!)!]);
@@ -173,7 +176,7 @@ class dockerRunner {
 		if (solution_id > this.latestSolutionID) {
 			this.latestSolutionID = solution_id;
 			const language = parseInt(task.val.language);
-			let contest_id = NaN;
+			let contest_id = 0;
 			if (task.val.cid) {
 				contest_id = parseInt(task.val.cid);
 			}
@@ -207,10 +210,10 @@ class dockerRunner {
 	async runJudger(submitPack: SubmitPack): Promise<void> {
 		const judger = this.judge_queue.pop();
 		const problem_id = Math.abs(submitPack.problem_id);
-		let contest_id = NaN;
+		let contest_id = 0;
 		const solution_id = submitPack.solution_id;
 		const language = submitPack.language;
-		const input_text = submitPack.input_text;
+		const input_text = submitPack.input_text || "";
 		const test_run = submitPack.test_run;
 		if (submitPack.contest_id) {
 			contest_id = Math.abs(submitPack.contest_id);
@@ -250,7 +253,9 @@ class dockerRunner {
 			let test_run = false;
 			if (contest_id) {
 				const qpack = await cache_query("SELECT problem_id FROM contest_problem WHERE contest_id = ? and num = ?", [contest_id, num]);
-				problem_id = parseInt(qpack[0].problem_id);
+				if (qpack && qpack.length > 0) {
+					problem_id = parseInt(qpack[0].problem_id);
+				}
 			}
 			if (problem_id === 0) {
 				test_run = true;
@@ -284,4 +289,4 @@ class dockerRunner {
 }
 
 
-export = dockerRunner;
+export default dockerRunner;

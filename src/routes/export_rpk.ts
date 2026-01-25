@@ -8,7 +8,7 @@ const suffix = require("../module/const_name").language_suffix.local;
 const zlib = require("zlib");
 const home_dir = path.join(global.config.judger.oj_home, "data");
 const middleWare = require("../middleware/admin");
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 
 const error_cb = {
 	status: "ERROR",

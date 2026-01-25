@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 const router = express.Router();
 const cache_query = require("../module/mysql_cache");
 const [error] = require("../module/const_var");
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 
 router.get("/", async (req: Request, res: Response) => {
 	try {

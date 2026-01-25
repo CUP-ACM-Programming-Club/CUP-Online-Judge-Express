@@ -4,11 +4,9 @@
  */
 import * as path from "path";
 import { EventEmitter } from "events";
-import * as fsSync from "fs";
-
-const Bluebird = require("bluebird");
-const query = require("./mysql_query");
-const fs = Bluebird.promisifyAll(fsSync);
+import * as fs from "fs";
+import * as fsPromises from "fs/promises";
+import query = require("./mysql_query");
 
 const OUTPUT_LIMIT_EXCEEDED = -1;
 const WRONG_ANSWER = 0;
@@ -32,7 +30,16 @@ async function cache_query(sql: string, sqlArr: any[]): Promise<any> {
 	}
 }
 
-function parseResult(code: number, time: number, memory: number, pass_point: number, compile_msg: string, compile_error_msg: string) {
+interface JudgeResult {
+	status: number;
+	time: number;
+	memory: number;
+	pass_point: number;
+	compile_message: string;
+	compile_error_message: string;
+}
+
+function parseResult(code: number, time: number, memory: number, pass_point: number, compile_msg: string, compile_error_msg: string): JudgeResult {
 	return {
 		status: code,
 		time: time,
@@ -67,12 +74,12 @@ class dockerJudger extends EventEmitter {
 		this.oj_home = oj_home;
 		this.inputFile = [];
 		this.outputFile = [];
-		if (fs.existsSync("./module/docker/index.js")) {
+		if (fs.existsSync(path.join(__dirname, "docker", "index.js"))) {
 			this.Sandbox = require("./docker/index");
 			this.submit = this.Sandbox.createSubmit();
 		}
 		else {
-			console.error("You don't have CUP Online Judge docker judger in ./docker directory\nPlease clone it in this directory");
+			// console.error("You don't have CUP Online Judge docker judger in ./docker directory\nPlease clone it in this directory");
 		}
 		this.language = NaN;
 		this.submit_id = NaN;
@@ -100,6 +107,7 @@ class dockerJudger extends EventEmitter {
 		if (lang > -1 && lang < languageToName.length) {
 			return languageToName[lang];
 		}
+		return undefined;
 	}
 
 	static LanguageBonus(language: number): number {
@@ -158,12 +166,14 @@ class dockerJudger extends EventEmitter {
 		}
 		this.problem_id = parsedId;
 		const problem_status = await cache_query("SELECT * FROM problem WHERE problem_id=?", [this.problem_id]);
-		let time_limit = parseFloat(problem_status[0].time_limit);
-		let memory_limit = parseInt(problem_status[0].memory_limit);
-		this.setTimeLimit(time_limit);
-		this.setTimeLimitReserve(time_limit / 2);
-		this.setMemoryLimit(memory_limit);
-		this.setMemoryLimitReserve(memory_limit / 4);
+		if (problem_status && problem_status.length > 0) {
+			let time_limit = parseFloat(problem_status[0].time_limit);
+			let memory_limit = parseInt(problem_status[0].memory_limit);
+			this.setTimeLimit(time_limit);
+			this.setTimeLimitReserve(time_limit / 2);
+			this.setMemoryLimit(memory_limit);
+			this.setMemoryLimitReserve(memory_limit / 4);
+		}
 	}
 
 	setTimeLimit(time_limit: number): void {
@@ -217,10 +227,12 @@ class dockerJudger extends EventEmitter {
 	}
 
 	setCustomInput(input: string): void {
-		this.submit.pushInputRawFiles({
-			name: "custominput.in",
-			data: input
-		});
+		if (this.submit) {
+			this.submit.pushInputRawFiles({
+				name: "custominput.in",
+				data: input
+			});
+		}
 	}
 
 	setLanguage(language: number): void {
@@ -240,26 +252,33 @@ class dockerJudger extends EventEmitter {
 	}
 
 	pushRawFile(file: { name: string; data: string }): void {
-		this.submit.pushInputRawFiles({
-			name: file.name,
-			data: file.data
-		});
+		if (this.submit) {
+			this.submit.pushInputRawFiles({
+				name: file.name,
+				data: file.data
+			});
+		}
 	}
 
 	async run() {
+		if (!this.submit) return;
 		if (this.mode === 0) {
 			const dirname = path.join(this.oj_home, "data", this.problem_id!.toString());
-			const filelist = await fs.readdirAsync(dirname);
-			const outfilelist = [];
-			for (let i in filelist) {
-				//(filelist[i]);
-				if (filelist[i].indexOf(".in") > 0) {
-					this.submit.pushFileStdin(path.join(dirname, filelist[i]));
+			try {
+				const filelist = await fsPromises.readdir(dirname);
+				const outfilelist = [];
+				for (let i in filelist) {
+					//(filelist[i]);
+					if (filelist[i].indexOf(".in") > 0) {
+						this.submit.pushFileStdin(path.join(dirname, filelist[i]));
+					}
+					else if (filelist[i].indexOf(".out") > 0) {
+						this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
+						outfilelist.push(path.join(dirname, filelist[i]));
+					}
 				}
-				else if (filelist[i].indexOf(".out") > 0) {
-					this.submit.pushAnswerFiles(path.join(dirname, filelist[i]));
-					outfilelist.push(path.join(dirname, filelist[i]));
-				}
+			} catch (e) {
+				console.error(e);
 			}
 		}
 		else {
@@ -271,7 +290,7 @@ class dockerJudger extends EventEmitter {
 		this.submit.setMemoryLimit(this.memory_limit * dockerJudger.LanguageBonus(this.language));
 		this.submit.setMemoryLimitReverse(this.memory_limit_reserve);
 		if (this.mode === 0) {
-			if (fs.existsSync("./docker/checker")) {
+			if (fs.existsSync(path.join(__dirname, "docker", "checker.js"))) {
 				this.submit.setCompareFunction(require("./docker/checker").compareDiff);
 			}
 		}
@@ -288,4 +307,4 @@ class dockerJudger extends EventEmitter {
 }
 
 
-export = dockerJudger;
+export default dockerJudger;

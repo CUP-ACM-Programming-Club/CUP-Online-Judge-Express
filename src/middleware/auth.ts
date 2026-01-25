@@ -1,13 +1,14 @@
-const [error] = require("../module/const_var");
+import const_var from "../module/const_var";
+const [error] = const_var;
 import client from "../module/redis";
-const contest_mode = require("./contest_mode");
-const ban_check = require("./ban_check");
-const generateToken = require("./generate_token");
-const UpdatePool = require("../module/user/LazyPrivilegeUpdatePool");
-const login_action = require("../module/login_action");
+import contest_mode from "./contest_mode";
+import ban_check from "./ban_check";
+import generateToken from "./generate_token";
+import UpdatePool = require("../module/user/LazyPrivilegeUpdatePool");
+import login_action from "../module/login_action";
 import { Request, Response, NextFunction } from "express";
 
-export = async (req: Request, res: Response, next: NextFunction) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
 	if (!req.session!.auth) {
 		const original_cookie = req.cookies;
 		//req.cookies is an object

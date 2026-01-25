@@ -5,4 +5,4 @@ router.get("/", (req, res) => {
 	res.json(SelfInfoManager.getSelfInfoByRequest(req));
 });
 
-export =  ["/self", router];
+export default router;

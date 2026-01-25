@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 // @ts-ignore
 const website_dir = global.config.website.dir;
 const path = require("path");

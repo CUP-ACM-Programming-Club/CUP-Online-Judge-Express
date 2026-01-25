@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const Promise = require("bluebird");
 const fs = Promise.promisifyAll(require("fs"));
 const { error, ok } = require("../module/constants/state");

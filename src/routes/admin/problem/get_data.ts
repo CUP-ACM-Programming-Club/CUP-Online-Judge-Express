@@ -1,10 +1,10 @@
 import express from "express";
 const router = express.Router();
-import ProblemFileManager from "../../../module/problem/ProblemFileManager";
+import AdminProblemService from "../../../service/admin/AdminProblemService";
 
 router.get("/data/:problemId/:fileName", (req, res) => {
-	const {problemId, fileName} = req.params;
-	const filePath = ProblemFileManager.getFilePath(problemId, fileName);
+	const { problemId, fileName } = req.params;
+	const filePath = AdminProblemService.getProblemDataPath(parseInt(problemId), fileName);
 	res.download(filePath);
 });
 

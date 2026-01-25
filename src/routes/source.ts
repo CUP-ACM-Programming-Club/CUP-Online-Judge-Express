@@ -13,7 +13,7 @@ const mh = require("markdown-it-highlightjs");
 md.use(mh);
 const router = express.Router();
 const query = require("../module/mysql_cache");
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const cnameList = require("../module/const_name");
 const const_name = cnameList.markdown_language;
 const language_name = cnameList.language_name;

@@ -3,7 +3,7 @@ import TutorialInterceptor from "../module/tutorial/interceptor";
 
 import express from "express";
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const cache_query = require("../module/mysql_cache");
 const { checkCaptcha } = require("../module/captcha_checker");
 const { error, ok } = require("../module/constants/state");

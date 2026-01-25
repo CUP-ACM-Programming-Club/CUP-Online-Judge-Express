@@ -13,9 +13,58 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const [error] = require("../module/const_var");
 const admin_auth = require("../middleware/admin");
+import client from "../module/redis";
+import { getGraphDataWithCache, indexToGranularity, TIME_GRANULARITY } from "./status/graph_data_optimizer";
+
+const SECONDS = 1000;
+const MINUTES = 60 * SECONDS;
+const HOURS = 60 * MINUTES;
+const DAYS = 24 * HOURS;
+const WEEKS = 7 * DAYS;
+const MONTH = 30 * DAYS;
+const YEARS = 365 * DAYS;
+
+const GREATER = "greater";
+
+// Fallback SQLs (reconstructed)
+const graphDataSql = [
+	"SELECT count(1) as cnt, year(in_date) as year, month(in_date) as month FROM solution WHERE contest_id = ? GROUP BY year(in_date), month(in_date)",
+	"SELECT count(1) as cnt, month(in_date) as month, day(in_date) as day FROM solution WHERE contest_id = ? GROUP BY month(in_date), day(in_date)",
+	"SELECT count(1) as cnt, day(in_date) as day, hour(in_date) as hour FROM solution WHERE contest_id = ? GROUP BY day(in_date), hour(in_date)",
+	"SELECT count(1) as cnt, hour(in_date) as hour, minute(in_date) as minute FROM solution WHERE contest_id = ? GROUP BY hour(in_date), minute(in_date)",
+	"SELECT count(1) as cnt, minute(in_date) as minute, second(in_date) as second FROM solution WHERE contest_id = ? GROUP BY minute(in_date), second(in_date)",
+	"SELECT count(1) as cnt, year(in_date) as year, month(in_date) as month FROM solution GROUP BY year(in_date), month(in_date)"
+];
+
+function validateProblemId(req: any) {
+	let pid = req.params.problem_id;
+	if (pid === "null" || pid === undefined) {
+		return undefined;
+	}
+	const val = parseInt(pid);
+	if (isNaN(val)) {
+		return undefined;
+	}
+	return val;
+}
+
+function invalidProblemIdHandler(ctx: any, problem_id: any, result: any) {
+	if (problem_id && isNaN(problem_id)) {
+		ctx.res.json(error.invalidParams);
+		return true;
+	}
+	return false;
+}
+
+async function infoHandler(sid: number, table: string, sendmsg: any) {
+	const data = await cache_query(`select error from ${table} where solution_id = ?`, [sid]);
+	if (data.length > 0) {
+		sendmsg.data.tr = data[0].error;
+	}
+}
 
 router.use("/result", require("./status/submit_result"));
 router.use("/device", require("./status/device"));
@@ -29,374 +78,18 @@ router.use(...require("./status/runtime_info"));
 router.use(...require("./status/ip"));
 router.use(...require("./status/problem"));
 
-const SECONDS = 1000;
-const MINUTES = 60 * SECONDS;
-const HOURS = 60 * MINUTES;
-const DAYS = 24 * HOURS;
-const WEEKS = 7 * DAYS;
-const MONTH = 30 * DAYS;
-const YEARS = 365 * DAYS;
-const NOT_EQUAL = 1;
-const EQUAL = 0;
-const LESS_OR_EQUAL = 2;
-const GREATER_OR_EQUAL = 3;
-const GREATER = 4;
-const LESSER = 5;
-const compareSymbol = ["!=", "=", "<=", ">=", ">", "<"];
-
-function isCompareFlag(flag: any) {
-	return flag >= 0 && flag <= 5;
-}
-
-const graphDataSql = [`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
- FROM (SELECT count(1) as cnt,YEAR(in_date) as year,
-              MONTH(in_date) as month
-       FROM solution
-       WHERE contest_id = ?
-       GROUP BY YEAR(in_date),MONTH(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,YEAR(in_date) as year,
-              MONTH(in_date) as month
-       FROM vjudge_solution
-       WHERE contest_id = ?
-       GROUP BY YEAR(in_date),MONTH(in_date)) sub
-        LEFT JOIN
-      (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
-       FROM solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY YEAR(in_date),MONTH(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
-       FROM vjudge_solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY YEAR(in_date),MONTH(in_date)) accept
-      ON sub.year = accept.year AND sub.month = accept.month`, `SELECT sub.year,sub.month,sub.day,sub.cnt as submit,accept.cnt as accepted
- FROM (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day
-       FROM solution
-       WHERE contest_id = ?
-       GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")
-       UNION ALL
-       SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day
-       FROM vjudge_solution
-       WHERE contest_id = ?
-       GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")) sub
-        LEFT JOIN
-      (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day
-       FROM solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")
-       UNION ALL
-       SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day
-       FROM vjudge_solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY MONTH(in_date),DATE_FORMAT(in_date, "%d")) accept
-      ON sub.month = accept.month AND sub.day = accept.day AND
-         sub.year = accept.year
- ORDER BY sub.year,sub.month,sub.day`,
-	`SELECT sub.year,sub.month,sub.day,sub.hour,sub.cnt as submit,accept.cnt as accepted
- FROM (SELECT count(1) as cnt,
-              YEAR(in_date) as year,
-              MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day,
-              HOUR(in_date) as hour
-       FROM solution
-       WHERE contest_id = ?
-       GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,
-              YEAR(in_date) as year,
-              MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day,
-              HOUR(in_date) as hour
-       FROM vjudge_solution
-       WHERE contest_id = ?
-       GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)) sub
-        LEFT JOIN
-      (SELECT count(1) as cnt,
-              YEAR(in_date) as year,
-              MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day,
-              HOUR(in_date) as hour
-       FROM solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,
-              YEAR(in_date) as year,
-              MONTH(in_date) as month,
-              DATE_FORMAT(in_date, "%d") as day,
-              HOUR(in_date) as hour
-       FROM vjudge_solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY DATE_FORMAT(in_date, "%d"),HOUR(in_date)) accept
-      ON sub.day = accept.day AND sub.hour = accept.hour AND
-         sub.year = accept.year AND sub.month = accept.month`,
-	`SELECT sub.hour,sub.minute,sub.cnt as submit,accept.cnt as accepted
- FROM (SELECT count(1) as cnt,HOUR(in_date) as hour,
-              MINUTE(in_date) as minute
-       FROM solution
-       WHERE contest_id = ?
-       GROUP BY HOUR(in_date),MINUTE(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,HOUR(in_date) as hour,
-              MINUTE(in_date) as minute
-       FROM vjudge_solution
-       WHERE contest_id = ?
-       GROUP BY HOUR(in_date),MINUTE(in_date)) sub
-        LEFT JOIN
-      (SELECT count(1) as cnt,HOUR(in_date) as hour,
-              MINUTE(in_date) as minute
-       FROM solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY HOUR(in_date),MINUTE(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,HOUR(in_date) as hour,
-              MINUTE(in_date) as minute
-       FROM vjudge_solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY HOUR(in_date),MINUTE(in_date)) accept
-      ON sub.hour = accept.hour AND sub.minute = accept.minute`,
-	`SELECT sub.minute,sub.second,sub.cnt as submit,accept.cnt as accepted
- FROM (SELECT count(1) as cnt,MINUTE(in_date) as minute,
-              SECOND(in_date) as second
-       FROM solution
-       WHERE contest_id = ?
-       GROUP BY MINUTE(in_date),SECOND(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,MINUTE(in_date) as minute,
-              SECOND(in_date) as second
-       FROM vjudge_solution
-       WHERE contest_id = ?
-       GROUP BY MINUTE(in_date),SECOND(in_date)) sub
-        LEFT JOIN
-      (SELECT count(1) as cnt,MINUTE(in_date) as minute,
-              SECOND(in_date) as second
-       FROM solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY MINUTE(in_date),SECOND(in_date)
-       UNION ALL
-       SELECT count(1) as cnt,MINUTE(in_date) as minute,
-              SECOND(in_date) as second
-       FROM vjudge_solution
-       WHERE result = 4
-         AND contest_id = ?
-       GROUP BY MINUTE(in_date),SECOND(in_date)) accept
-      ON sub.minute = accept.minute AND sub.second = accept.second`,
-	`SELECT sub.year,sub.month,sub.cnt as submit,accept.cnt as accepted
-                                              FROM (SELECT count(1)       as cnt,YEAR(in_date) as year,
-      MONTH(in_date) as month
-   FROM solution
-   GROUP BY YEAR(in_date),MONTH(in_date)) sub
-LEFT JOIN
-  (SELECT count(1) as cnt,YEAR(in_date) as year,MONTH(in_date) as month
-   FROM solution
-   WHERE result = 4
-   GROUP BY YEAR(in_date),MONTH(in_date)) accept
-  ON sub.year = accept.year AND sub.month = accept.month`
-];
-
-const check_owner = (data: any, owner: any) => {
-	if (owner) {
-		return data;
-	} else {
-		return "----";
-	}
-};
-
-const infoHandler = async (sid: any, table_name: any, sendmsg: any) => {
-	const data = await cache_query(`select error from ${table_name} where solution_id=?`, [sid]);
-	if (data.length > 0) {
-		sendmsg.data["tr"] = escape(data[0].error);
-		query(`delete error from ${table_name} where solution_id=?`, [sid]);
-	}
-};
-
-function renameProperty(element: any, newProperty: any, oldProperty: any) {
-	element[newProperty] = element[oldProperty];
-	delete element[oldProperty];
-}
-
-function validateProblemId(req: any) {
-	if (isNaN(req.params.problem_id)) {
-		if (req.params.problem_id === "null" || !req.params.problem_id) {
-			return undefined;
-		} else {
-			return req.params.problem_id.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-		}
-	} else {
-		return parseInt(req.params.problem_id);
-	}
-}
-
-function invalidProblemIdHandler(httpInstance: any, problem_id: any, result: any) {
-	const { req, res } = httpInstance;
-	if (isNaN(problem_id) && problem_id !== undefined) {
-		res.json({
-			result: result,
-			const_list: const_name,
-			self: req.session.user_id,
-			isadmin: req.session.isadmin,
-			browse_code: req.session.source_browser,
-			end: false
-		});
-		return true;
-	}
-}
-
-function generateSqlData(request_query: any) {
-	let where_sql = [], sql_arr = [];
-	for (let i in request_query) {
-		if (!Object.prototype.hasOwnProperty.call(request_query, i)) {
-			continue;
-		}
-		if (typeof request_query[i] === "undefined" || typeof request_query[i] === "boolean") {
-			continue;
-		}
-		if (typeof request_query[i] === "string" || typeof request_query[i] === "number") {
-			where_sql.push(` ${i} = ?`);
-			sql_arr.push(request_query[i]);
-		} else if (typeof request_query[i] === "object") {
-			const ele = request_query[i];
-			if (Array.isArray(ele)) {
-				for (let val of ele) {
-					if (typeof val === "undefined" || val === null) {
-						continue;
-					}
-					if (typeof val === "string" || typeof val === "number") {
-						where_sql.push(` ${i} = ?`);
-						sql_arr.push(val);
-					} else if (isCompareFlag(val.type)) {
-						where_sql.push(` ${i} ${compareSymbol[val.type]} ?`);
-						sql_arr.push(val.value);
-					}
-				}
-			} else {
-				if (isCompareFlag(ele.type)) {
-					where_sql.push(` ${i} ${compareSymbol[ele.type]} ?`);
-					sql_arr.push(ele.value);
-				}
-			}
-		}
-	}
-	return [where_sql, sql_arr];
-}
-
-async function buildResponse(req: any, val: any, request_query: any, browser_privilege: any, _end: any) {
-	const _user_info = await cache_query("SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?", [val.user_id]);
-	if (_user_info.length > 0) {
-		const nick = _user_info[0].nick.trim();
-		const avatar = Boolean(_user_info[0].avatar);
-		const avatarUrl = _user_info[0].avatarUrl || "";
-		const email = _user_info[0].email || "";
-		let element = Object.assign({ nick, avatar, avatarUrl, email }, val);
-		renameProperty(element, "sim_id", "sim_s_id");
-		renameProperty(element, "length", "code_length");
-		if ((request_query.contest_id && browser_privilege) || !request_query.contest_id || _end) {
-			return element;
-		} else {
-			const owner = req.session.user_id === val.user_id;
-			return Object.assign(element, {
-				memory: check_owner(val.memory, owner),
-				time: check_owner(val.time, owner),
-				length: check_owner(val.code_length, owner)
-			});
-		}
-	}
-}
+import StatusService from "../service/StatusService";
+import { JudgeResult } from "../enums/JudgeResult";
 
 async function get_status(req: any, res: any, next: any, request_query: any = {}, limit: any = 0) {
-	let _res;
-	let sql_data_result = generateSqlData(request_query);
-	let where_sql: any = sql_data_result[0];
-	let sql_arr = sql_data_result[1];
-	let pre_sim = "", end_sim = "";
-	if (request_query.sim) {
-		if (request_query.user_id) {
-			let user_id_sql = "";
-			if (request_query.user_id) {
-				user_id_sql = " where s_user_id = ?";
-				sql_arr.push(request_query.user_id);
-			}
-			where_sql.push(` solution_id in (select s_id as solution_id from sim${user_id_sql})`);
-		} else {
-			pre_sim = "select * from(";
-			end_sim = ")t where sim is not null";
-		}
+	try {
+		request_query.limit = limit;
+		const data = await StatusService.getStatusList(req, request_query);
+		res.json(data);
+	} catch (e) {
+		logger.error("get_status error", e);
+		next(e);
 	}
-	let _end: any = false;
-	const browser_privilege = req.session.isadmin || req.session.source_browser || (request_query.contest_id && await ContestAssistantManager.userIsContestAssistant(request_query.contest_id, req.session.user_id));
-	if (browser_privilege) {
-		where_sql = where_sql.join(" and ").trim();
-		if (where_sql.length > 0) {
-			where_sql = ` where ${where_sql}`;
-		}
-		if (request_query.contest_id) {
-			sql_arr.push(limit);
-			_res = await cache_query(`${pre_sim}select * from
-								(select fingerprint,fingerprintRaw,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution ${where_sql}) sol
-								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
-		} else {
-			sql_arr.push(limit);
-			_res = await cache_query(`${pre_sim}select * from
-								(select fingerprint,fingerprintRaw,solution_id,pass_rate,share,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution ${where_sql}) sol
-								left join sim on sim.s_id = sol.solution_id
-								order by sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
-		}
-	} else if (request_query.contest_id) {
-		where_sql.unshift("problem_id > 0");
-		where_sql = where_sql.join(" and ").trim();
-		where_sql = ` where ${where_sql}`;
-
-		sql_arr.push(limit);
-		_end = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
-		_end = _end[0].cnt;
-		_res = await cache_query(`${pre_sim}select * from
-								(select fingerprint,fingerprintRaw,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-								from solution ${where_sql}) sol
-								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc, sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
-	} else {
-		where_sql.unshift("problem_id > 0");
-		where_sql.unshift("contest_id is null");
-		where_sql = where_sql.join(" and ").trim();
-		where_sql = ` where ${where_sql}`;
-		sql_arr.push(limit);
-		_res = await cache_query(`${pre_sim}select * from
-								(select fingerprint,fingerprintRaw,solution_id,
-								if((share = 1 and not exists (select * from contest where contest_id in
-           (select contest_id from contest_problem where solution.problem_id = contest_problem.problem_id)
-          and end_time > NOW()) ),1,0) as share
-								,pass_rate,problem_id,ip,contest_id,num,user_id,time,
-								memory,in_date,result,language,code_length,judger, "local" as oj_name from solution
-								${where_sql}) sol
-								left join sim on sim.s_id = sol.solution_id
-								order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
-	}
-	let result = await Promise.all(_res.map((e: any) => buildResponse(req, e, request_query, browser_privilege, _end)));
-	res.json({
-		result: result,
-		const_list: const_name,
-		self: req.session.user_id,
-		isadmin: req.session.isadmin,
-		browse_code: browser_privilege,
-		end: Boolean(_end)
-	});
 }
 
 function calculateDiffTimeMilliseconds(diff_time: any) {
@@ -412,11 +105,24 @@ function calculateDiffTimeMilliseconds(diff_time: any) {
 const graphLabel = [["year", "month"], ["month", "day"], ["day", "hour"], ["hour", "minute"], ["minute", "second"]];
 
 async function graphDataHandler(res: any, request_query: any, idx: any) {
-	res.json({
-		result: await cache_query(graphDataSql[idx],
-			[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]),
-		label: graphLabel[idx]
-	});
+	try {
+		// 使用优化后的查询 (SQL 优化 + Redis 缓存)
+		const granularity = indexToGranularity(idx);
+		const result = await getGraphDataWithCache(request_query.contest_id, granularity);
+
+		res.json({
+			result: result,
+			label: graphLabel[idx]
+		});
+	} catch (e) {
+		// 降级到原始 SQL (如果优化失败)
+		logger.warn(`Optimized query failed for idx ${idx}, falling back to original SQL`, e);
+		res.json({
+			result: await cache_query(graphDataSql[idx],
+				[request_query.contest_id, request_query.contest_id, request_query.contest_id, request_query.contest_id]),
+			label: graphLabel[idx]
+		});
+	}
 }
 
 async function getGraphData(req: any, res: any, request_query: any = {}) {
@@ -439,11 +145,22 @@ async function getGraphData(req: any, res: any, request_query: any = {}) {
 				}
 			}
 		} else {
-			const result = await cache_query(graphDataSql[5]);
-			res.json({
-				result: result,
-				label: graphLabel[0]
-			});
+			// 全局统计（无 contest_id）
+			try {
+				const result = await getGraphDataWithCache(0, TIME_GRANULARITY.MONTH);
+				res.json({
+					result: result,
+					label: graphLabel[0]
+				});
+			} catch (e) {
+				// 降级到原始 SQL
+				logger.warn('Optimized global graph query failed, falling back to original SQL', e);
+				const result = await cache_query(graphDataSql[5]);
+				res.json({
+					result: result,
+					label: graphLabel[0]
+				});
+			}
 		}
 	} catch (e) {
 		logger.fatal(e);
@@ -674,4 +391,11 @@ router.get("/:sid/:tr", async function (req: any, res: any) {
 });
 
 
-export = ["/status", auth, router];
+
+const routes: any = ["/status", auth, router];
+
+// 导出缓存清除函数供其他模块使用（例如提交后清除相关比赛缓存）
+import { clearGraphDataCache as _clearGraphDataCache } from "./status/graph_data_optimizer";
+routes.clearGraphCache = _clearGraphDataCache;
+
+export = routes;

@@ -9,13 +9,13 @@ async function removeAll() {
 function afterAll() {
     require("../../module/mysql_cache").pool.end();
     require("../../module/mysql_query").pool.end();
-    if(typeof require("../../module/redis").quit === "function") {
+    if (typeof require("../../module/redis").quit === "function") {
         require("../../module/redis").quit();
     }
 }
 
 describe("test auth", function () {
-    const auth = require("../../middleware/auth");
+    const auth = require("../../middleware/auth").default;
     before(async function () {
         await removeAll();
         const query = require("../../module/mysql_query");
@@ -38,22 +38,22 @@ describe("test auth", function () {
 
     it('should call login action', function (done) {
         let req =
-            {
-                session: {
-                    auth: false,
-                    isadmin: false,
-                    user_id: ""
-                },
-                cookies: {
-                    token:"test",
-                    user_id: "test_name"
-                }
-            };
+        {
+            session: {
+                auth: false,
+                isadmin: false,
+                user_id: ""
+            },
+            cookies: {
+                token: "test",
+                user_id: "test_name"
+            }
+        };
         let res = {
-            json: function(data){
+            json: function (data) {
 
             },
-            cookie: function() {}
+            cookie: function () { }
         };
         auth(req, res, () => {
             expect(req.session.auth).to.equal(true);
@@ -65,19 +65,19 @@ describe("test auth", function () {
 
     it('should call res.json return nologin because of no user_id', function (done) {
         let req =
-            {
-                session: {
-                    auth: false,
-                    isadmin: false,
-                    user_id: ""
-                },
-                cookies: {
-                    token:"test",
-                    user_id: undefined
-                }
-            };
+        {
+            session: {
+                auth: false,
+                isadmin: false,
+                user_id: ""
+            },
+            cookies: {
+                token: "test",
+                user_id: undefined
+            }
+        };
         let res = {
-            json: function(data){
+            json: function (data) {
                 expect(data).to.have.ownProperty("status").that.equal("error");
                 expect(data).to.have.ownProperty("statement").that.equal("not login");
                 done();
@@ -93,19 +93,19 @@ describe("test auth", function () {
 
     it('should call res.json return nologin because of not in redis array', function (done) {
         let req =
-            {
-                session: {
-                    auth: false,
-                    isadmin: false,
-                    user_id: ""
-                },
-                cookies: {
-                    token:"test1",
-                    user_id: "test"
-                }
-            };
+        {
+            session: {
+                auth: false,
+                isadmin: false,
+                user_id: ""
+            },
+            cookies: {
+                token: "test1",
+                user_id: "test"
+            }
+        };
         let res = {
-            json: function(data){
+            json: function (data) {
                 expect(data).to.have.ownProperty("status").that.equal("error");
                 expect(data).to.have.ownProperty("statement").that.equal("not login");
                 done();
@@ -131,8 +131,8 @@ describe("test auth", function () {
             cookies: {}
         };
         let res = {
-            cookie: function () {},
-            json: function () {}
+            cookie: function () { },
+            json: function () { }
         };
         auth(req, res, () => {
             expect(req.session.user_id).to.equal("test_name");

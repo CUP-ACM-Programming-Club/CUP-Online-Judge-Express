@@ -2,7 +2,7 @@ import express from "express";
 const router = express.Router();
 const [error] = require("../../module/const_var");
 const getIP = require("../../module/getIP");
-const auth = require("../../middleware/auth");
+import auth from "../../middleware/auth";
 router.get("/", (req: any, res: any) => {
 	try {
 		res.json({

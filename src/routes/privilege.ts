@@ -1,8 +1,8 @@
 import express from "express";
-import {ok} from "../module/constants/state";
+import { ok } from "../module/constants/state";
 
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 
 router.get("/", (req, res) => {
     res.json(ok.okMaker({

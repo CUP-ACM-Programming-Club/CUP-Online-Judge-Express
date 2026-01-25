@@ -1,7 +1,8 @@
 import express from "express";
 const router = express.Router();
-const query = require("../../module/mysql_cache");
-const [error, ok] = require("../../module/const_var");
+import query = require("../../module/mysql_cache");
+import const_var from "../../module/const_var";
+const [error, ok] = const_var;
 
 router.get("/", async (req: any, res: any) => {
 	try {
@@ -17,4 +18,4 @@ router.get("/", async (req: any, res: any) => {
 	}
 });
 
-module.exports = ["/register_timeline", router];
+export default router;

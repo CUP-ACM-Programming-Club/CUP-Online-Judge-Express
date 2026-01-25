@@ -1,17 +1,17 @@
 const express = require("express");
-const cache_query = require("../module/mysql_cache");
-const query = require("../module/mysql_query");
+import TopicService from "../service/TopicService";
+import HttpError from "../module/util/HttpError";
+
 const router = express.Router();
 const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const DiscussInterceptor = require("../module/discuss/interceptor");
 const { checkCaptcha } = require("../module/captcha_checker");
 
 const checkPrivilege = (req: any) => {
 	return req.session.isadmin || req.session.source_browser;
 };
-
 
 const checkValidation = (number: any) => {
 	number = parseInt(number);
@@ -26,18 +26,8 @@ router.get("/my", async (req: any, res: any) => {
 	let page = checkValidation(req.query.page);
 	const user_id = req.session.user_id;
 	try {
-		const [_discuss_list, _tot] = await Promise.all([
-			cache_query(`select title,create_time,edit_time,article_id from article where user_id = ? or article_id in
-		 (select article_id from article_content where user_id = ?)
-	order by last_post desc,edit_time desc,create_time desc,article_id desc
-	limit ?,?`, [user_id, user_id, page, page_cnt]),
-			cache_query(`select count(1) as cnt from article
-         ${req.session.isadmin ? "" : "where defunct = 'N'"}`)
-		]);
-		res.json({
-			discuss: _discuss_list,
-			total: _tot[0].cnt
-		});
+		const data = await TopicService.getTopicList(page, page_cnt, req.session.isadmin, user_id);
+		res.json(data);
 	} catch (e: any) {
 		res.json(error.invalidParams);
 	}
@@ -56,29 +46,22 @@ router.get("/:id", async (req: any, res: any) => {
 		res.json(error.invalidParams);
 		return;
 	}
-	let discuss_content;
-	let _tot, _article;
-	[discuss_content, _tot, _article] = await Promise.all([
-		cache_query(`select * from 
-		(select t.*,users.avatar,users.avatarUrl,users.nick,users.email from (select * from article_content where article_id = ?)t left join users
-	on users.user_id = t.user_id)joint
-	 order by comment_id asc 
-	limit ?,?`, [id, page, page_cnt]),
-		cache_query("select count(1) as cnt from article_content where article_id = ?", [id]),
-		cache_query(`select tmp.*,users.avatar,users.avatarUrl,users.nick,users.biography,users.solved,users.email from (
-		select * from article where article_id = ?)
-		tmp
-		left join users on users.user_id = tmp.user_id
-		`, [id])
-	]);
-	res.json({
-		discuss: discuss_content,
-		total: _tot[0].cnt,
-		discuss_header_content: _article[0],
-		owner: req.session.user_id,
-		admin: req.session.isadmin
-	});
+	try {
+		const data = await TopicService.getTopicDetail(id, page, page_cnt, req.session.user_id, req.session.isadmin);
+		res.json(data);
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.status(e.statusCode).json({
+				status: e.status,
+				statement: e.statement
+			});
+		} else {
+			console.log(e);
+			res.json(error.invalidParams);
+		}
+	}
 });
+
 router.get("/", async (req: any, res: any) => {
 	let page = checkValidation(req.query.page);
 	if (!checkPrivilege(req)) {
@@ -87,36 +70,17 @@ router.get("/", async (req: any, res: any) => {
 			return;
 		}
 	}
-	let discuss_list: any;
-	let tot = 0;
-	let count = 0;
-	const resolve = () => {
-		++count;
-		if (count >= 2) {
-			res.json({
-				discuss: discuss_list,
-				total: tot
-			});
-		}
-	};
 
-	cache_query(`select user_id, title, last_post, edit_time, create_time, article_id from article ${req.session.isadmin ? "" : "where defunct = 'N'"}
-	order by last_post desc,edit_time desc,create_time desc,article_id desc
-	limit ?,?`, [page, page_cnt])
-		.then((rows: any) => {
-			discuss_list = rows;
-			resolve();
-		});
-	cache_query(`select count(1) as cnt from article 
-	${req.session.isadmin ? "" : "where defunct = 'N'"}`)
-		.then((rows: any) => {
-			tot = parseInt(rows[0].cnt);
-			resolve();
-		});
+	try {
+		const data = await TopicService.getTopicList(page, page_cnt, req.session.isadmin);
+		res.json(data);
+	} catch (e) {
+		console.log(e);
+		res.json(error.database);
+	}
 });
 
-
-router.post("/reply/:id", (req: any, res: any) => {
+router.post("/reply/:id", async (req: any, res: any) => {
 	const id = req.params.id === undefined ? -1 : parseInt(req.params.id);
 	if (id < 1) {
 		res.json(error.invalidParams);
@@ -125,130 +89,143 @@ router.post("/reply/:id", (req: any, res: any) => {
 			res.json(error.invalidCaptcha);
 		} else {
 			const content = req.body.comment;
-			query(`insert into article_content(user_id,content,article_id)
-		values(?,?,?)`, [req.session.user_id, content, id]);
-			res.json(ok.serverReceived);
+			try {
+				const result = await TopicService.addReply(id, req.session.user_id, content);
+				res.json(result);
+			} catch (e) {
+				console.log(e);
+				res.json(error.database);
+			}
 		}
 	}
 });
 
 router.get("/search/:search_val", async (req: any, res: any) => {
-	const search_val = `%${req.params.search_val}%`;
-	let sql = "select * from article where title like ?";
+	const search_val = req.params.search_val || "";
 	let page = checkValidation(req.query.page);
-	let sqlArr: (string | number)[] = [search_val];
-	if (search_val.length === 2 || typeof req.params.search_val === "undefined") {
-		sql = `select * from article 
-	    order by last_post desc,edit_time desc,create_time desc,article_id desc limit ?,?`;
-		sqlArr = [];
+	try {
+		const result = await TopicService.searchTopics(search_val, page, page_cnt);
+		res.json({
+			status: "OK",
+			data: result
+		});
+	} catch (e) {
+		console.log(e);
+		res.json(error.database);
 	}
-	sqlArr.push(page, page_cnt);
-	const result = await query(sql, sqlArr);
-	res.json({
-		status: "OK",
-		data: result
-	});
 });
 
-router.post("/newpost", (req: any, res: any) => {
+router.post("/newpost", async (req: any, res: any) => {
 	if (!checkCaptcha(req, "newpost")) {
 		res.json(error.invalidCaptcha);
 	} else {
 		const content = req.body.content;
 		const title = req.body.title;
-		query("insert into article(user_id,title,content)values(?,?,?)", [req.session.user_id, title, content])
-			.then((rows: any) => {
-				res.json({
-					status: "OK",
-					data: rows.insertId
-				});
-			})
-			.catch(() => {
-				res.json({
-					status: "error",
-					statement: "insert happend to be error.Please contact maintainer"
-				});
-
+		try {
+			const insertId = await TopicService.addNewPost(req.session.user_id, title, content);
+			res.json({
+				status: "OK",
+				data: insertId
 			});
+		} catch (e) {
+			res.json({
+				status: "error",
+				statement: "insert happend to be error.Please contact maintainer"
+			});
+		}
 	}
 });
 
-router.post("/update/main/:id", (req: any, res: any) => {
+router.post("/update/main/:id", async (req: any, res: any) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
 	} else {
 		const article_id = parseInt(req.params.id);
 		const content = req.body.content;
 		const title = req.body.title;
-		query("update article set title = ? , content = ?,edit_time = NOW(),last_post = NOW() where article_id = ? and user_id = ?",
-			[title, content, article_id, req.session.user_id])
-			.then(() => {
-				res.json(ok.ok);
-			})
-			.catch((e: any) => {
-				console.log(e);
-				res.json({
-					status: "error",
-					statement: "error happend in modify methods.Please contact admin"
-				});
+		try {
+			await TopicService.updatePost(article_id, req.session.user_id, title, content);
+			res.json(ok.ok);
+		} catch (e) {
+			console.log(e);
+			res.json({
+				status: "error",
+				statement: "error happend in modify methods.Please contact admin"
 			});
+		}
 	}
 });
 
 router.post("/update/:id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
-	const _main_content = await query(`select content,title from article 
-	where article_id = ?`, [article_id]);
-	res.json({
-		status: "OK",
-		data: _main_content[0]
-	});
+	try {
+		const data = await TopicService.getPostContent(article_id);
+		res.json({
+			status: "OK",
+			data: data
+		});
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.status(e.statusCode).json({
+				status: e.status,
+				statement: e.statement
+			});
+		} else {
+			console.log(e);
+			res.json(error.database);
+		}
+	}
 });
 
-router.post("/update/reply/:id/:comment_id", (req: any, res: any) => {
+router.post("/update/reply/:id/:comment_id", async (req: any, res: any) => {
 	if (!checkCaptcha(req, "edit")) {
 		res.json(error.invalidCaptcha);
 	} else {
 		const article_id = parseInt(req.params.id);
 		const content = req.body.content;
 		const comment_id = parseInt(req.params.comment_id);
-		query(`update article_content set content = ? 
-		where article_id = ? and comment_id = ? and user_id = ?`, [content, article_id, comment_id,
-			req.session.user_id])
-			.then(() => {
-				res.json(ok.ok);
-			})
-			.catch(() => {
-				res.json({
-					status: "error",
-					statement: "error happend in modify reply. Please contact admin"
-				});
+		try {
+			await TopicService.updateReply(article_id, comment_id, req.session.user_id, content);
+			res.json(ok.ok);
+		} catch (e) {
+			res.json({
+				status: "error",
+				statement: "error happend in modify reply. Please contact admin"
 			});
+		}
 	}
 });
 
 router.get("/update/reply/:id/:comment_id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
 	const comment_id = parseInt(req.params.comment_id);
-	const _reply_content = await query(`select content from article_content 
-	where article_id = ? and comment_id = ?`, [article_id, comment_id]);
-	res.json({
-		status: "OK",
-		data: _reply_content[0]
-	});
+	try {
+		const data = await TopicService.getReplyContent(article_id, comment_id);
+		res.json({
+			status: "OK",
+			data: data
+		});
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.status(e.statusCode).json({
+				status: e.status,
+				statement: e.statement
+			});
+		} else {
+			res.json(error.database);
+		}
+	}
 });
 
 router.get("/update/reply/block/:id/:comment_id", async (req: any, res: any) => {
 	const article_id = parseInt(req.params.id);
 	const comment_id = parseInt(req.params.comment_id);
-	await query(`update article_content set content = "该回复经管理员审核，已被屏蔽" where article_id = ? and
-     comment_id = ?`, [article_id, comment_id])
-		.then(() => {
-			res.json(ok.ok);
-		})
-		.catch(() => {
-			res.json(error.invalidParams);
-		});
+	try {
+		await TopicService.blockReply(article_id, comment_id);
+		res.json(ok.ok);
+	} catch (e) {
+		res.json(error.invalidParams);
+	}
 });
 
 export = ["/discuss", auth, DiscussInterceptor, router];

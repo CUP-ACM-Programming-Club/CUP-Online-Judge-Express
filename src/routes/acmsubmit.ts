@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const const_variable = require("../module/const_name");
 const cache_query = require("../module/mysql_cache");
 

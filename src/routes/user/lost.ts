@@ -1,9 +1,10 @@
 import express from "express";
 const router = express.Router();
-const query = require("../../module/mysql_query");
-const [error, ok] = require("../../module/const_var");
-const { trimProperty, generateNewEncryptPassword } = require("../../module/util");
-const checkPassword = require("../../module/check_password");
+import query = require("../../module/mysql_query");
+import const_var from "../../module/const_var";
+const [error, ok] = const_var;
+import { trimProperty, generateNewEncryptPassword } from "../../module/util";
+import checkPassword from "../../module/check_password";
 const salt = global.config.salt || "thisissalt";
 
 async function getQuestionHandler(user_id: any) {
@@ -48,4 +49,4 @@ router.post("/answer", async (req: any, res: any) => {
 	}
 });
 
-module.exports = ["/lost", router];
+export default router;

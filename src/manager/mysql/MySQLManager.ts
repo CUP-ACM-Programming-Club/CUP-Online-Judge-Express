@@ -1,14 +1,14 @@
 // @ts-ignore
 import mysql from "mysql2";
-import {Pool, PoolConnection, Query, queryCallback, QueryOptions} from "mysql";
+import { Pool, PoolConnection, Query, queryCallback, QueryOptions } from "mysql";
 import Logger from "../../module/console/Logger";
 // @ts-ignore
 const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]) as any as Pool;
 
-interface MySQLTransaction {
-    query: (options: string | QueryOptions, values?: any, callback?: queryCallback) => Query;
-    release: () => void
+export interface MySQLTransaction {
+    query: (sql: string, binding?: any[]) => Promise<any>;
+    release: () => Promise<void>;
 }
 
 export class MySQLManager {
@@ -23,7 +23,7 @@ export class MySQLManager {
             return new Promise((resolve, reject) => {
                 pool.query(sql_query, sqlArr, function (err, results, fields) {
                     if (err) {
-                        reject({error:err, sql: sql_query, args: sqlArr});
+                        reject({ error: err, sql: sql_query, args: sqlArr });
                     }
                     else {
                         // @ts-ignore
@@ -34,7 +34,7 @@ export class MySQLManager {
         }
         //connection.end();
     }
-    static getConnection() : Promise<PoolConnection> {
+    static getConnection(): Promise<PoolConnection> {
         return new Promise((resolve, reject) => {
             pool.getConnection((err, connection) => {
                 if (err !== null) {
@@ -67,7 +67,7 @@ export class MySQLManager {
                         resolve(connection.release());
                     });
                 };
-                resolve({query, release} as unknown as MySQLTransaction);
+                resolve({ query, release } as unknown as MySQLTransaction);
             });
         });
     }

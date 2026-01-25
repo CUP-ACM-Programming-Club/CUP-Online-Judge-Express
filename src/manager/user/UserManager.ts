@@ -41,6 +41,10 @@ export interface UserInfoDAO {
 }
 
 @injectable()
+/**
+ * @deprecated Use src/service/admin/AdminUserService.ts for admin operations.
+ * Core user logic should be moved to a specific UserService in the future.
+ */
 export class UserManager {
     private _configService?: ConfigService;
 

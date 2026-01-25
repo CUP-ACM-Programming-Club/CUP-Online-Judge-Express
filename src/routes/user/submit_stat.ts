@@ -1,7 +1,8 @@
 import express from "express";
-const cache_query = require("../../module/mysql_cache");
+import cache_query = require("../../module/mysql_cache");
 const query = cache_query;
-const [error, ok] = require("../../module/const_var");
+import const_var from "../../module/const_var";
+const [error, ok] = const_var;
 const router = express.Router();
 
 const generateWhereStatement = function (args: any) {
@@ -124,4 +125,4 @@ router.get("/:user_id", async (req: any, res: any) => {
 	}
 });
 
-module.exports = ["/submit_stat", router];
+export default router;

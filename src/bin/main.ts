@@ -16,7 +16,7 @@ import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionColl
 import initEnv from "../middleware/init_env";
 // const _dockerRunner = require("../module/docker_runner");
 // dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
-import {app, server} from "../module/init/http-server";
+import { app, server } from "../module/init/http-server";
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
 	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
@@ -27,10 +27,10 @@ if (process.env.MODE === "websocket") {
 	app.use(initEnv);
 }
 const cache_query = require("../module/mysql_cache");
-const submitControl = require("../module/submitControl");
+import SubmissionService from "../service/SubmissionService";
 const cookie = require("cookie");
 const sessionMiddleware = require("../module/session").sessionMiddleware;
-import {ConfigManager} from "../module/config/config-manager";
+import { ConfigManager } from "../module/config/config-manager";
 import OnlineUserSet from "../module/websocket/set/OnlineUserSet";
 import NormalUserSet from "../module/websocket/set/NormalUserSet";
 import AdminUserSet from "../module/websocket/set/AdminUserSet";
@@ -42,7 +42,7 @@ import BroadcastManager from "../manager/websocket/BroadcastManager";
 import UserSetCollector from "../module/websocket/UserSetCollector";
 import OnlineUserBroadcast from "../manager/websocket/OnlineUserBroadcast";
 import SolutionUserCollector from "../module/judger/SolutionUserCollector";
-import BuildSocketStatus, {buildSocket} from "../module/websocket/BuildSocketStatus";
+import BuildSocketStatus, { buildSocket } from "../module/websocket/BuildSocketStatus";
 import ContestPagePushSet from "../module/websocket/set/ContestPagePushSet";
 import StatusSet from "../module/websocket/singleton/StatusSet";
 import InitExternalEnvironment from "../module/init/InitExternalEnvironment";
@@ -53,7 +53,7 @@ import SolutionContext from "../module/websocket/set/SolutionContext";
 import JudgeManager from "../manager/judge/JudgeManager";
 import whiteboard from "../module/websocket/whiteboard/SocketSet";
 import io from "../module/websocket/server/SocketServer";
-import {UserSocket} from "../module/websocket/Socket";
+import { UserSocket } from "../module/websocket/Socket";
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
 require("../module/init/express_loader")(app, io);
@@ -88,7 +88,7 @@ process.on("message", function (message, connection) {
 localJudge.on("change", (freeJudger: any) => {
 	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "judgerChange", freeJudger);
 	BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "judgerChange", freeJudger);
-	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "freeJudgerNumber", { num: freeJudger.length});
+	BroadcastManager.sendMessage(NormalUserSet.getInnerStorage(), "freeJudgerNumber", { num: freeJudger.length });
 	BroadcastManager.sendMessage(AdminUserSet.getInnerStorage(), "freeJudgerNumber", { num: freeJudger.length });
 });
 
@@ -177,8 +177,8 @@ io.on("connection", async function (socket: UserSocket) {
 	});
 
 	/**
-     * 获取状态信息
-     */
+	 * 获取状态信息
+	 */
 	socket.on("getUser", function () {
 		OnlineUserBroadcast.broadcast();
 	});
@@ -200,26 +200,26 @@ io.on("connection", async function (socket: UserSocket) {
 		// deprecated
 	});
 	/**
-     * 提交推送处理
-     */
+	 * 提交推送处理
+	 */
 	socket.on("submit", async function (_data) {
 		/**
-         * { submission_id: 61459,
-         * val:
-         * { id: '',
-         * input_text: '1 2',
-         * language: '1',
-         * source: '',
-         * type: 'problem',
-         * csrf: '' },
-         * user_id: '',
-         * nick: '' }
-         *
-         */
+		 * { submission_id: 61459,
+		 * val:
+		 * { id: '',
+		 * input_text: '1 2',
+		 * language: '1',
+		 * source: '',
+		 * type: 'problem',
+		 * csrf: '' },
+		 * user_id: '',
+		 * nick: '' }
+		 *
+		 */
 		let data = Object.assign({}, _data);
 		let response;
 		try {
-			response = await submitControl(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
+			response = await SubmissionService.submit(socket.request, data.val, cookie.parse(socket.handshake.headers.cookie));
 		} catch (e) {
 			socket.emit("reject_submit", e);
 			console.log(e);
@@ -304,8 +304,8 @@ io.on("connection", async function (socket: UserSocket) {
 		}
 	});
 	/**
-     * 全局推送功能
-     */
+	 * 全局推送功能
+	 */
 	socket.on("msg", function (data) {
 		if (data.to) {
 			for (const soc of SocketSet.toArray()) {
@@ -319,8 +319,8 @@ io.on("connection", async function (socket: UserSocket) {
 		socket.emit("msg", data);
 	});
 	/**
-     * 聊天功能，向目标用户发送聊天信息
-     */
+	 * 聊天功能，向目标用户发送聊天信息
+	 */
 
 	socket.on("chat", function (data) {
 		const toPersonUser_id = data.to;
@@ -349,8 +349,8 @@ io.on("connection", async function (socket: UserSocket) {
 	}
 
 	/**
-     * 断开连接销毁所有保存的数据
-     */
+	 * 断开连接销毁所有保存的数据
+	 */
 	socket.on("disconnect", function () {
 		const userId = socket.user_id!;
 		let pos = OnlineUserSet.get(userId);

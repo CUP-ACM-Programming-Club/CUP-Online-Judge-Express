@@ -1,2 +1,27 @@
-const defunct = require("../../../module/admin/defunct");
-export = defunct("contest", "contest_id");
+import express from "express";
+import AdminContestService from "../../../service/admin/AdminContestService";
+const { error, ok } = require("../../../module/constants/state");
+const admin = require("../../../middleware/admin");
+
+const router = express.Router();
+
+router.get("/", (req: any, res: any) => {
+    res.json(error.errorMaker("You should POST data to server"));
+});
+
+router.post("/", async (req: any, res: any) => {
+    try {
+        const id = parseInt(req.body.id);
+        if (!isNaN(id)) {
+            await AdminContestService.toggleContestDefunct(id);
+            res.json(ok.ok);
+        } else {
+            res.json(error.invalidParams);
+        }
+    } catch (e) {
+        console.log(e);
+        res.json(error.database);
+    }
+});
+
+export = ["/defunct", admin, router];

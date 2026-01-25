@@ -1,25 +1,15 @@
 /* eslint-disable no-console */
-import ProblemManager from "../manager/problem/ProblemManager";
-import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+// import ProblemManager from "../manager/problem/ProblemManager";
+import HttpError from "../module/util/HttpError";
+import ProblemService from "../service/ProblemService";
+import ContestService from "../service/ContestService";
+import ProblemManageService from "../service/ProblemManageService";
 
 const express = require("express");
-const dayjs = require("dayjs");
-//const NodeCache = require('node-cache');
-//const cache = new NodeCache({stdTTL: 10 * 24 * 60 * 60, checkperiod: 15 * 24 * 60 * 60});
 const website_dir = global.config.website.dir;
 const bluebird = require("bluebird");
 const base64Img = bluebird.promisifyAll(require("base64-img"));
 const { mkdirAsync } = require("../module/file/mkdir");
-
-const md = require("markdown-it")({
-	html: true,
-	breaks: true
-});
-const mh = require("markdown-it-highlightjs");
-const mk = require("@ryanlee2014/markdown-it-katex");
-md.use(mk);
-md.use(mh);
 const cache = require("../module/cachePool");
 const router = express.Router();
 const log = console.log;
@@ -27,78 +17,24 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 const query = require("../module/mysql_query");
 const cache_query = require("../module/mysql_cache");
-const const_variable = require("../module/const_name");
-const auth = require("../middleware/auth");
-const cheerio = require("cheerio");
-const ENVIRONMENT = process.env.NODE_ENV;
+import auth from "../middleware/auth";
+const { error, ok } = require("../module/constants/state");
 const path = require("path");
 const ProblemInfoManager = require("../module/problem/ProblemInfoManager");
 const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
-const check = require("../module/contest/check");
-const { error, ok } = require("../module/constants/state");
+const cheerio = require("cheerio");
+const ENVIRONMENT = process.env.NODE_ENV;
+
 require("../module/router_loader")(router, path.resolve(__dirname, "./problem"));
 
-
-const checkEmpty = (str: any) => {
-	if (str === "" || str === null) {
-		return null;
-	}
-	return str;
-};
-
-const _judgeValidNumber = (num: any) => {
-	if (isNaN(num)) {
-		return -1;
-	} else {
-		return parseInt(num);
-	}
-};
-
-const judgeValidNumber = (num: any): any => {
-	if (Array.isArray(num)) {
-		let returnArr = [];
-		for (let i of num) {
-			returnArr.push(_judgeValidNumber(i));
-		}
-		return returnArr;
-	} else {
-		return _judgeValidNumber(num);
-	}
-};
-
-const checkUploader = async (problem_id: any) => {
+const checkContestPrivilege = async (req: any, cid: any) => {
+	if (req.session.source_browser) return true;
 	try {
-		const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
-		if (_uploader && _uploader.length > 0) {
-			return _uploader[0].user_id;
-		} else {
-			return "Administrator";
-		}
+		await ContestService.checkContestAccess(req, cid);
+		return true;
 	} catch (e) {
-		log(e);
+		return false;
 	}
-};
-
-const checkPrivilege = (req: any) => {
-	return req.session.isadmin || req.session.source_browser;
-};
-
-const checkProblemAvailable = async (problem_id: any) => {
-	const data = (await ProblemInfoManager.newInstance().setProblemId(problem_id).find()).get();
-	return !(!data || data.defunct === "Y");
-};
-
-const checkProblemInContest = async (problem_id: any) => {
-	const data = await cache_query("select problem_id from contest_problem where contest_id in (select contest_id from contest where end_time > NOW()) and problem_id = ?", [problem_id]);
-	return data && data.length && data.length > 0;
-};
-
-const checkContestPrivilege = (req: any, cid: any) => {
-	return req.session.source_browser || check(req, {
-		json(...args: any[]) {
-			return args;
-		}
-	}, cid) !== false;
 };
 
 const maintainLabels = (vjudge: any) => {
@@ -122,30 +58,18 @@ WHERE NOT EXISTS (
 		}).catch((e: any) => log(e));
 };
 
-async function problemCallbackHandler(opt: any, arr: any, val: any) {
-	const { req, res, copyVal } = val;
-	try {
-		const rows = await cache_query(opt.sql, arr);
-		problem_callback(rows, req, res, opt, copyVal);
-	}
-	catch (e) {
-		console.log(e);
-		res.json(error.internalError);
-	}
-}
-
 async function contestProblemHandler(httpInstance: any, val: any = {}) {
 	let { req, res } = httpInstance;
 	let { source, solution_id, raw, cid, pid } = val;
 	const [contest, result] = await Promise.all([cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]), cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and " +
 		"num = ?", [cid, pid])]);
-	if (!checkPrivilege(req)) {
+	if (!ProblemService.checkPrivilege(req)) {
 		if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {
 			res.json(error.contestMode);
 			return;
 		}
 	}
-	if (parseInt(contest[0].private) === 1 && !checkContestPrivilege(req, cid)) {
+	if (parseInt(contest[0].private) === 1 && !await checkContestPrivilege(req, cid)) {
 		res.json(error.noprivilege);
 		return;
 	}
@@ -154,11 +78,26 @@ async function contestProblemHandler(httpInstance: any, val: any = {}) {
 			res.json(error.attributeMaker({ redirect: `${result[0].oj_name.toLowerCase()}submitpage.php?cid=${cid}&pid=${pid}` }));
 			return;
 		}
-		let { langmask, end_time } = contest[0];
+		let { langmask, end_time, limit_hostname } = contest[0];
 		let problem_id = result[0].problem_id;
-		make_cache(res, req, {
-			cid, problem_id, source, solution_id, raw, langmask, after_contest: dayjs().isAfter(dayjs(end_time))
-		}, { limit_hostname: contest[0].limit_hostname });
+
+		try {
+			const data = await ProblemService.getProblem(req, {
+				id: problem_id,
+				cid,
+				pid,
+				source,
+				solution_id,
+				raw,
+				langmask,
+				after_contest: require("dayjs")().isAfter(require("dayjs")(end_time)),
+				limit_hostname
+			} as any);
+			res.json(data);
+		} catch (e) {
+			console.log(e);
+			res.json(error.internalError);
+		}
 	} else {
 		res.json(error.invalidParams);
 	}
@@ -167,7 +106,7 @@ async function contestProblemHandler(httpInstance: any, val: any = {}) {
 async function TopicProblemHandler(httpInstance: any, val: any = {}) {
 	let { req, res } = httpInstance;
 	let { tid, pid, source, solution_id, raw } = val;
-	if (!checkPrivilege(req) && global.contest_mode) {
+	if (!ProblemService.checkPrivilege(req) && global.contest_mode) {
 		res.json(error.contestMode);
 		return;
 	}
@@ -175,7 +114,19 @@ async function TopicProblemHandler(httpInstance: any, val: any = {}) {
 		"num = ?", [tid, pid]);
 	if (result.length > 0) {
 		let problem_id = result[0].problem_id;
-		make_cache(res, req, { problem_id, source, solution_id, raw, after_contest: true });
+		try {
+			const data = await ProblemService.getProblem(req, {
+				id: problem_id,
+				source,
+				solution_id,
+				raw,
+				after_contest: true
+			} as any);
+			res.json(data);
+		} catch (e) {
+			console.log(e);
+			res.json(error.internalError);
+		}
 	} else {
 		res.json(error.invalidParams);
 	}
@@ -184,37 +135,43 @@ async function TopicProblemHandler(httpInstance: any, val: any = {}) {
 async function normalProblemHandler(httpInstance: any, val: any = {}) {
 	let { req, res } = httpInstance;
 	let { id, source, solution_id, raw } = val;
-	const browse_privilege = checkPrivilege(req);
+	const browse_privilege = ProblemService.checkPrivilege(req);
 	if (!browse_privilege) {
 		if (global.contest_mode) {
 			res.json(error.contestMode);
 			return;
-		} else if (!await checkProblemAvailable(id)) {
+		} else if (!await ProblemService.checkProblemAvailable(id)) {
 			res.json(error.errorMaker("problem not available!"));
 			return;
-		} else if (await checkProblemInContest(id)) {
+		} else if (await ProblemService.checkProblemInContest(id)) {
 			res.json(error.errorMaker("problem is in contest"));
 			return;
 		}
 	}
-	const parseData: [any, any, any] = [res, req, {
-		problem_id: id,
-		source,
-		solution_id,
-		raw,
-		after_contest: true,
-		uploader: await checkUploader(id)
-	}];
-	if (browse_privilege) {
-		make_cache(...parseData);
-	} else {
+
+	// Check contest end time for non-privileged users
+	if (!browse_privilege) {
 		const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
-		 where problem_id = ?)`, [id]);
-		if (_end_time.length > 0 && dayjs().isBefore(dayjs(_end_time[0].t * 1000))) {
+         where problem_id = ?)`, [id]);
+		if (_end_time.length > 0 && require("dayjs")().isBefore(require("dayjs")(_end_time[0].t * 1000))) {
 			res.json(error.problemInContest);
-		} else {
-			make_cache(...parseData);
+			return;
 		}
+	}
+
+	try {
+		const data = await ProblemService.getProblem(req, {
+			id,
+			source,
+			solution_id,
+			raw,
+			after_contest: true,
+			uploader: await ProblemService.checkUploader(id)
+		} as any);
+		res.json(data);
+	} catch (e) {
+		console.log(e);
+		res.json(error.internalError);
 	}
 }
 
@@ -231,132 +188,11 @@ async function labelHandler(httpInstance: any) {
 	maintainLabels(vjudge);
 }
 
-function prependAppendHandler(dataArray: any, opt: any) {
-	let new_langmask = 0;
-	for (let i of dataArray) {
-		if (parseInt(i.prepend) === 1) {
-			if (!opt.prepend) {
-				opt.prepend = {};
-			}
-			opt.prepend[parseInt(i.type)] = i.code;
-		} else {
-			if (!opt.append) {
-				opt.append = {};
-			}
-			opt.append[parseInt(i.type)] = i.code;
-		}
-		new_langmask |= (2 ** parseInt(i.type));
-	}
-	if (new_langmask) {
-		opt.langmask = ~new_langmask;
-	}
-}
-
-const problem_callback = async (rows: any, req: any, res: any, opt: any = { source: "", sid: -1, raw: false }, copyVal: any = {}) => {
-	let packed_problem: any = {};
-	if (rows.length !== 0) {
-		/*if (!opt.raw && (packed_problem = cachePack[opt.id])) {
-			let _packed_problem = Object.assign({}, rows[0]);
-			_packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase() || "local"];
-			_packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
-			_packed_problem.prepend = opt.prepend;
-			_packed_problem.append = opt.append;
-			_packed_problem.uploader = opt.uploader;
-			_packed_problem.langmask = opt.langmask || const_variable.langmask;
-			cachePack[opt.id] = _packed_problem;
-		} else {
-
-		 */
-		packed_problem = Object.assign({}, rows[0]);
-		packed_problem.language_name = const_variable.language_name[opt.source.toLowerCase() || "local"];
-		packed_problem.language_template = const_variable.language_template[opt.source.toLowerCase() || "local"];
-		packed_problem.prepend = opt.prepend;
-		packed_problem.append = opt.append;
-		packed_problem.uploader = opt.uploader;
-		packed_problem.langmask = opt.langmask || const_variable.langmask;
-		// }
-		if (!opt.after_contest) {
-			packed_problem.source = "";
-		}
-		if (~opt.solution_id) {
-			const browse_privilege = await SourcePrivilegeCache.checkPrivilege(req.session, opt.solution_id);
-			const resolve = await cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
-					"           and not exists\n" +
-					"           (select * from contest where contest_id in\n" +
-					"           (select contest_id from contest_problem\n" +
-					"           where solution.problem_id = contest_problem.problem_id)\n" +
-					"          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session.user_id]);
-
-			const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
-			const source: any = { source_code };
-			if (source_code.length > 0) {
-				const data = await cache_query("select language from solution where solution_id = ?", [opt.solution_id]);
-				source.language = data[0].language;
-			}
-			Object.assign(copyVal, { source: source });
-			res.json(Object.assign({
-				problem: packed_problem,
-				source: source,
-				isadmin: req.session.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid, req.session.user_id)),
-				browse_code: req.session.source_browser,
-				editor: req.session.editor || false
-			}, copyVal));
-		} else {
-			res.json(Object.assign({
-				problem: packed_problem,
-				source: "",
-				isadmin: req.session.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid, req.session.user_id)),
-				browse_code: req.session.source_browser,
-				editor: req.session.editor || false
-			}, copyVal));
-			// cache.set("source/id/" + opt.source + opt.problem_id + opt.sql, packed_problem, 60 * 60);
-		}
-	} else {
-		res.json(error.errorMaker("problem not found or not a public problem"));
-	}
-};
-
-function SemanticUIAPIHandler(req: any, res: any, key: any, promisify = false) {
-	return new Promise((resolve, reject) => {
-		const val = "%" + req.params.val + "%";
-		const _res = cache.get(key + req.session.isadmin + val);
-		if (_res === undefined) {
-			if (val.length < 3) {
-				res.json(error.errorMaker("Value too short!"));
-				return;
-			}
-			cache_query(`SELECT * FROM problem WHERE ${(req.session.isadmin ? "" : " defunct='N' AND")} 
-			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [val, val, val, val, val])
-				.then((rows: any) => {
-					let result;
-					if (promisify) {
-						result = rows;
-						resolve(rows);
-					} else {
-						for (let i in rows) {
-							if (Object.prototype.hasOwnProperty.call(rows, i)) {
-								rows[i]["url"] = "/newsubmitpage.php?id=" + rows[i]["problem_id"];// deprecated
-								rows[i].source = cheerio.load(rows[i].source).text();
-							}
-						}
-						result = {
-							items: rows
-						};
-						res.json(result);
-					}
-					cache.set(key + req.session.isadmin + val, result, 24 * 60 * 60);
-				})
-				.catch(reject);
-		} else {
-			res.json(_res);
-		}
-	});
-}
-
-router.get("/module/search/:val", function (req: any, res: any) {
+router.get("/module/search/:val", async function (req: any, res: any) {
 	try {
-		SemanticUIAPIHandler(req, res, "/module/search/");
+		const val = req.params.val;
+		const result = await ProblemService.searchProblems(val, req.session.isadmin, false);
+		res.json(result);
 	}
 	catch (e) {
 		console.log(e);
@@ -366,7 +202,8 @@ router.get("/module/search/:val", function (req: any, res: any) {
 
 router.get("/module/search/dropdown/:val", async (req: any, res: any) => {
 	try {
-		const data: any = await SemanticUIAPIHandler(req, res, "/module/search/dropdown/", true);
+		const val = req.params.val;
+		const data: any = await ProblemService.searchProblems(val, req.session.isadmin, true);
 		const sendData = [];
 		for (let i in data) {
 			if (Object.prototype.hasOwnProperty.call(data, i)) {
@@ -376,7 +213,6 @@ router.get("/module/search/dropdown/:val", async (req: any, res: any) => {
 				});
 			}
 		}
-		let val = req.params.val;
 		sendData.sort((a, b) => {
 			let intVal = parseInt(val);
 			let strVal = val + "";
@@ -407,76 +243,8 @@ router.get("/module/search/dropdown/:val", async (req: any, res: any) => {
 	}
 });
 
-router.get("/:source/:id", function (req: any, res: any, next: any) {
-	const id = parseInt(req.params.id);
-	if (isNaN(id)) {
-		next();
-	} else {
-		next("route");
-	}
-}, function (req: any, res: any) {
-	res.json(error.invalidParams);
-});
-
-router.get("/:source/:id/:sid", function (req: any, res: any, next: any) {
-	const id = parseInt(req.params.id);
-	const sid = parseInt(req.params.sid);
-	if (isNaN(sid) || isNaN(id)) {
-		next();
-	} else {
-		next("route");
-	}
-}, function (req: any, res: any) {
-	res.json(error.invalidParams);
-});
-
-const make_cache = async (res: any, req: any, opt: any = {
-	source: "",
-	raw: false,
-	after_contest: false,
-	uploader: "Administrator"
-}, copyVal: any = {}) => {
-	if (ENVIRONMENT === "test") {
-		console.log(`${path.basename(__filename)} line 208:Problem_ID:${opt.problem_id}`);
-	} else {
-		logger.info(opt.problem_id);
-	}
-	prependAppendHandler(await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.problem_id]), opt);
-	if (req.session.isadmin) {
-		if (opt.source.length === 0) {
-			opt.sql = `select a.*,privilege.user_id as creator
-from (SELECT * FROM problem WHERE problem_id = ?)a
-       left join privilege on privilege.rightstr = CONCAT('p', '?')`;
-			problemCallbackHandler(opt, [opt.problem_id, opt.problem_id], { req, res, copyVal });
-		} else {
-			opt.sql = "SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?";
-			problemCallbackHandler(opt, [opt.problem_id, opt.source], { req, res, copyVal });
-		}
-	} else {
-		if (opt.source.length === 0) {
-			opt.sql = "SELECT * FROM problem WHERE problem_id = ?";
-			problemCallbackHandler(opt, [opt.problem_id], { req, res, copyVal });
-		} else {
-			opt.sql = `SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
-			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
-			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
-			OR private = 1))`;
-			problemCallbackHandler(opt, [opt.problem_id, opt.source], { req, res, copyVal });
-		}
-	}
-};
-
-router.get("/:source/:id", function (req: any, res: any) {
-	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
-	const id = parseInt(req.params.id);
-	const _res = cache.get("source/id/" + source + id);
-	if (_res === undefined) {
-		make_cache(res, req, { problem_id: id, source: source });
-	} else {
-		res.json(_res);
-		make_cache(null, req, { problem_id: id, source: source });
-	}
-});
+// Cache Logic moved to Service, wrapper kept for compatibility if needed or removed
+// router.get("/:source/:id") logic is below in root handler
 
 function queryValidate(val: any) {
 	let returnVal: any = {};
@@ -492,7 +260,7 @@ router.get("/:source/", async function (req: any, res: any) {
 	let { cid, tid, pid, id, sid: solution_id } = queryValidate(req.query);
 	let labels = req.query.label !== undefined;
 	let raw = req.query.raw !== undefined;
-	[cid, tid, pid, id, solution_id] = judgeValidNumber([cid, tid, pid, id, solution_id]);
+	[cid, tid, pid, id, solution_id] = ProblemService.judgeValidNumber([cid, tid, pid, id, solution_id]);
 	if (~cid && ~pid) {
 		contestProblemHandler({ req, res }, { source, solution_id, raw, cid, pid });
 	} else if (~tid && ~pid) {
@@ -529,7 +297,7 @@ function storePhoto(problem_id: any, photo: any = { description: {}, input: {}, 
 }
 
 router.post("/add", async (req: any, res: any) => {
-	res.json(await ProblemManager.addProblem(req, req.body));
+	res.json(await ProblemManageService.createProblem(req, undefined, req.body));
 });
 
 router.post("/:source/:id", function (req: any, res: any) {
@@ -561,7 +329,7 @@ router.post("/:source/:id", function (req: any, res: any) {
 			memory_limit = ?,description = ?,input = ?,output = ?,
 			sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ?, spj = ? " : ""} where problem_id = ?
 			 ${local ? "" : " and source = ?"}`;
-			let sqlArr = [json.title, checkEmpty(json.time), checkEmpty(json.memory), json.description, json.input,
+			let sqlArr = [json.title, ProblemService.checkEmpty(json.time), ProblemService.checkEmpty(json.memory), json.description, json.input,
 			json.output, json.sampleinput, json.sampleoutput, json.label];
 			if (local) {
 				sqlArr.push(json.hint, json.spj,
@@ -625,6 +393,5 @@ router.get("/:source/:id/:sid", async function (req: any, res: any) {
 		res.json(_res);
 	}
 });
-
 
 export = ["/problem", auth, router];

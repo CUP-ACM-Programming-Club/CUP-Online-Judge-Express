@@ -1,4 +1,4 @@
-import {Express} from "express";
+import { Express } from "express";
 // @ts-ignore
 const log4js = require("../../module/logger");
 // @ts-ignore
@@ -22,13 +22,23 @@ function loader(app: Express, io: any = undefined) {
     });
     app.use((err: any, req: any, res: any, next: any) => {
         let statusCode = 500;
+        let statement = "internal error.";
+
         console.error(err);
-        if (!isNaN(err.statusCode)) {
+
+        if (err.statusCode && !isNaN(err.statusCode)) {
             statusCode = err.statusCode;
         }
+
+        if (err.statement) {
+            statement = err.statement;
+        } else if (err.message) {
+            statement = err.message;
+        }
+
         res.status(statusCode).json({
             status: "error",
-            statement: "internal error."
+            statement: statement
         });
     });
 }

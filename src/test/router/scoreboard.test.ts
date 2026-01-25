@@ -1,5 +1,6 @@
 const expect = require("chai").expect;
 const query = require("../../module/mysql_cache");
+const sinon = require("sinon");
 
 async function removeAll() {
     await query("delete from users where user_id = 'test' or nick = 'test' or nick = 'test1'");
@@ -17,11 +18,30 @@ function afterAll() {
 
 describe("test scoreboard", function () {
     let server;
+    let getScoreboardStub;
+
     server = require("../../app").default || require("../../app");
     require("../../module/init/build_env")(true);
     require("../../module/init/express_loader")(server);
     const request = require("supertest").agent(server);
+
     before(async function () {
+        // Mock getScoreboardWithCache 来避免 Redis 依赖
+        const optimizerModule = require("../../routes/scoreboard/optimizer");
+        getScoreboardStub = sinon.stub(optimizerModule, "getScoreboardWithCache");
+        getScoreboardStub.resolves([
+            {
+                user_id: "test",
+                nick: "test",
+                avatar: null,
+                avatarUrl: null,
+                result: 4,
+                num: 0,
+                in_date: "2015-12-09 22:02:36",
+                problem_id: 1000,
+                solution_id: 1000
+            }
+        ]);
         await removeAll();
         await query("insert into users (user_id,password) values(?,?)",
             ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"]);
@@ -56,6 +76,7 @@ describe("test scoreboard", function () {
         request.get("/scoreboard/1000")
             .expect(200)
             .end(function (err, res) {
+                if (err) return done(err);
                 expect(res.body).to.have.ownProperty("status").that.equal("OK");
                 expect(res.body).to.have.ownProperty("data");
                 done();
@@ -98,7 +119,10 @@ describe("test scoreboard", function () {
     });
 
     after(async function () {
-        await afterAll();
+        if (getScoreboardStub) {
+            getScoreboardStub.restore();
+        }
         await removeAll();
+        afterAll();
     })
 });

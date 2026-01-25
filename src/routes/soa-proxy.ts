@@ -1,6 +1,6 @@
 import AutoRouterUse from "../module/common/AutoRouterUse";
 const router = AutoRouterUse.newRouter();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 
 router.get("/", async (req, res) => {
     res.json("t");

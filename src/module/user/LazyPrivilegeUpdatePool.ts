@@ -2,7 +2,7 @@ interface UserMap {
 	[id: string]: any
 }
 class Pool {
-    map: UserMap;
+	map: UserMap;
 	constructor() {
 		this.map = {};
 	}
@@ -18,4 +18,4 @@ class Pool {
 	}
 }
 
-module.exports = new Pool();
+export = new Pool();

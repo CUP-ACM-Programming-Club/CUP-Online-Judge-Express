@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 const cache_query = require("../module/mysql_cache");
 
 function getMaintainInfo(limit = false) {

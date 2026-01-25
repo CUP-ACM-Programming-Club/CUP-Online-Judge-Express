@@ -1,11 +1,11 @@
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import { getScoreboardWithCache, clearScoreboardCache } from "./scoreboard/optimizer";
 const { error, ok } = require("../module/constants/state");
 import express from "express";
 const router = express.Router();
 const query = require("../module/mysql_cache");
 const cache_query = query;
-const auth = require("../middleware/auth");
-const check = require("../module/contest/check");
+import auth from "../middleware/auth";
 
 router.get("/:cid", (req: any, res: any, next: any) => {
 	const cid = isNaN(Number(req.params.cid)) ? -1 : parseInt(req.params.cid);
@@ -79,7 +79,8 @@ async function scoreboardHandler(cid: any, browsePrivilege = false) {
 	const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
 	const sql3 = "select start_time,title,show_all_ranklist from contest where contest_id = ?";
 
-	const _data = submitHandler(cid, browsePrivilege);
+	// 使用优化后的查询（带 Redis 缓存）
+	const _data = getScoreboardWithCache(cid, browsePrivilege);
 	const _total = query(sql2, [cid]);
 	const _start_time = query(sql3, [cid]);
 	const _user = contestUserHandler(cid);
@@ -119,18 +120,46 @@ from (select solution_id,
 	return await cache_query(sql, [cid, cid]);
 }
 
+import ContestService from "../service/ContestService";
+import HttpError from "../module/util/HttpError";
+
 router.get("/:cid", async (req: any, res: any) => {
 	const cid = parseInt(req.params.cid);
-	if (!await check(req, res, cid)) {
-		return;
+	try {
+		await ContestService.checkContestAccess(req, cid);
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.status(e.statusCode).json({
+				status: e.status,
+				statement: e.statement
+			});
+			return;
+		} else {
+			// Fallback or rethrow?
+			// Original check logic handled response.
+			// If not HttpError (e.g. invalid params from checkContestAccess?), assume it's fatal.
+			res.json(error.internalError);
+			return;
+		}
 	}
 	res.json(await scoreboardHandler(cid, req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id)));
 });
 
 router.get("/:cid/line", async (req: any, res: any) => {
 	const cid = parseInt(req.params.cid);
-	if (!await check(req, res, cid)) {
-		return;
+	try {
+		await ContestService.checkContestAccess(req, cid);
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.status(e.statusCode).json({
+				status: e.status,
+				statement: e.statement
+			});
+			return;
+		} else {
+			res.json(error.internalError);
+			return;
+		}
 	}
 	let [submitStat, line_break, contest_user] = await Promise.all([submitHandler(cid), lineBreakHandler(cid), contestUserHandler(cid)]);
 	let map: any = {};
@@ -146,4 +175,11 @@ router.get("/:cid/line", async (req: any, res: any) => {
 	}));
 });
 
-module.exports = ["/scoreboard", auth, router];
+
+const routes: any = ["/scoreboard", auth, router];
+
+// 导出缓存清除函数供其他模块使用（例如提交后清除相关比赛缓存）
+routes.clearScoreboardCache = clearScoreboardCache;
+
+module.exports = routes;
+

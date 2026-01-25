@@ -1,7 +1,7 @@
 import express from "express";
 import TokenManager from "../module/account/token/TokenManager";
 const router = express.Router();
-const auth = require("../middleware/auth");
+import auth from "../middleware/auth";
 router.get("/", async function (req, res) {
 	const userId = req.session!.user_id;
 	req.session!.destroy((err: any) => {

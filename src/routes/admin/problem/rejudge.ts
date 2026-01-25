@@ -1,11 +1,12 @@
 import express from "express";
-const router = express.Router();
+import AdminProblemService from "../../../service/admin/AdminProblemService";
 const [error, ok] = require("../../../module/const_var");
-const { rejudgeBySolution, rejudgeByContest, rejudgeByProblem } = require("../../../module/status/update_solution_result");
 
-async function rejudgeHandler(res: any, id: any, func: any) {
+const router = express.Router();
+
+async function rejudgeHandler(res: any, id: any, func: Function) {
 	try {
-		await func(id, 1);
+		await func(id); // Service methods now only take ID
 		res.json(ok.ok);
 	} catch (e) {
 		console.log(e);
@@ -14,16 +15,16 @@ async function rejudgeHandler(res: any, id: any, func: any) {
 }
 
 router.post("/contest", async (req: any, res: any) => {
-	await rejudgeHandler(res, req.body.contest_id, rejudgeByContest);
+	await rejudgeHandler(res, req.body.contest_id, AdminProblemService.rejudgeContest);
 });
 
 router.post("/solution", async (req: any, res: any) => {
-	await rejudgeHandler(res, req.body.solution_id, rejudgeBySolution);
+	await rejudgeHandler(res, req.body.solution_id, AdminProblemService.rejudgeSolution);
 });
 
 router.post("/problem", async (req: any, res: any) => {
-	await rejudgeHandler(res, req.body.problem_id, rejudgeByProblem);
+	await rejudgeHandler(res, req.body.problem_id, AdminProblemService.rejudgeProblem);
 });
 
 
-module.exports = ["/rejudge", router];
+export = ["/rejudge", router];

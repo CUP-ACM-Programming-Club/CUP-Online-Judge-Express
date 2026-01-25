@@ -3,7 +3,7 @@ import ContestAssistantManager from "../../manager/contest/ContestAssistantManag
 import express from "express";
 const router = express.Router();
 const { error, ok } = require("../../module/constants/state");
-const getProblemInfo = require("../../module/contest/problem");
+const ContestService = require("../../service/ContestService").default;
 const ProblemInfoManager = require("../../module/problem/ProblemInfoManager");
 
 async function privilegeMiddleware(req: any, res: any, next: any) {
@@ -19,7 +19,15 @@ async function privilegeMiddleware(req: any, res: any, next: any) {
 router.get("/:contestId", async (req: any, res: any) => {
 	try {
 		const contestId = parseInt(req.params.contestId);
-		const contestProblemInfo = await getProblemInfo(contestId, false);
+		// Using Service to get list (uncached for now per request logic but service caches list)
+		// Original code: await getProblemInfo(contestId, false) -> false means LOCAL? vjudge argument.
+		// Wait, module/contest/problem exports function(cid, vjudge).
+		// Here second arg is false.
+		// ContestService.getContestProblemList detects vjudge from contest info.
+		// It fetches contest info first.
+		// So ContestService is better.
+		const result = await ContestService.getContestProblemList(req, contestId);
+		const contestProblemInfo = result.data;
 		const problemInfo = (await Promise
 			.all(contestProblemInfo
 				.map((e: any) => ProblemInfoManager
