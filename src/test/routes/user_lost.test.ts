@@ -6,20 +6,9 @@ const expect = require("chai").expect;
 
 describe("User Lost Tests", function () {
     const module = require("../../routes/user/lost");
-    // User 模块使用特殊导出格式: [path, router]
-    const [path, router] = module;
-
+    const router = module.default;
     describe("模块导出验证", function () {
-        it("should export array with path and router", function () {
-            expect(module).to.be.an('array');
-            expect(module).to.have.lengthOf(2);
-        });
-
-        it("should export correct path", function () {
-            expect(path).to.equal('/lost');
-        });
-
-        it("should export a router", function () {
+        it("should export router as default", function () {
             expect(router).to.be.a('function');
             expect(router.name).to.equal('router');
         });

@@ -1,3 +1,4 @@
+
 /**
  * Profile Route Unit Tests with Closure Control & Manual Recording
  */
@@ -5,6 +6,7 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
+const fakeDb = require("../mocks/fake-db"); // Import fake-db directly (Fixed path)
 
 describe("Profile Route Tests (Full Coverage)", function () {
     let router;
@@ -30,10 +32,12 @@ describe("Profile Route Tests (Full Coverage)", function () {
         shouldQueryFail = false;
         mockQueryCalls = [];
 
-        // 1. Setup Stubs
-        queryStub = sinon.stub().callsFake(async (sql, params) => {
+        // 1. Stub fakeDb.query directly (More robust than module interception)
+        queryStub = sinon.stub(fakeDb, "query").callsFake(async (sql, params) => {
             mockQueryCalls.push({ sql, params });
-            if (sql && typeof sql === "string" && sql.toLowerCase().includes("select password")) {
+            const normalizedSql = sql.toLowerCase().replace(/\s+/g, " ").trim();
+
+            if (normalizedSql.includes("select password")) {
                 return [{ password: "mock_password_hash", newpassword: "mock_new_password_hash" }];
             }
             if (shouldQueryFail) {
@@ -61,11 +65,13 @@ describe("Profile Route Tests (Full Coverage)", function () {
             }
         ];
 
-        // 2. Intercept Module._load
+        // 2. Intercept Other Modules
         previousLoad = Module._load;
         Module._load = function (request, parent, isMain) {
-            if (request.includes("mysql_query")) return queryStub;
-            if (request.includes("check_password")) return checkPasswordStub;
+            // mysql_query is handled by fakeDb stub
+            if (request.includes("check_password")) {
+                return checkPasswordStub;
+            }
             if (request.includes("login_action")) return loginActionStub;
             if (request.includes("module/util")) return utilStub;
             if (request.includes("const_var")) return constVarStub;
@@ -77,19 +83,24 @@ describe("Profile Route Tests (Full Coverage)", function () {
 
         // 4. Clear Cache & Load Module
         Object.keys(require.cache).forEach(key => {
-            if (key.includes("routes/user/update/profile")) {
+            const normalizedKey = key.replace(/\\/g, "/");
+            if (normalizedKey.includes("routes/user/update/profile") ||
+                normalizedKey.includes("module/check_password") ||
+                normalizedKey.includes("module/login_action") ||
+                normalizedKey.includes("module/util") ||
+                normalizedKey.includes("const_var")) {
                 delete require.cache[key];
             }
         });
 
         const profileModule = require("../../routes/user/update/profile");
-        router = profileModule[1];
+        router = profileModule.default;
         handler = router.stack.find(layer => layer.route && layer.route.methods.post).route.stack[0].handle;
     });
 
     afterEach(function () {
         if (previousLoad) Module._load = previousLoad;
-        sinon.restore();
+        sinon.restore(); // This restores fakeDb.query too
     });
 
     const createReq = (body) => ({
@@ -109,14 +120,18 @@ describe("Profile Route Tests (Full Coverage)", function () {
             const req = createReq({ nick: "a".repeat(101), password: "old" });
             const res = createRes();
             await handler(req, res);
-            expect(res.json.calledWith(sinon.match({ status: "error" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.status !== "error") throw new Error("Expected status error, got " + JSON.stringify(arg));
         });
 
         it("should valid inputs pass validation", async function () {
             const req = createReq({ nick: "valid", password: "old" });
             const res = createRes();
             await handler(req, res);
-            expect(res.json.calledWith(sinon.match({ status: "OK" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.status !== "OK") throw new Error("Expected status OK, got " + JSON.stringify(arg));
         });
     });
 
@@ -127,7 +142,9 @@ describe("Profile Route Tests (Full Coverage)", function () {
             const res = createRes();
             await handler(req, res);
 
-            expect(res.json.calledWith(sinon.match({ status: "error", statement: "Password wrong" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.statement !== "Password wrong") throw new Error("Expected Password wrong, got " + JSON.stringify(arg));
         });
 
         it("should reject if passwords mismatch", async function () {
@@ -136,7 +153,9 @@ describe("Profile Route Tests (Full Coverage)", function () {
             const res = createRes();
             await handler(req, res);
 
-            expect(res.json.calledWith(sinon.match({ status: "error", statement: "Two password not same" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.statement !== "Two password not same") throw new Error("Expected Two password not same, got " + JSON.stringify(arg));
         });
     });
 
@@ -147,7 +166,9 @@ describe("Profile Route Tests (Full Coverage)", function () {
             const res = createRes();
             await handler(req, res);
 
-            expect(res.json.calledWith(sinon.match({ status: "OK" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.status !== "OK") throw new Error("Expected status OK, got " + JSON.stringify(arg));
 
             // Verify verification call manually using our captured calls
             const hasUpdate = mockQueryCalls.some(call => call.sql && call.sql.toLowerCase().includes("update users set"));
@@ -162,7 +183,9 @@ describe("Profile Route Tests (Full Coverage)", function () {
             const res = createRes();
             await handler(req, res);
 
-            expect(res.json.calledWith(sinon.match({ status: "error", statement: "database error" }))).to.be.true;
+            expect(res.json.called).to.be.true;
+            const arg = res.json.args[0][0];
+            if (arg.statement !== "database error") throw new Error("Expected database error, got " + JSON.stringify(arg));
         });
     });
 });

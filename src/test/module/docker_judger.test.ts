@@ -41,7 +41,7 @@ describe("Docker Judger Tests", function () {
 
         previousLoad = Module._load;
         Module._load = function (request: string, parent: any, isMain: any) {
-            if (request.includes("mysql_query")) return { query: queryStub };
+            if (request.includes("mysql_query")) return queryStub;
             if (request.includes("docker/index")) return sandboxStub;
             if (request.includes("docker/checker")) return { compareDiff: sinon.spy() };
             if (request === "fs") return fsStub;

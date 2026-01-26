@@ -1,3 +1,4 @@
+
 /**
  * User Submit Stat 路由单元测试
  */
@@ -6,20 +7,10 @@ const expect = require("chai").expect;
 
 describe("User Submit Stat Tests", function () {
     const module = require("../../routes/user/submit_stat");
-    // User 模块使用特殊导出格式: [path, router]
-    const [path, router] = module;
+    const router = module.default;
 
     describe("模块导出验证", function () {
-        it("should export array with path and router", function () {
-            expect(module).to.be.an('array');
-            expect(module).to.have.lengthOf(2);
-        });
-
-        it("should export correct path", function () {
-            expect(path).to.equal('/submit_stat');
-        });
-
-        it("should export a router", function () {
+        it("should export router as default", function () {
             expect(router).to.be.a('function');
             expect(router.name).to.equal('router');
         });
@@ -76,17 +67,3 @@ describe("User Submit Stat Tests", function () {
         });
     });
 });
-
-/**
- * 测试说明：
- * 
- * 覆盖内容：
- * - 特殊导出格式验证 [path, router]
- * - 两个GET路由存在性
- * - 异步处理器验证
- * 
- * 未测试（需集成测试）：
- * - 实际的提交统计查询
- * - 数据聚合逻辑  
- * - 错误处理
- */

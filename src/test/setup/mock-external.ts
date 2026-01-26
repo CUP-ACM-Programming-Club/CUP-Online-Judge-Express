@@ -17,7 +17,10 @@ if (!global.config) {
 		webhook: { secret: "test-secret" },
 		cookie: Object.assign({ domain: "" }, baseConfig.cookie || {}),
 		session_secret: baseConfig.session_secret || "test-secret",
-		salt: baseConfig.salt || "testsalt"
+		salt: baseConfig.salt || "testsalt",
+		problem_upload_dest: {
+			dir: path.resolve(__dirname, "test_upload_dir")
+		}
 	});
 }
 
