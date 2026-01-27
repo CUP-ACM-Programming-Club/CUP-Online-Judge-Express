@@ -37,7 +37,8 @@ export class StatusService {
                 continue;
             }
             const value = request_query[key];
-            if (typeof value === "undefined" || typeof value === "boolean") {
+            const value = request_query[key];
+            if (typeof value === "undefined" || typeof value === "boolean" || key === "limit" || key === "sim") {
                 continue;
             }
 
