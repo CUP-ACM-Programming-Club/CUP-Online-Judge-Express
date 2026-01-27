@@ -107,6 +107,54 @@ function queryValidate(val: any) {
 	return returnVal;
 }
 
+
+router.get("/:id(\\d+)", async function (req: any, res: any) {
+	const id = parseInt(req.params.id);
+	const source = "";
+	let { sid: solution_id } = queryValidate(req.query);
+	const raw = req.query.raw !== undefined;
+	[solution_id] = ProblemService.judgeValidNumber([solution_id]);
+	try {
+		const browse_privilege = ProblemService.checkPrivilege(req);
+		if (!browse_privilege) {
+			if (global.contest_mode) {
+				res.json(error.contestMode);
+				return;
+			} else if (!await ProblemService.checkProblemAvailable(id)) {
+				res.json(error.errorMaker("problem not available!"));
+				return;
+			} else if (await ProblemService.checkProblemInContest(id)) {
+				res.json(error.errorMaker("problem is in contest"));
+				return;
+			}
+
+			if (await ProblemService.checkProblemContestStatus(id)) {
+				res.json(error.problemInContest);
+				return;
+			}
+		}
+
+		const data = await ProblemService.getProblem(req, {
+			id,
+			source,
+			solution_id,
+			raw,
+			after_contest: true,
+			uploader: await ProblemService.checkUploader(id)
+		} as any);
+		res.json(data);
+	} catch (e: any) {
+		if (e instanceof HttpError) {
+			res.json(e.json());
+		} else if (e === error.contestMode || e === error.noprivilege || e === error.invalidParams) {
+			res.json(e);
+		} else {
+			console.log(e);
+			res.json(error.internalError);
+		}
+	}
+});
+
 router.get("/:source/", async function (req: any, res: any) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	let { cid, tid, pid, id, sid: solution_id } = queryValidate(req.query);

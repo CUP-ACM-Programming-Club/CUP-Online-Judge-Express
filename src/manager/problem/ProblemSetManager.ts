@@ -1,8 +1,8 @@
-import {Request, Response} from "express";
+import { Request, Response } from "express";
 import dayjs from "dayjs";
-import {error, ok} from "../../module/constants/state";
+import { error, ok } from "../../module/constants/state";
 import cache_query = require("../../module/mysql_cache");
-import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
+import { ErrorHandlerFactory } from "../../decorator/ErrorHandler";
 import ContestModeChecker from "../../decorator/common/ContestModeChecker";
 import Cacheable from "../../decorator/Cacheable";
 import CachePool from "../../module/common/CachePool";
@@ -32,7 +32,7 @@ class ProblemSetManager {
 
     @Cacheable(new CachePool(), 10, "minute")
     async getListObject(user_id: string, payload: any, one_month_ago: string) {
-        const {problem_id, title, source, accepted, submit, label, in_date} = payload;
+        const { problem_id, title, source, accepted, submit, label, in_date } = payload;
         let acnum = await cache_query(`select count(1) as cnt from solution where user_id=? and problem_id = ?
 		and result=4 union all select count(1) as cnt from solution where user_id=? and problem_id=?`, [user_id, problem_id, user_id, problem_id]);
         let ac = parseInt(acnum[0].cnt);
@@ -72,7 +72,7 @@ class ProblemSetManager {
     async getProblem(req: Request, res: Response) {
         const target = req.query.source || "local";
         let search_table = target === "local" ? "problem" : target === "virtual" ? "vjudge_problem" : "problem";
-        const start = parseInt(req.params.start);
+        const start = parseInt(req.params.start) || 0;
         let search: string | boolean = req.params.search;
         if (search === "none") {
             search = false;
@@ -99,7 +99,7 @@ class ProblemSetManager {
         console.time("get info");
         if (browse_privilege) {
             if (search) {
-                [_total, result] = await this.searchHandler({search, label, has_from, from, start, search_table, order});
+                [_total, result] = await this.searchHandler({ search, label, has_from, from, start, search_table, order });
             }
             else {
                 let sqlArr = [];
@@ -154,7 +154,7 @@ class ProblemSetManager {
                 let promiseArray = [cache_query(`select count(1) as cnt from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} ${NONE_PRIVILEGE_AND_SQL}
 			`, sqlArr),
-                    this.getProblemList(search_table, has_from, label, order, sqlArr)];
+                this.getProblemList(search_table, has_from, label, order, sqlArr)];
                 if (!has_from && !label) {
                     promiseArray.push(cache_query(`select count(1) as cnt from problem where defunct='N' and in_date > ${one_month_ago}
 			    ${NONE_PRIVILEGE_AND_SQL}`));
@@ -184,13 +184,13 @@ class ProblemSetManager {
     }
 
     @Cacheable(new CachePool(), 1, "day")
-    async getColorSetting () {
+    async getColorSetting() {
         const colorSetting = await cache_query("select value from global_setting where label='label_color'");
         return Array.isArray(colorSetting) && colorSetting.length > 0 ? JSON.parse(colorSetting[0].value) : {};
     }
 
     @Cacheable(new CachePool(), 1, "hour")
-    async getProblemList (search_table: string, has_from: boolean, label: boolean, order: string, sqlArr: any[]) {
+    async getProblemList(search_table: string, has_from: boolean, label: boolean, order: string, sqlArr: any[]) {
         return await cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
 			where defunct='N' ${has_from ? "and source = ?" : ""} ${label ? "and label like ?" : ""} ${NONE_PRIVILEGE_AND_SQL}
 			order by ${order}
@@ -199,7 +199,7 @@ class ProblemSetManager {
 
     @Cacheable(new CachePool(), 12, "hour")
     async searchHandler(val: any = {}, normal = false) {
-        let {search, label, has_from, from, start, search_table, order} = val;
+        let { search, label, has_from, from, start, search_table, order } = val;
         let sqlArr = [search, search, search, search, search, search, has_from ? from : search];
         if (label) {
             sqlArr.push(`%${label}%`);
@@ -210,7 +210,7 @@ class ProblemSetManager {
 			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
 			${normal ? `and defunct='N' ${NONE_PRIVILEGE_AND_SQL}` : ""}
 			`, sqlArr),
-            cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
+        cache_query(`select problem_id,in_date,title,source,submit,accepted,label from ${search_table}
 			where ((title like ? or description like ? or input like ? or output like ? or problem_id like ?
 			or label like ?) ${has_from ? "and source = ?" : "or source like ?"}) ${label ? "and label like ?" : ""}
 			${normal ? `and defunct='N' ${NONE_PRIVILEGE_AND_SQL}` : ""}

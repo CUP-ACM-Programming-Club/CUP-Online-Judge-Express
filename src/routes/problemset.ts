@@ -5,6 +5,15 @@ import auth from "../middleware/auth";
 const Interceptor = require("../module/problemset/interceptor");
 
 
+
+router.get("/", async function (req, res) {
+	res.json(await ProblemSetManager.getProblem(req, res));
+});
+
+router.get("/search/:search", async function (req, res) {
+	res.json(await ProblemSetManager.getProblem(req, res));
+});
+
 router.get("/:start", async function (req, res) {
 	res.json(await ProblemSetManager.getProblem(req, res));
 });
