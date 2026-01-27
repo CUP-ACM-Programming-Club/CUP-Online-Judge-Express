@@ -92,6 +92,101 @@ router.get("/:problem_id/:user_id/:language/:result/:limit", async (req: any, re
 	}, limit);
 });
 
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id", async (req: any, res: any, next: any) => {
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		problem_id,
+		user_id,
+		language,
+		result,
+		contest_id
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim", async (req: any, res: any, next: any) => {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	await get_status(req, res, next, {
+		problem_id,
+		user_id,
+		language,
+		result,
+		sim: !!sim
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim", async (req: any, res: any, next: any) => {
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		problem_id,
+		user_id,
+		language,
+		result,
+		contest_id,
+		sim: !!sim
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:sim/:privilege", async (req: any, res: any, next: any) => {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	await get_status(req, res, next, {
+		problem_id: [problem_id, privilege ? { type: "GREATER", value: 0 } : undefined],
+		user_id,
+		language,
+		result,
+		sim: !!sim
+	}, limit);
+});
+
+router.get("/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege", async (req: any, res: any, next: any) => {
+	const contest_id = req.params.contest_id === "null" ? undefined : parseInt(req.params.contest_id);
+	const sim = req.params.sim === "null" ? undefined : parseInt(req.params.sim);
+	const privilege = req.params.privilege === "null" ? undefined : parseInt(req.params.privilege);
+	if (typeof contest_id === "number" && contest_id < 1000 && contest_id >= 0) {
+		return next();
+	}
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		problem_id: [problem_id, privilege ? { type: "GREATER", value: 0 } : undefined],
+		user_id,
+		language,
+		result,
+		contest_id,
+		sim: !!sim
+	}, limit);
+});
+
 router.get("/", async (req: any, res: any, next: any) => {
 	await get_status(req, res, next, {}, 0);
 });
