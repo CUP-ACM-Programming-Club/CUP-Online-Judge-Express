@@ -285,6 +285,34 @@ describe("Status Service Tests", function () {
             // Note: 'result' word exists in SELECT clause. Check WHERE usage.
             expect(call.args[0]).to.not.match(/result\s*[=<>!]+\s*\?/);
         });
+
+        it("should exclude 'limit' and 'sim' from WHERE clause", async function () {
+            await service.getStatusList(mockReq, {
+                limit: 10,
+                sim: true,
+                problem_id: 1001
+            });
+            const call = queryStub.lastCall;
+            const sql = call.args[0];
+            const params = call.args[1];
+
+            // Should contain problem_id
+            expect(sql).to.include("problem_id = ?");
+            expect(params).to.include(1001);
+
+            // Should NOT contain limit or sim as column filters
+            // Check for potential misuse like "AND limit = ?" or "AND sim = ?"
+            expect(sql).to.not.match(/\blimit\s*=\s*\?/i);
+            expect(sql).to.not.match(/\bsim\s*=\s*\?/i);
+
+            // Params should NOT include the boolean true for sim or number 10 for limit (unless it's the LIMIT clause param)
+            // Note: limit IS pushed as the LAST param for the LIMIT clause.
+            // But it shouldn't be pushed TWICE (once for where, once for limit).
+            // problem_id is pushed once.
+            // limit is pushed once (at the end).
+            // So total params length should be 2.
+            expect(params.length).to.equal(2);
+        });
     });
 
     describe("Privilege Flows", () => {

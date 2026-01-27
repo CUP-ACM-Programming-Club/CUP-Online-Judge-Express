@@ -36,9 +36,11 @@ export class StatusService {
             if (!Object.prototype.hasOwnProperty.call(request_query, key)) {
                 continue;
             }
+            if (key === "limit" || key === "sim") {
+                continue;
+            }
             const value = request_query[key];
-            const value = request_query[key];
-            if (typeof value === "undefined" || typeof value === "boolean" || key === "limit" || key === "sim") {
+            if (typeof value === "undefined" || typeof value === "boolean") {
                 continue;
             }
 
