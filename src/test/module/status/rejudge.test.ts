@@ -30,15 +30,17 @@ describe("Rejudge Logic (update_solution_result)", function () {
             if (request.includes("mysql_query")) return queryStub;
             if (request.includes("judger")) {
                 // Return default export as the stub
-                return { default: judgerStub };
+                return { __esModule: true, default: judgerStub };
             }
-            if (request.includes("ScoreboardService")) return { default: scoreboardStub };
-            if (request.includes("redis")) return { default: redisStub };
+            if (request.includes("ScoreboardService")) return { __esModule: true, default: scoreboardStub };
+            if (request.includes("redis")) return { __esModule: true, default: redisStub };
             return previousLoad.apply(this, arguments);
         };
 
         // 3. Load Module
-        delete require.cache[require.resolve("../../../../module/status/update_solution_result")];
+        try {
+            delete require.cache[require.resolve("../../../module/status/update_solution_result")];
+        } catch (e) { }
         rejudgeModule = require("../../../module/status/update_solution_result");
     });
 

@@ -18,7 +18,9 @@ describe("ProblemManageService Tests", function () {
     beforeEach(function () {
         // Mock global.config.website
         global.config = global.config || {};
-        global.config.website = { dir: "/mock/website/dir" };
+        const os = require("os");
+        const path = require("path");
+        global.config.website = { dir: path.join(os.tmpdir(), "mock_website_dir") };
 
         // 1. Setup Stubs
         queryStub = sinon.stub().resolves({ insertId: 2000 });
