@@ -76,7 +76,7 @@ async function get_status(req: any, res: any, next: any, request_query: any = {}
 		next(e);
 	}
 }
-}
+
 
 router.get("/:problem_id/:user_id/:language/:result/:limit", async (req: any, res: any, next: any) => {
 	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
