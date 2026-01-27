@@ -6,18 +6,21 @@
 const expect = require("chai").expect;
 
 describe("Scoreboard Optimizer Tests - With Pure Functions", function () {
-    const {
-        generateCacheKey,
-        generateClearCacheKeys,
-        extractUserIds,
-        createUserMap,
-        extractSolutionIds,
-        createSimMap,
-        mergeSubmissionData,
-        submitHandlerOptimized,
-        getScoreboardWithCache,
-        clearScoreboardCache
-    } = require("../../routes/scoreboard/optimizer");
+    const ScoreboardService = require("../../service/ScoreboardService").default;
+
+    // Access private methods for testing
+    const service: any = ScoreboardService;
+
+    const generateCacheKey = service.generateCacheKey.bind(service);
+    const generateClearCacheKeys = service.generateClearCacheKeys.bind(service);
+    const extractUserIds = service.extractUserIds.bind(service);
+    const createUserMap = service.createUserMap.bind(service);
+    const extractSolutionIds = service.extractSolutionIds.bind(service);
+    const createSimMap = service.createSimMap.bind(service);
+    const mergeSubmissionData = service.mergeSubmissionData.bind(service);
+    const submitHandlerOptimized = service.submitHandlerOptimized.bind(service);
+    const getScoreboardWithCache = service.getScoreboard.bind(service); // Note: renamed in Service?
+    const clearScoreboardCache = service.clearScoreboardCache.bind(service);
 
     describe("纯函数测试 - generateCacheKey", function () {
         it("should generate admin cache key", function () {

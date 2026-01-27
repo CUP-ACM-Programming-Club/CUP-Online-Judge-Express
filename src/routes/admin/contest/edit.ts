@@ -2,7 +2,6 @@ import ContestAssistantManager from "../../../manager/contest/ContestAssistantMa
 import { error, ok } from "../../../module/constants/state";
 import AdminContestService from "../../../service/admin/AdminContestService";
 import isNumber from "../../../module/util/isNumber";
-const query = require("../../../module/mysql_query");
 
 async function privilegeMiddleware(req: any, res: any, next: any) {
 	if (req.session.isadmin || req.session.contest_manager) {
@@ -37,7 +36,7 @@ router.get("/user/:id", privilegeMiddleware, async (req: any, res: any) => {
 			res.json(error.invalidParams);
 			return;
 		}
-		const data = await query("select user_id from privilege where rightstr = ?", [`c${contest_id}`]);
+		const data = await AdminContestService.getContestCompetitors(contest_id);
 		res.json(ok.okMaker(data));
 	} catch (e) {
 		console.log(e);

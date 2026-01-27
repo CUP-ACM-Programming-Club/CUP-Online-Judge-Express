@@ -189,3 +189,17 @@ export function indexToGranularity(idx: number): string {
     ];
     return map[idx] || TIME_GRANULARITY.MONTH;
 }
+
+/**
+ * 获取图表标签
+ */
+export function getGraphLabel(granularity: string): string[] {
+    switch (granularity) {
+        case TIME_GRANULARITY.MONTH: return ["year", "month"];
+        case TIME_GRANULARITY.DAY: return ["month", "day"];
+        case TIME_GRANULARITY.HOUR: return ["day", "hour"];
+        case TIME_GRANULARITY.MINUTE: return ["hour", "minute"];
+        case TIME_GRANULARITY.SECOND: return ["minute", "second"];
+        default: return ["year", "month"];
+    }
+}

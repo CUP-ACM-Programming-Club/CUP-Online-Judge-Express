@@ -30,6 +30,12 @@ export class HttpError extends Error {
     static internalError(statement: string = "Internal Server Error") {
         return new HttpError(statement, 500);
     }
+    json() {
+        return {
+            status: "error",
+            statement: this.statement
+        };
+    }
 }
 
 export default HttpError;

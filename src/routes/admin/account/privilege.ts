@@ -1,25 +1,23 @@
 import express from "express";
 const router = express.Router();
-const query = require("../../../module/mysql_query");
 const [error, ok] = require("../../../module/const_var");
 const { trimProperty } = require("../../../module/util");
 const UpdatePool = require("../../../module/user/LazyPrivilegeUpdatePool");
+import AdminUserService from "../../../service/admin/AdminUserService";
+
 const privilegeList = ["administrator", "source_browser", "contest_manager", "editor"];
 
-async function privilegeListGetter() {
-	return await query(`select superuser.*, users.nick
-from (select user_id, rightstr, defunct
-      from privilege
-      where rightstr in
-            ('${privilegeList.join("','")}')) superuser
-         inner join users on users.user_id = superuser.user_id`);
-}
+// Removed privilegeListGetter
 
-async function modifyHandler(req: any, res: any, sql: any) {
+async function modifyHandler(req: any, res: any, action: "add" | "remove") {
 	let { user_id, rightstr } = trimProperty(req.body);
 	if (privilegeList.includes(rightstr)) {
 		try {
-			await query(sql, [user_id, rightstr]);
+			if (action === "add") {
+				await AdminUserService.addPrivilege(user_id, rightstr);
+			} else {
+				await AdminUserService.removePrivilege(user_id, rightstr);
+			}
 			UpdatePool.addToUpdate(user_id);
 			res.json(ok.ok);
 		} catch (e) {
@@ -33,7 +31,7 @@ async function modifyHandler(req: any, res: any, sql: any) {
 
 router.get("/", async (req: any, res: any) => {
 	try {
-		res.json(ok.okMaker({ privilegeList, userList: await privilegeListGetter() }));
+		res.json(ok.okMaker({ privilegeList, userList: await AdminUserService.getPrivilegeList(privilegeList) }));
 	} catch (e) {
 		console.log(e);
 		res.json(error.database);
@@ -41,11 +39,11 @@ router.get("/", async (req: any, res: any) => {
 });
 
 router.post("/add", async (req: any, res: any) => {
-	await modifyHandler(req, res, "insert into privilege values(?,?,'N')");
+	await modifyHandler(req, res, "add");
 });
 
 router.post("/remove", async (req: any, res: any) => {
-	await modifyHandler(req, res, "delete from privilege where user_id = ? and rightstr = ?");
+	await modifyHandler(req, res, "remove");
 });
 
 module.exports = ["/privilege", router];

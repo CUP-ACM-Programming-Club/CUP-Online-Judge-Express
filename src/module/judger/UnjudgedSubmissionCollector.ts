@@ -1,9 +1,9 @@
-import {localJudger} from "../judger";
-import {MySQLManager} from "../../manager/mysql/MySQLManager";
+import { localJudger } from "../judger";
+import { MySQLManager } from "../../manager/mysql/MySQLManager";
 import { ConfigManager } from "../config/config-manager";
 import dayjs from "dayjs";
 import Logger from "../console/Logger";
-import {wait} from "../../decorator/RetryAsync";
+import { wait } from "../../decorator/RetryAsync";
 const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;
 
@@ -22,7 +22,7 @@ class UnjudgedSubmissionCollector {
         this.noDataProblemIdSet.add(`${problemId}`);
     }
 
-    start () {
+    start() {
         this.noDataProblemIdSet.add("0");
         this.collectHandler();
         if (!this.interval) {
@@ -35,28 +35,36 @@ class UnjudgedSubmissionCollector {
         }
     }
 
-    async collectHandler () {
+    async collectHandler() {
         try {
             this.collectFinished = false;
-            const today = dayjs();
-            const yesterday = today.subtract(1, "day").format("YYYY-MM-DD HH:mm:ss");
-            const thirtySecondAgo = today.subtract(30, "second").format("YYYY-MM-DD HH:mm:ss")
             const noDataProblemIdList = Array.from(this.noDataProblemIdSet);
-            const waitingResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=0 and language not in (15,22) and problem_id != 0 and in_date > '" + yesterday +"' and in_date < '" + thirtySecondAgo +"' and problem_id not in (?) order by solution_id limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
-            const rejudgeResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=1 and language not in (15,22) and problem_id != 0 and in_date > '" + yesterday +"' and in_date < '" + thirtySecondAgo +"' and problem_id not in (?) order by solution_id limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
+            const waitingResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=0 and language not in (15,22) and problem_id != 0 and problem_id not in (?) order by solution_id limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
+            const rejudgeResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=1 and language not in (15,22) and problem_id != 0 and problem_id not in (?) order by solution_id desc limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
             const result = [...waitingResult, ...rejudgeResult];
             await wait(2000);
             for (let i in result) {
-                if (!Object.prototype.hasOwnProperty.call(result,i)) {
+                if (!Object.prototype.hasOwnProperty.call(result, i)) {
                     continue;
                 }
-                const _data = await MySQLManager.execQuery("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
-                    [result[i].user_id]);
-                const admin = !!(_data && _data.length && _data[0].cnt);
                 const solutionId = parseInt(result[i].solution_id);
-                const priority = parseInt(String(!!result[i].result));
-                console.log(`Current Time: ${dayjs().format("YYYY-MM-DD HH:mm:ss")}, solutionId: ${solutionId}`);
-                await this.judger!.addTask(solutionId, admin, false, (priority + 1) % 2);
+                try {
+                    const _data = await MySQLManager.execQuery("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
+                        [result[i].user_id]);
+                    const admin = !!(_data && _data.length && _data[0].cnt);
+                    const priority = parseInt(String(!!result[i].result));
+                    console.log(`Current Time: ${dayjs().format("YYYY-MM-DD HH:mm:ss")}, solutionId: ${solutionId}`);
+                    // Add timeout to prevent hanging indefinitely
+                    // Default 5 minutes timeout (300000 ms)
+                    const timeoutMs = ConfigManager.getConfig("judger_request_timeout", 300000);
+                    await Promise.race([
+                        this.judger!.addTask(solutionId, admin, false, (priority + 1) % 2),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Judger task timeout")), timeoutMs))
+                    ]);
+                } catch (e) {
+                    console.error("Collector task error:", e);
+                    await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [solutionId]);
+                }
             }
         }
         catch (e) {
@@ -71,7 +79,7 @@ class UnjudgedSubmissionCollector {
         this.collectFinished = true;
     }
 
-    stop () {
+    stop() {
         if (this.interval) {
             clearInterval(this.interval);
             return true;
@@ -79,7 +87,7 @@ class UnjudgedSubmissionCollector {
         return false;
     }
 
-    newInstance () {
+    newInstance() {
         return new UnjudgedSubmissionCollector();
     }
 }

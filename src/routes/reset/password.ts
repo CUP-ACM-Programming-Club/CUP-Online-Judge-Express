@@ -1,10 +1,10 @@
 import express from "express";
 const router = express.Router();
-const cache_query = require("../../module/mysql_cache");
+import UserService from "../../service/UserService";
 const [error, ok] = require("../../module/const_var");
 
 async function getUserConfirmQuestion(user_id: any) {
-	const data = await cache_query("select confirmquestion from users where user_id = ?", [user_id]);
+	const data = await UserService.getUserConfirmInfo(user_id);
 	if (Array.isArray(data) && data.length > 0 && data[0].confirmquestion) {
 		return data[0].confirmquestion;
 	}

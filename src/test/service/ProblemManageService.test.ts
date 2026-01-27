@@ -16,6 +16,10 @@ describe("ProblemManageService Tests", function () {
     };
 
     beforeEach(function () {
+        // Mock global.config.website
+        global.config = global.config || {};
+        global.config.website = { dir: "/mock/website/dir" };
+
         // 1. Setup Stubs
         queryStub = sinon.stub().resolves({ insertId: 2000 });
         fsStub = {
@@ -23,7 +27,8 @@ describe("ProblemManageService Tests", function () {
             readFileAsync: sinon.stub().resolves(Buffer.from("mock data")), // Mock RPK content validation later if needed
             chownAsync: sinon.stub().resolves(),
             mkdirAsync: sinon.stub().resolves(),
-            existsSync: sinon.stub().returns(false)
+            existsSync: sinon.stub().returns(false),
+            imgAsync: sinon.stub().resolves("/path/to/image.jpg")
         };
 
         const bluebirdStub = {
@@ -148,6 +153,87 @@ describe("ProblemManageService Tests", function () {
             const calls = queryStub.getCalls();
             const insertSol = calls.find(c => c.args[0].includes("INSERT INTO solution"));
             expect(insertSol).to.exist;
+        });
+    });
+
+    describe("updateProblem", () => {
+        let problemInfoManagerStub: { newInstance: any; setProblemId: any; removeCache: any; };
+        let problemSetCachePoolStub: { removeAll: any; };
+
+        beforeEach(() => {
+            // Mock the cache managers being required inside updateProblem
+            problemInfoManagerStub = {
+                newInstance: sinon.stub().returnsThis(),
+                setProblemId: sinon.stub().returnsThis(),
+                removeCache: sinon.stub().resolves()
+            };
+            problemSetCachePoolStub = {
+                removeAll: sinon.stub().resolves()
+            };
+
+            // Inject these into Module._load
+            // We need to update the _load hook or make it dynamic
+            const oldLoad = (Module as any)._load;
+            (Module as any)._load = function (request: string) {
+                if (request.includes("ProblemInfoManager")) return problemInfoManagerStub;
+                if (request.includes("ProblemSetCachePool")) return problemSetCachePoolStub;
+                return oldLoad.apply(this, arguments);
+            };
+        });
+
+        it("should update local problem with all fields", async () => {
+            const data = {
+                title: "New Title",
+                hint: "New Hint",
+                spj: 1,
+                imageData: {
+                    description: { "1": "img" }
+                }
+            };
+
+            await ProblemManageService.updateProblem(mockReq, 1000, "local", data);
+
+            const calls = queryStub.getCalls();
+            const updateCall = calls.find(c => c.args[0].includes("update problem set"));
+
+            expect(updateCall).to.exist;
+            // Check SQL structure for local
+            expect(updateCall.args[0]).to.include("hint = ?");
+            expect(updateCall.args[0]).to.include("spj = ?");
+
+            // Check parameters
+            const params = updateCall.args[1];
+            expect(params).to.include("New Title");
+            expect(params).to.include("New Hint");
+            expect(params).to.include(1); // spj
+
+            // Check image processing called (imgAsync on fsStub)
+            expect(fsStub.imgAsync.called).to.be.true;
+
+            // Check cache clearing
+            expect(problemInfoManagerStub.removeCache.called).to.be.true;
+            expect(problemSetCachePoolStub.removeAll.called).to.be.true;
+        });
+
+        it("should update vjudge problem excluding local fields", async () => {
+            const data = {
+                title: "VJ Title",
+                hint: "Should Ignore"
+            };
+
+            await ProblemManageService.updateProblem(mockReq, 1000, "POJ", data);
+
+            const calls = queryStub.getCalls();
+            const updateCall = calls.find(c => c.args[0].includes("update vjudge_problem set"));
+
+            expect(updateCall).to.exist;
+            // Should NOT include hint/spj in SQL
+            expect(updateCall.args[0]).to.not.include("hint = ?");
+            expect(updateCall.args[0]).to.include("source = ?");
+
+            const params = updateCall.args[1];
+            expect(params).to.include("VJ Title");
+            expect(params).to.include("POJ"); // source
         });
     });
 

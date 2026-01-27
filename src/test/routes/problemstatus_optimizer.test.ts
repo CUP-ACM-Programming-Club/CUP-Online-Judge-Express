@@ -6,14 +6,17 @@
 const expect = require("chai").expect;
 
 describe("ProblemStatus Optimizer Tests - With Pure Functions", function () {
-    const {
-        generateProblemStatusCacheKey,
-        generateProblemStatusClearKeys,
-        extractStats,
-        getProblemStatusOptimized,
-        getProblemStatusWithCache,
-        clearProblemStatusCache
-    } = require("../../routes/problemstatus/optimizer");
+    const ProblemStatusService = require("../../service/ProblemStatusService").default;
+
+    // Access private methods for testing
+    const service: any = ProblemStatusService;
+
+    const generateProblemStatusCacheKey = service.generateProblemStatusCacheKey.bind(service);
+    const generateProblemStatusClearKeys = service.generateProblemStatusClearKeys.bind(service);
+    const extractStats = service.extractStats.bind(service);
+    const getProblemStatusOptimized = service.getProblemStatusOptimized.bind(service);
+    const getProblemStatusWithCache = service.getProblemStatusWithCache.bind(service);
+    const clearProblemStatusCache = service.clearProblemStatusCache.bind(service);
 
     describe("纯函数测试 - generateProblemStatusCacheKey", function () {
         it("should generate cache key for local source", function () {

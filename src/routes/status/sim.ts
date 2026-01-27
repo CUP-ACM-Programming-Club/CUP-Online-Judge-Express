@@ -1,19 +1,13 @@
 import express from "express";
 const router = express.Router();
 const [error, ok] = require("../../module/const_var");
-const cache_query = require("../../module/mysql_cache");
+import SubmissionService from "../../service/SubmissionService";
 const getSim = require("../../module/status/sim");
 
 router.get("/", async (req: any, res: any) => {
 	const cid = parseInt(req.query.cid);
 	try {
-		const data = await cache_query(`select s.*,u2.nick as snick from(select t.*,u1.nick from (select * from sim where
-		 s_user_id is not null and s_s_user_id is not null 
-		 ${isNaN(cid) ? "" : ` and s_id in (select solution_id from
-		 solution where contest_id = ?)`} )t left join users as u1
-		on u1.user_id = t.s_user_id)s
-left join users as u2
-		on u2.user_id = s.s_s_user_id`, [cid]);
+		const data = await SubmissionService.getSimRelatedSolution(isNaN(cid) ? undefined : cid);
 		res.json(ok.okMaker(data));
 	}
 	catch (e) {

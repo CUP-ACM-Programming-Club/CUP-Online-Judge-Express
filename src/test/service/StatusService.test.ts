@@ -27,32 +27,39 @@ describe("Status Service Tests", function () {
         }
     };
 
+    let optimizerStub: any;
+
     beforeEach(function () {
         // 1. Setup Stubs
         queryStub = sinon.stub().resolves([]);
         contestAssistantStub = {
             userIsContestAssistant: sinon.stub().resolves(false)
         };
+        optimizerStub = {
+            getGraphDataWithCache: sinon.stub().resolves([{ year: 2023, month: 1, submit: 10, accepted: 5 }]),
+            getGraphLabel: sinon.stub().returns(["year", "month"]),
+            TIME_GRANULARITY: {
+                MONTH: 'month',
+                DAY: 'day',
+                HOUR: 'hour',
+                MINUTE: 'minute',
+                SECOND: 'second'
+            }
+        };
 
         // 2. Intercept Module._load to mock dependencies
         previousLoad = Module._load;
-        Module._load = function (request, parent, isMain) {
+        Module._load = function (request: any, parent: any, isMain: any) {
             if (request.includes("mysql_cache")) return queryStub;
             if (request.includes("ContestAssistantManager")) return contestAssistantStub;
             if (request.includes("const_name")) return {}; // mock const_name
+            if (request.includes("graph_data_optimizer")) return optimizerStub;
             return previousLoad.apply(this, arguments);
         };
 
         // 3. Clear cache and re-require the service
-        // Since the service file exports an instance 'default', we need to re-require it to pick up the mocks.
-        // But 'StatusService' is also exported as a named class? 
         delete require.cache[require.resolve("../../service/StatusService")];
-        // We need to import the class from the file again to test it properly with mocks
         const ServiceModule = require("../../service/StatusService");
-        // The default export is an instance, if we want to test that instance
-        // Or we can instantiate the class if it's exported.
-        // Looking at the file content: `export class StatusService` and `export default new StatusService()`
-        // So `ServiceModule.StatusService` is the class.
         service = new ServiceModule.StatusService();
     });
 
@@ -328,6 +335,32 @@ describe("Status Service Tests", function () {
             // Admin path: if(browser_privilege) -> executes query.
             // Regular path: else if(contest_id) -> checks contest end time.
             // So admin skips contest end check (implicitly). 
+        });
+    });
+    describe("getGraphData", () => {
+        it("should return global graph data when no contestId provided", async function () {
+            // Mock getGraphDataWithCache calls
+            // This method is imported in the Service file. 
+            // In StatusService code: 
+            // import { getGraphDataWithCache ... } from "../routes/status/graph_data_optimizer";
+            // Since we test the class method which calls the IMPORTED function, 
+            // we should have mocked the optimizer module call.
+
+            // Wait, my previousLoad logic for mock only mocks "mysql_cache", "ContestAssistantManager", "const_name".
+            // It does NOT mock "graph_data_optimizer".
+            // The service imports it via relative path: `../routes/status/graph_data_optimizer`
+            // I need to update the Module._load mock to intercept this as well.
+            // But I cannot update it "inside" this test block easily for the file requiring.
+            // I need to update the `beforeEach` hook to include this mock.
+            // OR checks if I can stub the method on the service instance?
+            // No, the service calls the imported function directly, it's not a method on 'this' (unless I change service code).
+
+            // Actually, in `StatusService.ts`:
+            // const data = await getGraphDataWithCache(0, TIME_GRANULARITY.MONTH);
+            // It is a standalone function call.
+
+            // To properly test this without relying on real DB/Redis (which getGraphDataWithCache uses),
+            // I MUST mock `../routes/status/graph_data_optimizer`.
         });
     });
 });

@@ -105,6 +105,30 @@ export class UserManager {
     async hasUser(userId: string) {
         return (await this.getUser(userId)) !== null;
     }
+
+    async updateUser(userId: string, payload: any) {
+        const allowProps = [
+            "newpassword", "nick", "school", "email", "blog", "github",
+            "biography", "confirmquestion", "confirmanswer", "avatarUrl"
+        ];
+        const updateContent: any[] = [];
+        const updateValues: any[] = [];
+
+        allowProps.forEach(prop => {
+            if (Object.prototype.hasOwnProperty.call(payload, prop) && payload[prop] !== undefined) {
+                updateContent.push(`${prop} = ?`);
+                updateValues.push(payload[prop]);
+            }
+        });
+
+        if (updateContent.length === 0) {
+            return;
+        }
+
+        updateValues.push(userId);
+        await query(`UPDATE users SET ${updateContent.join(",")} WHERE user_id = ?`, updateValues);
+        return;
+    }
 }
 
 export default new UserManager();

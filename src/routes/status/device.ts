@@ -2,22 +2,22 @@
 import express from "express";
 const router = express.Router();
 const [error] = require("../../module/const_var");
-const cache_query = require("../../module/mysql_cache");
+import UserService from "../../service/UserService";
 
 async function dataHandler(req: any, res: any, targetSet: any = []) {
-	let queryArray = ["time"];
 	if (!targetSet.length) {
 		targetSet = [];
 	}
-	queryArray.push(...targetSet);
-	console.log(`select ${queryArray.join(",")} from loginlog where browser_name is not null`);
-	const _loginlog = await cache_query(`select ${queryArray.join(",")} from loginlog where browser_name is not null`);
+	// "time" is included by default or should be explicitly requested? Original logic added "time" to any query.
+	if (!targetSet.includes("time")) {
+		targetSet.unshift("time");
+	}
+	const _loginlog = await UserService.getLoginLogStats(targetSet);
 	res.json({
 		status: "OK",
 		data: _loginlog
 	});
 }
-
 
 router.get("/os", async (req: any, res: any) => {
 	try {

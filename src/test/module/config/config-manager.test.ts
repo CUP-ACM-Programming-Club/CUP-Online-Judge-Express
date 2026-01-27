@@ -58,13 +58,19 @@ describe("ConfigManager", function () {
 		const store = {
 			getAll: () => Promise.resolve([{ key: "c1", value: "v1", comment: "x" }])
 		};
-		const originalInterval = global.setInterval;
-		global.setInterval = () => 0;
-		await manager.baseMapInitHandler(store, function (key, value) {
-			setCalled = true;
-			this.__data__.configMap[key] = { value };
-		});
-		global.setInterval = originalInterval;
+		const originalSetTimeout = global.setTimeout;
+		// Mock setTimeout to do nothing, breaking the loop
+		global.setTimeout = (() => { }) as any;
+
+		try {
+			await manager.baseMapInitHandler(store, function (this: any, key: string, value: any) {
+				setCalled = true;
+				// Use the getter
+				this.__data__.configMap[key] = { value };
+			});
+		} finally {
+			global.setTimeout = originalSetTimeout;
+		}
 		expect(setCalled).to.equal(true);
 		expect(manager.getConfig("c1", null)).to.equal("v1");
 	});
@@ -82,20 +88,21 @@ describe("ConfigManager", function () {
 
 	it("should init config and switch maps via init helpers", async function () {
 		const manager = new SystemConfigManager();
-		const originalInterval = global.setInterval;
-		global.setInterval = (fn) => {
-			fn();
-			return 0;
-		};
-		manager.setConfigPersistenceModule({
-			getAll: () => Promise.resolve([{ key: "cfg", value: "v" }])
-		});
-		manager.setSwitchPersistenceModule({
-			getAll: () => Promise.resolve([{ key: "sw", value: "1" }])
-		});
-		await manager.initConfigMap();
-		await manager.initSwitchMap();
-		global.setInterval = originalInterval;
+		const originalSetTimeout = global.setTimeout;
+		global.setTimeout = (() => { }) as any;
+
+		try {
+			manager.setConfigPersistenceModule({
+				getAll: () => Promise.resolve([{ key: "cfg", value: "v" }])
+			});
+			manager.setSwitchPersistenceModule({
+				getAll: () => Promise.resolve([{ key: "sw", value: "1" }])
+			});
+			await manager.initConfigMap();
+			await manager.initSwitchMap();
+		} finally {
+			global.setTimeout = originalSetTimeout;
+		}
 		expect(manager.getConfig("cfg", null)).to.equal("v");
 		expect(manager.getSwitch("sw")).to.deep.equal({ value: 1, comment: undefined });
 	});
@@ -137,41 +144,39 @@ describe("ConfigManager", function () {
 
 		const manager = new SystemConfigManager();
 		let setConfigCalledArgs = null;
-		manager.setConfigWithoutStore = function (...args) {
+		manager.setConfigWithoutStore = function (...args: any[]) {
 			setConfigCalledArgs = args;
 		};
 
-		// Simulate process.on logic
-		// We can't easily emit on real process, but we can verify code logic by visual inspection or stubbing logic if we could inject it.
-		// Actually, clusterHandler uses `process.on`.
-		// We can mock process.on temporarily?
 		const originalOn = process.on;
-		const listeners = {};
-		process.on = (evt, fn) => {
+		const listeners: any = {};
+		process.on = (evt: any, fn: any) => {
 			listeners[evt] = fn;
 			return process;
 		};
 
-		// Re-call clusterHandler to attach listener with mocked process.on
-		manager.clusterHandler({ "setConfig": manager.setConfigWithoutStore });
+		try {
+			// Re-call clusterHandler to attach listener with mocked process.on
+			manager.clusterHandler({ "setConfig": manager.setConfigWithoutStore });
 
-		if (listeners["message"]) {
-			listeners["message"]({
-				configManager: true,
-				method: "setConfig",
-				args: ["k", "v"]
-			});
-			expect(setConfigCalledArgs).to.deep.equal(["k", "v"]);
+			if (listeners["message"]) {
+				listeners["message"]({
+					configManager: true,
+					method: "setConfig",
+					args: ["k", "v"]
+				});
+				expect(setConfigCalledArgs).to.deep.equal(["k", "v"]);
 
-			// Branch: data.configManager false
-			setConfigCalledArgs = null;
-			listeners["message"]({ configManager: false });
-			expect(setConfigCalledArgs).to.equal(null);
+				// Branch: data.configManager false
+				setConfigCalledArgs = null;
+				listeners["message"]({ configManager: false });
+				expect(setConfigCalledArgs).to.equal(null);
+			}
+			done();
+		} finally {
+			process.on = originalOn;
+			cluster.isMaster = originalIsMaster;
 		}
-
-		process.on = originalOn;
-		cluster.isMaster = originalIsMaster;
-		done();
 	});
 
 	it("should broadcast setters", function (done) {
@@ -180,13 +185,16 @@ describe("ConfigManager", function () {
 		let sentPayload = null;
 		process.send = (payload) => {
 			sentPayload = payload;
+			return true;
 		};
 
-		manager.boardcastSetConfig("k", "v");
-		expect(sentPayload).to.deep.include({ method: "setConfig", args: ["k", "v"] });
-
-		process.send = originalSend;
-		done();
+		try {
+			manager.boardcastSetConfig("k", "v");
+			expect(sentPayload).to.deep.include({ method: "setConfig", args: ["k", "v"] });
+			done();
+		} finally {
+			process.send = originalSend;
+		}
 	});
 	it("should handle removeConfig/Switch safely", function () {
 		const manager = new SystemConfigManager();

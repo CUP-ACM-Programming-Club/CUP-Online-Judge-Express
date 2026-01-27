@@ -312,6 +312,64 @@ union all SELECT
             throw new HttpError("Wrong password", 200, error.errorMaker("Wrong password"));
         }
     }
+    async getContestProblemDetails(req: Request, cid: number, pid: number) {
+        const [contest, result] = await Promise.all([
+            cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]),
+            cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and num = ?", [cid, pid])
+        ]);
+
+        if (!contest || contest.length === 0) {
+            throw new HttpError("Contest not found", 404);
+        }
+
+        // This mirrors `checkPrivilege` check in router but inside service
+        // We should use `checkContestAccess`? 
+        // The router uses `checkContestPrivilege` which calls `checkContestAccess`.
+        // Let's use `checkContestAccess` at the start if we want to be strict.
+        // But the original logic:
+        // 1. check Privilege(req) (admin/browser) -> if false: check cmod_visible
+        // 2. check private -> if 1: checkContestPrivilege
+
+        const isPrivileged = req.session!.isadmin || req.session!.source_browser;
+        if (!isPrivileged) {
+            // @ts-ignore
+            if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {
+                throw error.contestMode;
+            }
+        }
+
+        if (parseInt(contest[0].private) === 1) {
+            await this.checkContestAccess(req, cid);
+        }
+
+        if (result.length > 0) {
+            if (result[0].oj_name && result[0].oj_name.length > 0) {
+                return {
+                    redirect: true,
+                    url: `${result[0].oj_name.toLowerCase()}submitpage.php?cid=${cid}&pid=${pid}`
+                };
+            }
+            let { langmask, end_time, limit_hostname } = contest[0];
+            let problem_id = result[0].problem_id;
+
+            // To avoid circular dependency with ProblemService if we import entire service,
+            // we might need to handle this carefully.
+            // But ProblemService is already imported or can be imported. 
+            const ProblemService = require("./ProblemService").default;
+
+            return await ProblemService.getProblem(req, {
+                id: problem_id,
+                cid,
+                pid,
+                source: result[0].oj_name || "",
+                langmask,
+                after_contest: dayjs().isAfter(dayjs(end_time)),
+                limit_hostname
+            });
+        } else {
+            throw error.invalidParams;
+        }
+    }
 }
 
 export default new ContestService();

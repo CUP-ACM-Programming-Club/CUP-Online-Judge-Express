@@ -219,6 +219,92 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
         }
         return _res;
     }
+    async maintainLabels(vjudge: string) {
+        try {
+            const rows: any = await cache_query(`select label from ${vjudge}problem`);
+            let all_label: any[] = [];
+            for (let i of rows) {
+                if (typeof i.label === "string" && i.label.length > 0) {
+                    for (let j of i.label.split(" ")) {
+                        all_label.push(j);
+                    }
+                }
+            }
+            const data = [...new Set(all_label)];
+            await Promise.all(data.map(i => query(`INSERT INTO ${vjudge}label_list (label_name)
+SELECT * FROM (SELECT ?) AS tmp
+WHERE NOT EXISTS (
+    SELECT label_name FROM ${vjudge}label_list WHERE label_name = ?
+) LIMIT 1;`, [i, i])));
+            return true;
+        } catch (e) {
+            console.log(e);
+            return false;
+        }
+    }
+
+    async getLabels(vjudge: string) {
+        const rows: any = await cache_query(`select label_name from ${vjudge}label_list`);
+        return {
+            status: "OK",
+            data: rows.map((val: any) => val.label_name)
+        };
+    }
+
+    async checkProblemContestStatus(id: any) {
+        const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
+         where problem_id = ?)`, [id]);
+        return (_end_time.length > 0 && dayjs().isBefore(dayjs(_end_time[0].t * 1000)));
+    }
+
+    async getSourceCode(req: Request, id: number, sid: number, source: string, vjudge: boolean = false) {
+        const prefix = vjudge ? "vjudge_" : "";
+        const rows2 = await cache_query(`SELECT source,user_id FROM ${prefix}source_code WHERE solution_id=?`, [sid]);
+        if (!rows2 || rows2.length === 0) {
+            throw error.errorMaker("Solution not found");
+        }
+        const user_id = rows2[0].user_id;
+        if (!req.session!.isadmin && user_id !== req.session!.user_id) {
+            throw error.noprivilege;
+        } else {
+            // Need to fetch problem info for `code` property???
+            // Original logic:
+            // if (source.length === 0) {
+            //     obj = (await ProblemInfoManager.newInstance().setProblemId(id).find()).get()
+            // } ...
+            // And then obj.code = rows2[0].source;
+            // The object `obj` passed to getSourceCode seems to be the PROBLEM object?
+            // Wait, the original route logic:
+            // await getSourceCode(req, res, (await ProblemInfoManager...find()).get(), { id, sid, source })
+            // It modifies the problem object. 
+            // Let's simplified this. We just return the code and problem basic info?
+            // The route says: `res.json(obj)` where obj is properties of `getSourceCode` result.
+            // Oh, checking original route:
+            // `await getSourceCode(req, res, (await ...).get(), ...)`
+            // `obj` is the first argument (problem info). `getSourceCode` attaches `.code` to it.
+            // So we should return the problem info + code.
+
+            let problemInfo: any;
+            if (!vjudge) {
+                problemInfo = (await ProblemInfoManager.newInstance().setProblemId(id).find()).get();
+            } else {
+                const pj = await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source]);
+                problemInfo = pj[0];
+            }
+
+            if (!problemInfo) {
+                throw error.errorMaker("Problem not found");
+            }
+
+            problemInfo.code = rows2[0].source;
+            cache.set("source/id/" + source + id + "/" + sid, problemInfo, 10 * 24 * 60 * 60);
+            return problemInfo;
+        }
+    }
+
+    async getVjudgeProblem(id: number, source: string) {
+        return await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source]);
+    }
 }
 
 export default new ProblemService();

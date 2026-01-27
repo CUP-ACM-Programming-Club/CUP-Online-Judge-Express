@@ -99,6 +99,125 @@ group by browser_name,browser_version`, [user_id]));
         const result = await cache_query("select user_id from solution where solution_id = ?", [solution_id]);
         return result.length > 0 ? result[0].user_id : null;
     }
+
+    async getLoginLogStats(fields: string[] = ["time"]) {
+        // Safe-guard against SQL injection by filtering allowed fields
+        const allowedFields = ["time", "os_name", "os_version", "browser_name", "browser_version"];
+        const filteredFields = fields.filter(f => allowedFields.includes(f));
+        if (filteredFields.length === 0) {
+            filteredFields.push("time");
+        }
+        return await cache_query(`select ${filteredFields.join(",")} from loginlog where browser_name is not null`);
+    }
+
+    async getUserByNick(nick: string) {
+        return await cache_query("select user_id from users where nick = ?", [nick]);
+    }
+
+    async getRecentRegisteredUsers() {
+        return await query("select user_id, nick, biography, solved,reg_time from users where email != 'your_own_email@internet' order by reg_time desc limit 50");
+    }
+
+    async getRegisterTimeline() {
+        return await cache_query("select reg_time from users where school != 'your_own_school' order by reg_time asc");
+    }
+
+    private generateWhereStatement(args: any) {
+        args = args.map((el: any) => {
+            return el.join(" ");
+        });
+        return "where " + args.join(" and ");
+    }
+
+    private generateArguments(...args: any[]) {
+        let result: any[] = [];
+        if (args.length === 1) {
+            result.push(["user_id", "=", "?"]);
+        } else if (args.length === 3) {
+            result.push(["user_id", "=", "?"], ["in_date", ">=", "?"], ["in_date", "<=", "?"]);
+        }
+        return result;
+    }
+
+    async getSubmitStat(...args: any[]) {
+        const _this = this; // Capture this
+        async function submitHandler(...args: any[]) {
+            let argList = _this.generateArguments(...args);
+            const sql = `SELECT users.user_id,
+           users.nick,
+           users.avatar,
+           users.avatarUrl,
+           solution.result,
+           solution.num,
+           solution.in_date,
+           solution.fingerprint,
+           solution.fingerprintRaw,
+           solution.ip,
+           sim.sim,
+           solution.code_length,
+           solution.solution_id
+    FROM (select *
+          from solution
+          ${_this.generateWhereStatement(argList)}) solution
+             left join users
+                       on users.user_id = solution.user_id
+             left join sim
+                       on sim.s_id = solution.solution_id
+    union all
+    select users.user_id,
+           users.nick,
+           users.avatar,
+           users.avatarUrl,
+           vsol.result,
+           vsol.num,
+           vsol.in_date,
+           ''   as fingerprint,
+           ''   as fingerprintRaw,
+           vsol.ip,
+           null as sim,
+           vsol.code_length,
+           vsol.solution_id
+    from (select *
+          from vjudge_solution
+          where ${_this.generateWhereStatement(argList)}) vsol
+             left join users on users.user_id = vsol.user_id
+    ORDER BY user_id, in_date`;
+            return await cache_query(sql, [...args, ...args]);
+        }
+
+        async function lineBreakHandler(...args: any[]) {
+            let argList = _this.generateArguments(...args);
+            const sql = `select code_stat.solution_id,
+           code_stat.line,
+           user.user_id, user.problem_id
+    from (select solution_id,
+                 length(source) - length(replace(source, '\\n', '')) as line,
+                 source
+          from source_code_user
+          where solution_id in
+                (select solution_id
+                 from solution
+                 ${_this.generateWhereStatement(argList)})) code_stat
+             left join
+             (select user_id, solution_id, problem_id from solution ${_this.generateWhereStatement(argList)}) user
+             on user.solution_id = code_stat.solution_id`;
+            return await cache_query(sql, [...args, ...args]);
+        }
+
+        let [submitStat, line_break] = await Promise.all([submitHandler(...args), lineBreakHandler(...args)]);
+        let map: any = {};
+        for (const i of submitStat) {
+            map[i.solution_id] = i;
+        }
+        for (const i of line_break) {
+            map[i.solution_id] = Object.assign(map[i.solution_id], i);
+        }
+        return map;
+    }
+
+    async getUserConfirmInfo(user_id: string) {
+        return await query("select confirmquestion, confirmanswer from users where user_id = ?", [user_id]);
+    }
 }
 
 export default new UserService();

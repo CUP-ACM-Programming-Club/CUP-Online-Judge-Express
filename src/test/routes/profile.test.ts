@@ -68,7 +68,6 @@ describe("Profile Route Tests (Full Coverage)", function () {
         // 2. Intercept Other Modules
         previousLoad = Module._load;
         Module._load = function (request, parent, isMain) {
-            // mysql_query is handled by fakeDb stub
             if (request.includes("check_password")) {
                 return checkPasswordStub;
             }
@@ -81,14 +80,29 @@ describe("Profile Route Tests (Full Coverage)", function () {
         // 3. Setup Global Config
         global.config = mockConfig;
 
-        // 4. Clear Cache & Load Module
+        // 4. Stub UserManager (Must happen after clearing cache if UserManager was loaded)
+        // Ensure UserManager is fresh or we stub the singleton if it's already loaded
+        const UserManager = require("../../manager/user/UserManager").default;
+
+        // Restore existing stubs if any
+        if (UserManager.getUser.restore) UserManager.getUser.restore();
+        if (UserManager.updateUser.restore) UserManager.updateUser.restore();
+
+        sinon.stub(UserManager, "getUser").callsFake(async (user_id) => {
+            // if (shouldQueryFail) throw new Error("DB Error");
+            return { password: "mock_password_hash", newpassword: "mock_new_password_hash" };
+        });
+
+        sinon.stub(UserManager, "updateUser").callsFake(async (user_id, payload) => {
+            if (shouldQueryFail) throw new Error("DB Error");
+            mockQueryCalls.push({ sql: "update users set ...", params: [payload] }); // Simulate capture
+            return { affectedRows: 1 };
+        });
+
+        // 5. Clear Cache & Load Module
         Object.keys(require.cache).forEach(key => {
             const normalizedKey = key.replace(/\\/g, "/");
-            if (normalizedKey.includes("routes/user/update/profile") ||
-                normalizedKey.includes("module/check_password") ||
-                normalizedKey.includes("module/login_action") ||
-                normalizedKey.includes("module/util") ||
-                normalizedKey.includes("const_var")) {
+            if (normalizedKey.includes("routes/user/update/profile")) {
                 delete require.cache[key];
             }
         });
@@ -100,7 +114,10 @@ describe("Profile Route Tests (Full Coverage)", function () {
 
     afterEach(function () {
         if (previousLoad) Module._load = previousLoad;
-        sinon.restore(); // This restores fakeDb.query too
+        const UserManager = require("../../manager/user/UserManager").default;
+        if (UserManager.getUser.restore) UserManager.getUser.restore();
+        if (UserManager.updateUser.restore) UserManager.updateUser.restore();
+        sinon.restore();
     });
 
     const createReq = (body) => ({
@@ -171,6 +188,7 @@ describe("Profile Route Tests (Full Coverage)", function () {
             if (arg.status !== "OK") throw new Error("Expected status OK, got " + JSON.stringify(arg));
 
             // Verify verification call manually using our captured calls
+            console.log("DEBUG: mockQueryCalls:", JSON.stringify(mockQueryCalls));
             const hasUpdate = mockQueryCalls.some(call => call.sql && call.sql.toLowerCase().includes("update users set"));
             expect(hasUpdate, "Should have called update query").to.be.true;
         });

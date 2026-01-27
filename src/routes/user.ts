@@ -1,5 +1,4 @@
 import express from "express";
-import query = require("../module/mysql_query");
 import UserService from "../service/UserService";
 import const_variable from "../module/const_name";
 import const_var from "../module/const_var";
@@ -45,7 +44,7 @@ router.get("/:user_id", async (req: any, res: any) => {
 
 router.get("/nick/:nick", async (req: any, res: any) => {
 	const nick = req.params.nick;
-	const data = await query("select user_id from users where nick = ?", [nick]);
+	const data = await UserService.getUserByNick(nick);
 	if (data && data.length > 0) {
 		res.json({
 			status: "OK",

@@ -19,6 +19,7 @@ function afterAll() {
 describe("test scoreboard", function () {
     let server;
     let getScoreboardStub;
+    let getLineBreakInfoStub;
 
     server = require("../../app").default || require("../../app");
     require("../../module/init/build_env")(true);
@@ -26,22 +27,41 @@ describe("test scoreboard", function () {
     const request = require("supertest").agent(server);
 
     before(async function () {
-        // Mock getScoreboardWithCache 来避免 Redis 依赖
-        const optimizerModule = require("../../routes/scoreboard/optimizer");
-        getScoreboardStub = sinon.stub(optimizerModule, "getScoreboardWithCache");
-        getScoreboardStub.resolves([
+        // Mock ScoreboardService.getScoreboard 来避免 Redis 依赖
+        const ScoreboardService = require("../../service/ScoreboardService").default;
+        getScoreboardStub = sinon.stub(ScoreboardService, "getScoreboard");
+        getScoreboardStub.resolves({
+            status: "OK",
+            data: [
+                {
+                    user_id: "test",
+                    nick: "test",
+                    avatar: null,
+                    avatarUrl: null,
+                    result: 4,
+                    num: 0,
+                    in_date: "2015-12-09 22:02:36",
+                    problem_id: 1000,
+                    solution_id: 1000
+                }
+            ],
+            total: 10,
+            start_time: new Date(),
+            title: "Test Contest",
+            show_all_ranklist: true,
+            users: []
+        });
+
+        getLineBreakInfoStub = sinon.stub(ScoreboardService, "getLineBreakInfo");
+        getLineBreakInfoStub.resolves([
             {
+                solution_id: 1000,
+                line: 10,
                 user_id: "test",
-                nick: "test",
-                avatar: null,
-                avatarUrl: null,
-                result: 4,
-                num: 0,
-                in_date: "2015-12-09 22:02:36",
-                problem_id: 1000,
-                solution_id: 1000
+                problem_id: 1000
             }
         ]);
+
         await removeAll();
         await query("insert into users (user_id,password) values(?,?)",
             ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"]);
@@ -121,6 +141,9 @@ describe("test scoreboard", function () {
     after(async function () {
         if (getScoreboardStub) {
             getScoreboardStub.restore();
+        }
+        if (getLineBreakInfoStub) {
+            getLineBreakInfoStub.restore();
         }
         await removeAll();
         afterAll();

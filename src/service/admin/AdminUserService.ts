@@ -41,6 +41,27 @@ class AdminUserService {
     async updateUserPassword(userId: string, password: string, salt: string) {
         await generateNewEncryptPassword(userId, password, salt);
     }
+
+    async getTeamList() {
+        return await query("select user_id, reg_time, accesstime,defunct from users where school = 'your_own_school' order by reg_time desc");
+    }
+
+    async getPrivilegeList(privilegeList: string[]) {
+        return await query(`select superuser.*, users.nick
+            from (select user_id, rightstr, defunct
+            from privilege
+            where rightstr in
+            ('${privilegeList.join("','")}')) superuser
+            inner join users on users.user_id = superuser.user_id`);
+    }
+
+    async addPrivilege(userId: string, rightstr: string) {
+        await query("insert into privilege values(?,?,'N')", [userId, rightstr]);
+    }
+
+    async removePrivilege(userId: string, rightstr: string) {
+        await query("delete from privilege where user_id = ? and rightstr = ?", [userId, rightstr]);
+    }
 }
 
 export default new AdminUserService();

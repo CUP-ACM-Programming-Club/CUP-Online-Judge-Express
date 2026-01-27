@@ -1,5 +1,6 @@
 import { JudgeResult } from "../enums/JudgeResult";
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import { getGraphDataWithCache, getGraphLabel, TIME_GRANULARITY } from "../routes/status/graph_data_optimizer";
 
 const cache_query = require("../module/mysql_cache");
 const const_name = require("../module/const_name");
@@ -206,6 +207,62 @@ export class StatusService {
             isadmin: req.session.isadmin,
             browse_code: browser_privilege,
             end: Boolean(_end)
+        };
+    }
+
+    public async getGraphData(contestId?: number) {
+        const SECONDS = 1000;
+        const MINUTES = 60 * SECONDS;
+        const HOURS = 60 * MINUTES;
+        const DAYS = 24 * HOURS;
+        const WEEKS = 7 * DAYS;
+        const MONTH = 30 * DAYS;
+        const YEARS = 365 * DAYS;
+
+        const calculateDiffTimeMilliseconds = (diff_time: any) => {
+            return diff_time.years * YEARS
+                + diff_time.months * MONTH
+                + diff_time.weeks * WEEKS
+                + diff_time.days * DAYS
+                + diff_time.minutes * MINUTES
+                + diff_time.seconds * SECONDS
+                + diff_time.milliseconds;
+        };
+
+        if (contestId) {
+            const result = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [contestId]);
+            if (result.length) {
+                const start_time = new Date(result[0].start_time), end_time = new Date(result[0].end_time);
+                // @ts-ignore
+                const timediff = require("timediff");
+                const diffMilliseconds = calculateDiffTimeMilliseconds(timediff(start_time, new Date(Math.min(new Date().getTime(), end_time.getTime()))));
+
+                let granularity = TIME_GRANULARITY.MONTH;
+                if (diffMilliseconds > 10 * MONTH) {
+                    granularity = TIME_GRANULARITY.MONTH;
+                } else if (diffMilliseconds > 12 * DAYS) {
+                    granularity = TIME_GRANULARITY.DAY;
+                } else if (diffMilliseconds > 12 * HOURS) {
+                    granularity = TIME_GRANULARITY.HOUR;
+                } else if (diffMilliseconds > 12 * MINUTES) {
+                    granularity = TIME_GRANULARITY.MINUTE;
+                } else {
+                    granularity = TIME_GRANULARITY.SECOND;
+                }
+
+                const data = await getGraphDataWithCache(contestId, granularity);
+                return {
+                    result: data,
+                    label: getGraphLabel(granularity)
+                };
+            }
+        }
+
+        // Global stats
+        const data = await getGraphDataWithCache(0, TIME_GRANULARITY.MONTH);
+        return {
+            result: data,
+            label: getGraphLabel(TIME_GRANULARITY.MONTH)
         };
     }
 }

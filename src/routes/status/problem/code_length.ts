@@ -1,7 +1,7 @@
 import express from "express";
 const router = express.Router();
 const [error] = require("../../../module/const_var");
-const cache_query = require("../../../module/mysql_cache");
+
 //const dayjs = require("dayjs");
 
 function validateAttribute(targetObject: any, id: any) {
@@ -24,9 +24,10 @@ router.get("/", async (req: any, res: any) => {
 	}
 });
 
+import SubmissionService from "../../../service/SubmissionService";
+
 async function CodeLengthHandler(req: any, res: any, statement = "1 = 1", sqlArr: any) {
-	const data = await cache_query(`select in_date, code_length from solution where ${statement} and result = 4`,
-		sqlArr);
+	const data = await SubmissionService.getCodeLengthStats(statement, sqlArr);
 	res.json({
 		status: "OK",
 		data

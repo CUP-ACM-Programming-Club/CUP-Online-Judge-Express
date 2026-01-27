@@ -1,19 +1,20 @@
 import express from "express";
 const router = express.Router();
-import query = require("../../module/mysql_query");
+import UserService from "../../service/UserService";
 import const_var from "../../module/const_var";
 const [error, ok] = const_var;
 import { trimProperty, generateNewEncryptPassword } from "../../module/util";
 import checkPassword from "../../module/check_password";
 const salt = global.config.salt || "thisissalt";
 
+
 async function getQuestionHandler(user_id: any) {
-	const res = await query("select confirmquestion from users where user_id = ?", [user_id]);
+	const res = await UserService.getUserConfirmInfo(user_id);
 	return res[0].confirmquestion;
 }
 
 async function getAnswer(user_id: any) {
-	const res = await query("select confirmanswer from users where user_id = ?", [user_id]);
+	const res = await UserService.getUserConfirmInfo(user_id);
 	return res[0].confirmanswer;
 }
 

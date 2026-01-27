@@ -1,10 +1,12 @@
 import express from "express";
 const router = express.Router();
 const [error] = require("../../module/const_var");
-const cache_query = require("../../module/mysql_cache");
+
+import SubmissionService from "../../service/SubmissionService";
+
 router.get("/", async (req: any, res: any) => {
 	try {
-		const data = await cache_query("select count(1) as cnt,result from solution group by result order by result");
+		const data = await SubmissionService.getSubmissionResultStats();
 		res.json({
 			status: "OK",
 			data

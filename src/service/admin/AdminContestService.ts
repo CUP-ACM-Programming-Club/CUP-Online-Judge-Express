@@ -126,7 +126,12 @@ class AdminContestService {
             throw e;
         } finally {
             connection.release();
+            connection.release();
         }
+    }
+
+    async getContestCompetitors(contestId: number | string) {
+        return await query("select user_id from privilege where rightstr = ?", [`c${contestId}`]);
     }
 }
 

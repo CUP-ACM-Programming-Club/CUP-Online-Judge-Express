@@ -1,5 +1,5 @@
 import express from "express";
-const query = require("../module/mysql_query");
+
 const router = express.Router();
 const checkPassword = require("../module/check_password");
 const log4js = require("../module/logger");

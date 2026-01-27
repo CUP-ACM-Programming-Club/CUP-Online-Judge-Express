@@ -133,6 +133,26 @@ class TopicService {
 
         return await query(sql, sqlArr);
     }
+    async getTopicProblemDetails(req: Request, tid: number, pid: number) {
+        const isPrivileged = req.session!.isadmin || req.session!.source_browser;
+        // @ts-ignore
+        if (!isPrivileged && global.contest_mode) {
+            throw error.contestMode;
+        }
+
+        const result = await cache_query("SELECT * FROM special_subject_problem WHERE topic_id = ? and num = ?", [tid, pid]);
+        if (result.length > 0) {
+            let problem_id = result[0].problem_id;
+            const ProblemService = require("./ProblemService").default;
+            return await ProblemService.getProblem(req, {
+                id: problem_id,
+                source: "",
+                after_contest: true
+            });
+        } else {
+            throw error.invalidParams;
+        }
+    }
 }
 
 export default new TopicService();

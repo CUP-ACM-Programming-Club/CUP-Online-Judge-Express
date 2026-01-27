@@ -4,7 +4,6 @@ const router = express.Router();
 import multer from "multer";
 import Bluebird from "bluebird";
 const fsPromise = Bluebird.promisifyAll(require("fs"));
-const query = require("../module/mysql_query");
 const config = global.config;
 const path = require("path");
 import auth from "../middleware/auth";
@@ -61,8 +60,7 @@ router.get("/", async (req: any, res: any) => {
 			}
 		});
 		dir_list.sort();
-		const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
-		let max_pid = parseInt(_max_pid[0].max_id);
+		let max_pid = await ProblemManageService.getMaxProblemId();
 		let problem_lists: any[] = [];
 		let start_id = max_pid + 1;
 

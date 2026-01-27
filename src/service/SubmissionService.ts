@@ -392,6 +392,57 @@ export class SubmissionService {
             await connection.release();
         }
     }
+
+    async getSimRelatedSolution(contestId?: number) {
+        let sql = `select s.*,u2.nick as snick from(select t.*,u1.nick from (select * from sim where
+		 s_user_id is not null and s_s_user_id is not null 
+		 ${!contestId ? "" : ` and s_id in (select solution_id from
+		 solution where contest_id = ?)`} )t left join users as u1
+		on u1.user_id = t.s_user_id)s
+ left join users as u2
+		on u2.user_id = s.s_s_user_id`;
+        const params = [];
+        if (contestId) {
+            params.push(contestId);
+        }
+        return await cache_query(sql, params);
+    }
+
+    async getRuntimeInfo(solutionId: number | string) {
+        const sql = "SELECT `error` FROM `runtimeinfo` WHERE `solution_id`= ?";
+        const data = await cache_query(sql, [solutionId]);
+        return data; // Return raw data as route expects array
+    }
+
+    async getCompileInfo(solutionId: number | string) {
+        const sql = "SELECT `error` FROM `compileinfo` WHERE `solution_id`= ?";
+        const data = await cache_query(sql, [solutionId]);
+        return data;
+    }
+
+    async getSolutionInfo(solutionId: number | string) {
+        const _result = await cache_query(`SELECT user_id,
+                                            language,
+                                            if((share = 1 or solution_id in (select solution_id from
+                                             tutorial where solution.solution_id = ?)) and not exists
+                                             (select * from contest where contest_id in (select contest_id
+                                             from contest_problem where solution.problem_id = contest_problem.problem_id)
+                                             and end_time > NOW()), 1, 0) as share,time,memory,code_length from solution
+                                     WHERE solution_id = ?`, [solutionId, solutionId]);
+        return _result;
+    }
+
+    async getSolutionDetail(solutionId: number | string) {
+        return await cache_query("select * from solution where solution_id=?", [solutionId]);
+    }
+
+    async getSubmissionResultStats() {
+        return await cache_query("select count(1) as cnt,result from solution group by result order by result");
+    }
+
+    async getCodeLengthStats(statement: string = "1 = 1", sqlArr: any[] = []) {
+        return await cache_query(`select in_date, code_length from solution where ${statement} and result = 4`, sqlArr);
+    }
 }
 
 export default new SubmissionService();

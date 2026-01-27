@@ -2,11 +2,12 @@ import express from "express";
 const router = express.Router();
 import const_var from "../../../module/const_var";
 const [error, ok] = const_var;
-import query = require("../../../module/mysql_query");
+
 const LENGTH_LIMIT = 100;
 import checkPassword = require("../../../module/check_password");
 import loginAction from "../../../module/login_action";
 import { encryptPassword } from "../../../module/util";
+import UserManager from "../../../manager/user/UserManager";
 const salt = global.config.salt || "thisissalt";
 
 function checkLength(str: any, size = LENGTH_LIMIT) {
@@ -14,9 +15,7 @@ function checkLength(str: any, size = LENGTH_LIMIT) {
 	return str.length <= size;
 }
 
-function buildUpdateQuery(name: any, val: any, user_id: any) {
-	return query(`update users set ${name} = ? where user_id = ?`, [val, user_id]);
-}
+
 
 function checkExists(str: any) {
 	return !!(str && typeof str === "string" && str.trim().length && str.trim().length > 0);
@@ -40,11 +39,9 @@ function checkRequestBodyProperties(body: any) {
 }
 
 async function checkPasswordAdapter(user_id: any, password: any) {
-	const res = await query("select password,newpassword from users where user_id = ?", [user_id]);
-	console.log("DEBUG: query res", res);
-	console.log("DEBUG: checkPassword fn", checkPassword.toString());
-	const result = checkPassword(res[0].password, password, res[0].newpassword);
-	console.log("DEBUG: checkPassword returned", result);
+	const user = await UserManager.getUser(user_id);
+	if (!user) return false;
+	const result = checkPassword(user.password, password, user.newpassword);
 	return result;
 }
 
@@ -67,11 +64,10 @@ router.post("/", async (req: any, res: any) => {
 		res.json(error.errorMaker("Two password not same"));
 		return;
 	}
-	newpassword = checkExists(newpassword) ? encryptPassword(newpassword, salt) : "";
-	confirmanswer = checkExists(confirmanswer) ? encryptPassword(confirmanswer, salt) : "";
+	newpassword = checkExists(newpassword) ? encryptPassword(newpassword, salt) : undefined;
+	confirmanswer = checkExists(confirmanswer) ? encryptPassword(confirmanswer, salt) : undefined;
 	try {
-		let Queue: any[] = [];
-		let Property: any = {
+		const payload = {
 			newpassword,
 			nick,
 			school,
@@ -83,16 +79,15 @@ router.post("/", async (req: any, res: any) => {
 			confirmanswer,
 			avatarUrl
 		};
-		Object.keys(Property).forEach(el => {
-			console.log("DEBUG: Checking prop", el, "Value:", Property[el]);
-			if (checkExists(Property[el])) {
-				console.log("DEBUG: Adding query for", el);
-				Queue.push(buildUpdateQuery(el, Property[el], user_id));
-			} else {
-				console.log("DEBUG: checkExists failed for", el);
+
+		// Filter undefined values
+		Object.keys(payload).forEach((key) => {
+			if (!checkExists((payload as any)[key])) {
+				(payload as any)[key] = undefined;
 			}
 		});
-		await Promise.all(Queue);
+
+		await UserManager.updateUser(user_id, payload);
 		await loginAction(req, req.session.user_id);
 		res.json(ok.ok);
 	} catch (e) {

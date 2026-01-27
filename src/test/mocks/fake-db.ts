@@ -158,6 +158,12 @@ function parseCondition(condition, params, indexRef) {
 		const value = parseToken(ltMatch[2], params, indexRef);
 		return row => getRowValue(row, column) < value;
 	}
+	const neMatch = cond.match(/(.+?)\s*!=\s*(.+)/);
+	if (neMatch) {
+		const column = neMatch[1].trim();
+		const value = parseToken(neMatch[2], params, indexRef);
+		return row => getRowValue(row, column) != value;
+	}
 	const eqMatch = cond.match(/(.+?)\s*=\s*(.+)/);
 	if (eqMatch) {
 		const column = eqMatch[1].trim();
@@ -167,8 +173,7 @@ function parseCondition(condition, params, indexRef) {
 	return () => true;
 }
 
-function buildWhere(whereClause, params) {
-	const indexRef = { index: 0 };
+function buildWhere(whereClause, params, indexRef = { index: 0 }) {
 	const orGroups = splitByKeyword(whereClause, "or").map(group => {
 		return splitByKeyword(group, "and").map(cond => parseCondition(cond, params, indexRef));
 	});
@@ -260,7 +265,7 @@ function handleUpdate(sql, params) {
 			value: parseToken(pieces[1], params, indexRef)
 		};
 	});
-	const matchRow = buildWhere(whereClause, params);
+	const matchRow = buildWhere(whereClause, params, indexRef);
 	let updated = 0;
 	table.forEach(row => {
 		if (matchRow(row)) {
@@ -291,19 +296,89 @@ function handleSelect(sql, params) {
 	let remainder = match[3] || "";
 	let whereClause = "";
 	const whereIndex = remainder.toLowerCase().indexOf(" where ");
+	let orderClause = "";
+	let limitClause = "";
+
 	if (whereIndex !== -1) {
-		whereClause = remainder.slice(whereIndex + 7);
-		const cutIndex = whereClause.search(/\s+(order by|group by|limit)\s+/i);
-		if (cutIndex !== -1) {
-			whereClause = whereClause.slice(0, cutIndex);
+		let tail = remainder.slice(whereIndex + 7);
+
+		// Parse LIMIT
+		const limitIndex = tail.toLowerCase().indexOf(" limit ");
+		if (limitIndex !== -1) {
+			limitClause = tail.slice(limitIndex + 7);
+			tail = tail.slice(0, limitIndex);
+		}
+
+		// Parse ORDER BY
+		const orderIndex = tail.toLowerCase().indexOf(" order by ");
+		if (orderIndex !== -1) {
+			orderClause = tail.slice(orderIndex + 10);
+			tail = tail.slice(0, orderIndex);
+		}
+
+		// Parse GROUP BY (Ignored but stripped)
+		const groupIndex = tail.toLowerCase().indexOf(" group by ");
+		if (groupIndex !== -1) {
+			tail = tail.slice(0, groupIndex);
+		}
+
+		whereClause = tail;
+	} else {
+		// No where, but maybe order by or limit
+		let tail = remainder;
+		const limitIndex = tail.toLowerCase().indexOf(" limit ");
+		if (limitIndex !== -1) {
+			limitClause = tail.slice(limitIndex + 7);
+			tail = tail.slice(0, limitIndex);
+		}
+		const orderIndex = tail.toLowerCase().indexOf(" order by ");
+		if (orderIndex !== -1) {
+			orderClause = tail.slice(orderIndex + 10);
+			tail = tail.slice(0, orderIndex);
 		}
 	}
+
 	const table = getTable(tableName);
 	let rows = table.slice();
+	const indexRef = { index: 0 };
+
+	console.log(`[FakeDB] Select ${tableName}. Initial rows: ${rows.length}`);
+
 	if (whereClause) {
-		const matchRow = buildWhere(whereClause, params);
+		const matchRow = buildWhere(whereClause, params, indexRef);
 		rows = rows.filter(matchRow);
+		console.log(`[FakeDB] After WHERE (${whereClause}): ${rows.length}`);
 	}
+
+	if (orderClause) {
+		const orderParts = splitList(orderClause).map(p => p.trim());
+		rows.sort((a, b) => {
+			for (const part of orderParts) {
+				const [col, dir] = part.split(/\s+/);
+				const valA = getRowValue(a, col);
+				const valB = getRowValue(b, col);
+				if (valA < valB) return dir && dir.toLowerCase() === "desc" ? 1 : -1;
+				if (valA > valB) return dir && dir.toLowerCase() === "desc" ? -1 : 1;
+			}
+			return 0;
+		});
+	}
+
+	if (limitClause) {
+		const parts = limitClause.split(",").map(p => p.trim());
+		let offset = 0;
+		let count = rows.length;
+
+		if (parts.length === 1) {
+			count = parseToken(parts[0], params, indexRef);
+		} else {
+			offset = parseToken(parts[0], params, indexRef);
+			count = parseToken(parts[1], params, indexRef);
+		}
+
+		rows = rows.slice(offset, offset + count);
+	}
+
 	if (/count\(/i.test(columnsPart)) {
 		const aliasMatch = columnsPart.match(/count\(([^)]+)\)\s*(?:as\s+)?([a-z0-9_]+)?/i);
 		const alias = (aliasMatch && aliasMatch[2]) ? aliasMatch[2] : "count";

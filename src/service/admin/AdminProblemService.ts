@@ -1,5 +1,5 @@
 import query from "../../module/mysql_query";
-import { rejudgeByContest, rejudgeBySolution, rejudgeByProblem } from "../../module/status/update_solution_result";
+import { rejudgeContest, rejudgeSolution, rejudgeProblem } from "../../module/status/update_solution_result";
 import ProblemFileManager from "../../module/problem/ProblemFileManager";
 
 class AdminProblemService {
@@ -38,15 +38,15 @@ class AdminProblemService {
 
     // Rejudge wrappers
     async rejudgeContest(contestId: number) {
-        return await rejudgeByContest(contestId, 1);
+        return await rejudgeContest(contestId);
     }
 
     async rejudgeSolution(solutionId: number) {
-        return await rejudgeBySolution(solutionId, 1);
+        return await rejudgeSolution(solutionId);
     }
 
     async rejudgeProblem(problemId: number) {
-        return await rejudgeByProblem(problemId, 1);
+        return await rejudgeProblem(problemId);
     }
 
     // Data Access

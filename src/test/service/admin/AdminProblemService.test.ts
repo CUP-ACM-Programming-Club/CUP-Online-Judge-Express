@@ -17,7 +17,10 @@ describe("AdminProblemService Tests", function () {
         rejudgeStub = {
             rejudgeByContest: sinon.stub().resolves(),
             rejudgeBySolution: sinon.stub().resolves(),
-            rejudgeByProblem: sinon.stub().resolves()
+            rejudgeByProblem: sinon.stub().resolves(),
+            rejudgeContest: sinon.stub().resolves(),
+            rejudgeSolution: sinon.stub().resolves(),
+            rejudgeProblem: sinon.stub().resolves()
         };
 
         problemFileManagerStub = {
@@ -27,6 +30,7 @@ describe("AdminProblemService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
+            // console.log("Req:", request);
             if (request.includes("mysql_query")) return queryStub;
             if (request.includes("module/status/update_solution_result")) return rejudgeStub;
             if (request.includes("ProblemFileManager")) {
@@ -39,7 +43,12 @@ describe("AdminProblemService Tests", function () {
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../../service/admin/AdminProblemService")];
+        Object.keys(require.cache).forEach(key => {
+            const normalized = key.replace(/\\/g, "/");
+            if (normalized.includes("module/status/update_solution_result") || normalized.includes("service/admin/AdminProblemService")) {
+                delete require.cache[key];
+            }
+        });
         AdminProblemService = require("../../../service/admin/AdminProblemService").default;
     });
 
@@ -85,19 +94,19 @@ describe("AdminProblemService Tests", function () {
     });
 
     describe("Rejudge Wrappers", () => {
-        it("should trigger rejudgeByContest", async () => {
+        it("should trigger rejudgeContest", async () => {
             await AdminProblemService.rejudgeContest(1000);
-            expect(rejudgeStub.rejudgeByContest.calledWith(1000, 1)).to.be.true;
+            expect(rejudgeStub.rejudgeContest.calledWith(1000)).to.be.true;
         });
 
-        it("should trigger rejudgeBySolution", async () => {
+        it("should trigger rejudgeSolution", async () => {
             await AdminProblemService.rejudgeSolution(100);
-            expect(rejudgeStub.rejudgeBySolution.calledWith(100, 1)).to.be.true;
+            expect(rejudgeStub.rejudgeSolution.calledWith(100)).to.be.true;
         });
 
-        it("should trigger rejudgeByProblem", async () => {
+        it("should trigger rejudgeProblem", async () => {
             await AdminProblemService.rejudgeProblem(1000);
-            expect(rejudgeStub.rejudgeByProblem.calledWith(1000, 1)).to.be.true;
+            expect(rejudgeStub.rejudgeProblem.calledWith(1000)).to.be.true;
         });
     });
 

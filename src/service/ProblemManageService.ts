@@ -191,6 +191,11 @@ class ProblemManageService {
         await this.submitStandardSolution(req, pid, solutionFiles, prependFiles, appendFiles);
     }
 
+    async getMaxProblemId() {
+        const _max_pid = await query("SELECT max(problem_id) as max_id FROM problem");
+        return parseInt(_max_pid[0].max_id);
+    }
+
     async importProblemFromRPK(req: any, filePath: string, startPid?: number) {
         const data = await (fs as any).readFileAsync(filePath);
         // @ts-ignore
@@ -216,6 +221,102 @@ class ProblemManageService {
             });
         }
         return problem_list;
+        return problem_list;
+    }
+
+    // Image Handling Helper (Ported from routes)
+    private async storePhotoToDir(problem_id: any, key: any, data: any, type: any) {
+        const website_dir = this.config.website.dir;
+        const picPath = path.join(website_dir, "images", problem_id.toString(), type);
+        const { mkdirAsync } = require("../module/file/mkdir");
+        const base64Img = Bluebird.promisifyAll(require("base64-img"));
+
+        await mkdirAsync(picPath);
+        try {
+            await (base64Img as any).imgAsync(data, picPath, key);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    private async storePhotoBase(problem_id: any, name: any, iterableData: any) {
+        const tasks = [];
+        console.log("storePhotoBase called for:", name);
+        for (let i in iterableData) {
+            console.log("Processing image:", i);
+            tasks.push(this.storePhotoToDir(problem_id, i, iterableData[i], name));
+        }
+        await Promise.all(tasks);
+    }
+
+    private async storePhoto(problem_id: any, photo: any = { description: {}, input: {}, output: {} }) {
+        const tasks = [];
+        for (let i in photo) {
+            tasks.push(this.storePhotoBase(problem_id, i, photo[i]));
+        }
+        await Promise.all(tasks);
+    }
+
+    async updateProblem(req: any, problemId: number, source: string, problemData: any) {
+        let local = false;
+        if (source.length <= 2 || source === "local") {
+            local = true;
+        }
+
+        const json = Object.assign({
+            title: "",
+            time: 0,
+            memory: 0,
+            description: "",
+            input: "",
+            output: "",
+            sampleinput: "",
+            sampleoutput: "",
+            label: "",
+            hint: "",
+            spj: 0,
+            imageData: {}
+        }, problemData);
+
+        // Debug Log
+        console.log("updateProblem called with:", JSON.stringify(problemData));
+        console.log("Merged json.imageData:", JSON.stringify(json.imageData));
+
+        await this.storePhoto(problemId, json.imageData);
+
+        // Import necessary modules locally or at top level if frequently used. 
+        // For ProblemService helpers, we can import ProblemService.
+        // But ProblemService is creating circular dependency potentially.
+        // Let's replicate strict checkEmpty or import it.
+        const checkEmpty = (str: any) => {
+            if (str === "" || str === null || str === undefined) {
+                return 0;
+            }
+            return str;
+        };
+
+        let sql = `update ${local ? "" : "vjudge_"}problem set title = ?,time_limit = ?,
+        memory_limit = ?,description = ?,input = ?,output = ?,
+        sample_input = ?,sample_output = ?,label = ?${local ? " ,hint = ?, spj = ? " : ""} where problem_id = ?
+         ${local ? "" : " and source = ?"}`;
+
+        let sqlArr = [json.title, checkEmpty(json.time), checkEmpty(json.memory), json.description, json.input,
+        json.output, json.sampleinput, json.sampleoutput, json.label];
+
+        if (local) {
+            sqlArr.push(json.hint, json.spj, problemId);
+        } else {
+            sqlArr.push(problemId, source);
+        }
+
+        await query(sql, sqlArr);
+
+        // Cache Invalidation
+        const ProblemInfoManager = require("../module/problem/ProblemInfoManager");
+        const ProblemSetCachePool = require("../module/problemset/ProblemSetCachePool");
+
+        ProblemInfoManager.newInstance().setProblemId(problemId).removeCache();
+        ProblemSetCachePool.removeAll();
     }
 }
 

@@ -1,15 +1,12 @@
 import express from "express";
 const router = express.Router();
 const [error, ok] = require("../../../module/const_var");
-const query = require("../../../module/mysql_query");
 
-async function teamlistHandler() {
-	return await query("select user_id, reg_time, accesstime,defunct from users where school = 'your_own_school' order by reg_time desc");
-}
+import AdminUserService from "../../../service/admin/AdminUserService";
 
 router.get("/", async (req: any, res: any) => {
 	try {
-		res.json(ok.okMaker(await teamlistHandler()));
+		res.json(ok.okMaker(await AdminUserService.getTeamList()));
 	} catch (e) {
 		console.log(e);
 		res.json(error.database);

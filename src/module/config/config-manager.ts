@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import cluster from "cluster";
-import {PersistenceStore} from "./store/base/store";
-import {config as Config, Switch} from "../../orm/ts-model";
+import { PersistenceStore } from "./store/base/store";
+import { config as Config, Switch } from "../../orm/ts-model";
 import * as configStoreCollection from "./store/config";
 import * as switchStoreCollection from "./store/switch";
 import * as OPERATION_CONSTANTS from "./constants/operation";
@@ -27,51 +27,68 @@ function switchValueValidate(switchValue: any) {
 }
 
 function nowTimeInstance() {
-    return {modify_time: dayjs().format("YYYY-MM-DD HH:mm:ss")};
+    return { modify_time: dayjs().format("YYYY-MM-DD HH:mm:ss") };
 }
 
 interface DataStoragePayload {
-    [key: string]: any
+    [key: string]: {
+        value: any,
+        comment?: string
+    }
 }
 
 interface DataStorage {
-    __switchMap__: DataStoragePayload,
-    __configMap__: DataStoragePayload,
-    readonly configMap: DataStoragePayload,
-    readonly switchMap: DataStoragePayload
+    configMap: DataStoragePayload,
+    switchMap: DataStoragePayload
+}
+
+export interface IConfigManagerOptions {
+    setConfig: (key: string, value: any, comment?: string) => void;
+    removeConfig: (key: string) => void;
+}
+
+export interface ISwitchManagerOptions {
+    setSwitch: (key: string, value: number, comment?: string) => void;
+    removeSwitch: (key: string) => void;
 }
 
 export class SystemConfigManager {
     SWITCH_ON = 100;
     SWITCH_OFF = 0;
-    __data__!: DataStorage;
+    private data: DataStorage;
     configLogger!: any;
     switchLogger!: any;
     switchPersistenceModule?: PersistenceStore<Switch>;
     configPersistenceModule?: PersistenceStore<Config>;
 
     constructor() {
-        this.__data__ = {
-            __switchMap__: {},
-            __configMap__: {}
-        } as any;
-        Object.defineProperty(this.__data__, "switchMap", {
-            get: () => {
-                return this.__data__.__switchMap__;
-            }
-        });
-        Object.defineProperty(this.__data__, "configMap", {
-            get: () => {
-                return this.__data__.__configMap__;
-            }
-        });
-        this.configLogger = ConfigLoggerFactory({set: this.setConfig, remove: this.removeConfig});
-        this.switchLogger = SwitchLoggerFactory({set: this.setSwitch, remove: this.removeSwitch});
-        this.clusterHandler({"setConfig": this.setConfigWithoutStore, "setSwitch": this.setSwitchWithoutStore});
+        this.data = {
+            switchMap: {},
+            configMap: {}
+        };
+        // Backward compatibility for __data__ access if needed (though we should avoid it)
+        // Leaving it out to enforce cleaner access, or add a getter if necessary.
+
+        this.configLogger = ConfigLoggerFactory({ set: this.setConfig.bind(this), remove: this.removeConfig.bind(this) });
+        this.switchLogger = SwitchLoggerFactory({ set: this.setSwitch.bind(this), remove: this.removeSwitch.bind(this) });
+        this.clusterHandler({ "setConfig": this.setConfigWithoutStore.bind(this), "setSwitch": this.setSwitchWithoutStore.bind(this) });
+    }
+
+    /**
+     * Legacy accessor if external modules access __data__ directly.
+     * Deprecated: Use getConfigMap/getSwitchMap instead.
+     */
+    get __data__() {
+        return {
+            __switchMap__: this.data.switchMap,
+            __configMap__: this.data.configMap,
+            switchMap: this.data.switchMap,
+            configMap: this.data.configMap
+        };
     }
 
     setConfigWithoutStore(configKey: string, configValue: any, comment?: string) {
-        this.__data__.configMap[configKey] = {value: configValue, comment};
+        this.data.configMap[configKey] = { value: configValue, comment };
     };
 
     switchPersistence(payload: any) {
@@ -105,11 +122,13 @@ export class SystemConfigManager {
 
     clusterHandler(setter: { [x: string]: (...args: any) => any }) {
         if (!cluster.isMaster) {
-            process.on("message", (data) => {
-                if (!data.configManager) {
+            process.on("message", (data: any) => {
+                if (!data || !data.configManager) {
                     return;
                 }
-                setter[data.method].apply(this, Array.isArray(data.args) ? data.args : Object.values(data.args));
+                if (typeof setter[data.method] === "function") {
+                    setter[data.method].apply(this, Array.isArray(data.args) ? data.args : Object.values(data.args));
+                }
             });
         }
     }
@@ -133,10 +152,11 @@ export class SystemConfigManager {
         const payload = {
             method,
             configManager: true,
-            args: [] as any[]
+            args: args
         };
-        payload.args = args;
-        process.send!(payload);
+        if (process.send) {
+            process.send(payload);
+        }
     }
 
     getRandom() {
@@ -144,25 +164,37 @@ export class SystemConfigManager {
     };
 
     isSwitchedOn(configKey: string, defaultValue = 0) {
-        const wrappedValue = this.__data__.switchMap[configKey];
-        const randomValue = this.getRandom();
+        const wrappedValue = this.data.switchMap[configKey];
+
+        // Optimize: If default is 0 or 100, we might not need random
+        // But here we check wrappedValue
+
         if (typeof wrappedValue === "undefined" || typeof wrappedValue.value !== "number") {
-            return randomValue <= defaultValue;
+            // Fallback to defaultValue check
+            if (defaultValue <= 0) return false;
+            if (defaultValue >= 100) return true;
+            // Only generate random if needed
+            return this.getRandom() <= defaultValue;
         }
-        return randomValue <= wrappedValue.value;
+
+        const val = wrappedValue.value;
+        if (val <= 0) return false;
+        if (val >= 100) return true;
+
+        return this.getRandom() <= val;
     };
 
     setConfig(configKey: string, configValue: any, comment?: string) {
-        const payload = {value: configValue, comment};
+        const payload = { value: configValue, comment };
         this.setConfigWithoutStore(configKey, configValue, comment);
         this.boardcastSetConfig(configKey, configValue, comment);
-        this.configPersistence(Object.assign(payload, {key: configKey}));
-        this.configLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: configValue, comment});
+        this.configPersistence(Object.assign(payload, { key: configKey }));
+        this.configLogger.log(OPERATION_CONSTANTS.SET, { key: configKey, value: configValue, comment });
         return this;
     }
 
     getConfig(configKey: string, defaultValue: any) {
-        const wrappedValue = this.__data__.configMap[configKey];
+        const wrappedValue = this.data.configMap[configKey];
         if (typeof wrappedValue === "undefined") {
             return defaultValue;
         }
@@ -176,9 +208,9 @@ export class SystemConfigManager {
         if (this.getConfig(configKey, null) === null) {
             return this;
         }
-        const {value, comment} = this.getConfig(configKey, null);
-        this.configLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
-        delete this.__data__.configMap[configKey];
+        const { value, comment } = this.getConfig(configKey, null);
+        this.configLogger.log(OPERATION_CONSTANTS.DELETE, { key: configKey, value, comment });
+        delete this.data.configMap[configKey];
         this.configRemove(configKey);
         return this;
     }
@@ -187,32 +219,33 @@ export class SystemConfigManager {
         if (!switchValueValidate(switchValue)) {
             return this;
         }
-        const payload = {value: parseInt(switchValue as string), comment};
-        this.setSwitchWithoutStore(configKey, switchValue, comment);
-        this.boardcastSetSwitch(configKey, switchValue, comment);
-        this.switchPersistence(Object.assign(payload, {key: configKey}));
-        this.switchLogger.log(OPERATION_CONSTANTS.SET, {key: configKey, value: switchValue, comment});
+        const parsedValue = parseInt(switchValue as string);
+        const payload = { value: parsedValue, comment };
+        this.setSwitchWithoutStore(configKey, parsedValue, comment);
+        this.boardcastSetSwitch(configKey, parsedValue, comment);
+        this.switchPersistence(Object.assign(payload, { key: configKey }));
+        this.switchLogger.log(OPERATION_CONSTANTS.SET, { key: configKey, value: parsedValue, comment });
         return this;
     };
 
     setSwitchWithoutStore(configKey: string, switchValue: string | number, comment?: string) {
-        this.__data__.switchMap[configKey] = {value: parseInt(switchValue as string), comment};
+        this.data.switchMap[configKey] = { value: parseInt(switchValue as string), comment };
     };
 
     removeSwitch(configKey: string) {
         if (this.getSwitch(configKey) === null) {
             return this;
         }
-        const {value, comment} = this.__data__.switchMap[configKey];
-        this.switchLogger.log(OPERATION_CONSTANTS.DELETE, {key: configKey, value, comment});
-        delete this.__data__.switchMap[configKey];
+        const { value, comment } = this.data.switchMap[configKey];
+        this.switchLogger.log(OPERATION_CONSTANTS.DELETE, { key: configKey, value, comment });
+        delete this.data.switchMap[configKey];
         this.switchRemove(configKey);
         return this;
     };
 
     getSwitch(configKey: string, defaultValue?: boolean) {
-        if (this.__data__.switchMap.hasOwnProperty(configKey)) {
-            return this.__data__.switchMap[configKey];
+        if (this.data.switchMap.hasOwnProperty(configKey)) {
+            return this.data.switchMap[configKey];
         }
         return defaultValue || null;
     };
@@ -233,11 +266,11 @@ export class SystemConfigManager {
     };
 
     getConfigMap() {
-        return this.__data__.configMap;
+        return this.data.configMap;
     }
 
     getSwitchMap() {
-        return this.__data__.switchMap;
+        return this.data.switchMap;
     }
 
     setConfigPersistenceModule(module: PersistenceStore<Config>) {
@@ -251,26 +284,32 @@ export class SystemConfigManager {
     };
 
     initConfigMap() {
-        this.baseMapInitHandler(this.configPersistenceModule!, this.setConfigWithoutStore);
+        this.baseMapInitHandler(this.configPersistenceModule!, this.setConfigWithoutStore.bind(this));
         return this;
     }
 
     async baseInitProcedure<T extends (Config | Switch)>(module: PersistenceStore<T>, setter: (...args: any[]) => void) {
-        const result = await module.getAll();
-        result.forEach(el => setter.call(this, el.key, el.value, el.comment));
+        try {
+            const result = await module.getAll();
+            result.forEach(el => setter.call(this, el.key, el.value, el.comment));
+        } catch (e) {
+            console.error("ConfigManager init error:", e);
+        }
     }
 
     async baseMapInitHandler<T extends (Config | Switch)>(module: PersistenceStore<T>, setter: (...args: any[]) => void) {
         if (typeof module !== "undefined") {
-            setInterval(async () => {
+            const loop = async () => {
                 await this.baseInitProcedure(module, setter);
-            }, 10000);
-            await this.baseInitProcedure(module, setter);
+                // Recursive setTimeout to avoid overlap and potential pile-up
+                setTimeout(loop, 10000);
+            };
+            await loop();
         }
     }
 
     initSwitchMap() {
-        this.baseMapInitHandler(this.switchPersistenceModule!, this.setSwitchWithoutStore);
+        this.baseMapInitHandler(this.switchPersistenceModule!, this.setSwitchWithoutStore.bind(this));
         return this;
     }
 
