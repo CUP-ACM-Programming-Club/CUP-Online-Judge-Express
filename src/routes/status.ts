@@ -76,6 +76,25 @@ async function get_status(req: any, res: any, next: any, request_query: any = {}
 		next(e);
 	}
 }
+}
+
+router.get("/:problem_id/:user_id/:language/:result/:limit", async (req: any, res: any, next: any) => {
+	const problem_id = req.params.problem_id === "null" ? undefined : parseInt(req.params.problem_id);
+	const user_id = req.params.user_id === "null" ? undefined : req.params.user_id;
+	const language = req.params.language === "null" ? undefined : parseInt(req.params.language);
+	const result = req.params.result === "null" ? undefined : parseInt(req.params.result);
+	const limit = req.params.limit === "null" ? 0 : parseInt(req.params.limit);
+	await get_status(req, res, next, {
+		problem_id,
+		user_id,
+		language,
+		result
+	}, limit);
+});
+
+router.get("/", async (req: any, res: any, next: any) => {
+	await get_status(req, res, next, {}, 0);
+});
 
 router.get("/graph", async function (req: any, res: any) {
 	const cid = req.query.cid ? parseInt(req.query.cid as string) : undefined;
