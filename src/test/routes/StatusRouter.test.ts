@@ -27,7 +27,6 @@ describe("Status Router Legacy Routes", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (requestStr: string, parent: any, isMain: boolean) {
-            if (requestStr.includes("StatusService")) return { default: statusServiceStub };
             if (requestStr.includes("ContestAssistantManager")) return { default: {} };
             if (requestStr.includes("SourcePrivilegeCache")) return { default: {} };
             if (requestStr.includes("middleware/auth")) return { default: authStub };
@@ -44,12 +43,26 @@ describe("Status Router Legacy Routes", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Clear cache and require status router
-        delete require.cache[require.resolve("../../routes/status")];
+        // 3. Clear cache
+        Object.keys(require.cache).forEach(key => {
+            if (key.includes("StatusService") || key.includes("routes\\status")) {
+                delete require.cache[key];
+            }
+        });
+
+        // Require the service (instance)
+        const StatusServiceInstance = require("../../service/StatusService").default;
+
+        // Stub the method on the instance
+        const getStatusListStub = sinon.stub(StatusServiceInstance, "getStatusList").resolves({ result: [], total: 0 });
+        statusServiceStub = { getStatusList: getStatusListStub };
+
         const routeExport = require("../../routes/status");
 
         // Setup Express
         app = express();
+        app.use(express.json());
+        app.use(express.urlencoded({ extended: true }));
         // Mimic session and params logic if needed, but for now just mount the router
         app.use((req, res, next) => {
             req.session = { user_id: "test", isadmin: false };
@@ -129,7 +142,7 @@ describe("Status Router Legacy Routes", function () {
         expect(query.sim).to.be.true;
     });
 
-    it.skip("should handle the user reported failing case (7 params with 0s)", async function () {
+    it("should handle the user reported failing case (7 params with 0s)", async function () {
         // /api/status/null/2016011253/null/null/0/0/0
         // params: pid=null, uid=2016011253, lang=null, res=null, limit=0, param6=0, param7=0
 
