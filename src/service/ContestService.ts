@@ -312,7 +312,7 @@ union all SELECT
             throw new HttpError("Wrong password", 200, error.errorMaker("Wrong password"));
         }
     }
-    async getContestProblemDetails(req: Request, cid: number, pid: number) {
+    async getContestProblemDetails(req: Request, cid: number, pid: number, sid?: number) {
         const [contest, result] = await Promise.all([
             cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]),
             cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and num = ?", [cid, pid])
@@ -364,7 +364,8 @@ union all SELECT
                 source: result[0].oj_name || "",
                 langmask,
                 after_contest: dayjs().isAfter(dayjs(end_time)),
-                limit_hostname
+                limit_hostname,
+                solution_id: sid
             });
         } else {
             throw error.invalidParams;

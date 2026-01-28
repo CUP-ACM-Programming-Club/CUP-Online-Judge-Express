@@ -164,7 +164,7 @@ router.get("/:source/", async function (req: any, res: any) {
 
 	try {
 		if (~cid && ~pid) {
-			const data = await ContestService.getContestProblemDetails(req, cid, pid);
+			const data = await ContestService.getContestProblemDetails(req, cid, pid, solution_id);
 			if (data.redirect) {
 				res.json(error.attributeMaker({ redirect: data.url }));
 			} else {
