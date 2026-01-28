@@ -62,3 +62,7 @@ typings/
 .idea
 
 dist/
+
+# Temporary test output
+test_output_*.txt
+reproduce_issue.ts
