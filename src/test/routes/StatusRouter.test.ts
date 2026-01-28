@@ -51,6 +51,9 @@ describe("Status Router Legacy Routes", function () {
             if (requestStr.includes("SubmissionService")) {
                 return { ...submissionServiceStub, default: submissionServiceStub };
             }
+            if (requestStr.includes("StatusService") && !requestStr.includes("routes")) { // Avoid intercepting route file itself if path is confusing
+                return { ...statusServiceStub, default: statusServiceStub };
+            }
 
             // Sub-routes
             if (requestStr.includes("./status/")) return [(req, res, next) => next()];
@@ -60,17 +63,10 @@ describe("Status Router Legacy Routes", function () {
 
         // 3. Clear cache
         Object.keys(require.cache).forEach(key => {
-            if (key.includes("StatusService") || key.includes("routes\\status") || key.includes("SubmissionService")) {
+            if (key.includes("routes\\status")) {
                 delete require.cache[key];
             }
         });
-
-        // Require the service (instance)
-        const StatusServiceInstance = require("../../service/StatusService").default;
-
-        // Stub the method on the instance
-        const getStatusListStub = sinon.stub(StatusServiceInstance, "getStatusList").resolves({ result: [], total: 0 });
-        statusServiceStub = { getStatusList: getStatusListStub };
 
         const routeExport = require("../../routes/status");
 
