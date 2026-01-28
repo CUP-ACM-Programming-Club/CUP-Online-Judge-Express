@@ -8,6 +8,7 @@ const express = require("express");
 describe("Status Router Legacy Routes", function () {
     let statusRouter: any;
     let statusServiceStub: any;
+    let submissionServiceStub: any;
     let app: any;
     let previousLoad: any;
 
@@ -16,6 +17,14 @@ describe("Status Router Legacy Routes", function () {
         statusServiceStub = {
             getStatusList: sinon.stub().resolves({ result: [], total: 0 }),
             getGraphData: sinon.stub().resolves({})
+        };
+
+        submissionServiceStub = {
+            getSolutionInfo: sinon.stub().resolves([]),
+            getCompileInfo: sinon.stub().resolves([]),
+            getRuntimeInfo: sinon.stub().resolves([]),
+            getSourceCode: sinon.stub().resolves(""),
+            checkPrivilege: sinon.stub().resolves(true)
         };
 
         const authStub = (req, res, next) => next();
@@ -27,15 +36,21 @@ describe("Status Router Legacy Routes", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (requestStr: string, parent: any, isMain: boolean) {
+
             if (requestStr.includes("ContestAssistantManager")) return { default: {} };
-            if (requestStr.includes("SourcePrivilegeCache")) return { default: {} };
+            if (requestStr.includes("SourcePrivilegeCache")) {
+                const mock = { checkPrivilege: sinon.stub().resolves(true) };
+                return { ...mock, default: mock };
+            }
             if (requestStr.includes("middleware/auth")) return { default: authStub };
             if (requestStr.includes("middleware/admin")) return authStub;
             if (requestStr.includes("logger")) return loggerStub;
             if (requestStr.includes("const_name")) return {};
             if (requestStr.includes("const_var")) return [{}];
             if (requestStr.includes("redis")) return { default: {} };
-            if (requestStr.includes("SubmissionService")) return { default: {} };
+            if (requestStr.includes("SubmissionService")) {
+                return { ...submissionServiceStub, default: submissionServiceStub };
+            }
 
             // Sub-routes
             if (requestStr.includes("./status/")) return [(req, res, next) => next()];
@@ -45,7 +60,7 @@ describe("Status Router Legacy Routes", function () {
 
         // 3. Clear cache
         Object.keys(require.cache).forEach(key => {
-            if (key.includes("StatusService") || key.includes("routes\\status")) {
+            if (key.includes("StatusService") || key.includes("routes\\status") || key.includes("SubmissionService")) {
                 delete require.cache[key];
             }
         });
@@ -65,6 +80,7 @@ describe("Status Router Legacy Routes", function () {
         app.use(express.urlencoded({ extended: true }));
         // Mimic session and params logic if needed, but for now just mount the router
         app.use((req, res, next) => {
+
             req.session = { user_id: "test", isadmin: false };
             next();
         });
@@ -144,23 +160,10 @@ describe("Status Router Legacy Routes", function () {
 
     it("should handle the user reported failing case (7 params with 0s)", async function () {
         // /api/status/null/2016011253/null/null/0/0/0
-        // params: pid=null, uid=2016011253, lang=null, res=null, limit=0, param6=0, param7=0
-
-        // Expectation:
-        // param6=0. Matches cid route? 0 < 1000 -> next().
-        // Matches sim route (6 params)? No, path has 7 segments.
-        // Matches cid/sim route (7 params)? /:cid/:sim.
-        // cid=0, sim=0.
-        // cid check: 0 < 1000 -> next().
-        // Matches sim/privilege route (7 params)? /:sim/:privilege.
-        // sim=0 -> false. privilege=0.
-
         const res = await request(app)
             .get("/status/null/2016011253/null/null/0/0/0");
 
-        if (res.status === 500) {
-            console.log("DEBUG RESPONSE 500:", res.text);
-        }
+
         expect(res.status).to.equal(200);
 
         const call = statusServiceStub.getStatusList.lastCall;
@@ -168,13 +171,29 @@ describe("Status Router Legacy Routes", function () {
 
         expect(query.user_id).to.equal("2016011253");
         expect(query.sim).to.be.false;
-        // Privilege logic puts object in problem_id array? 
-        // Logic: problem_id: [problem_id, privilege ? ... : undefined]
-        // If privilege is 0, second element is undefined.
-        // Array becomes [undefined, undefined] -> filtered by service or database logic?
-        // Service expects problem_id to be number or array?
-
         expect(Array.isArray(query.problem_id)).to.be.true;
         expect(query.problem_id[0]).to.be.undefined;
+    });
+
+    it("should return source code in /solution endpoint", async function () {
+        const sid = 3885859;
+        const mockSolutionInfo = [{
+            user_id: "test",
+            language: 21,
+            time: 1,
+            memory: 1536,
+            share: 1
+        }];
+
+        submissionServiceStub.getSolutionInfo.resolves(mockSolutionInfo);
+        submissionServiceStub.getSourceCode.resolves("int main() { return 0; }");
+
+        const res = await request(app)
+            .get(`/status/solution?sid=${sid}`)
+            .expect(200);
+
+        expect(res.body.status).to.equal("OK");
+        expect(res.body.data.solution_id).to.equal(sid);
+        expect(res.body.data.source).to.equal("int main() { return 0; }");
     });
 });

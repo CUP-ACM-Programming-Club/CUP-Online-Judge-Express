@@ -8,14 +8,16 @@ const express = require("express");
 const router = express.Router();
 const escape = require("escape-html");
 const log4js = require("../module/logger");
-const logger = log4js.logger("cheese", "info");
 const const_name = require("../module/const_name");
 const timediff = require("timediff");
 import auth from "../middleware/auth";
 const [error] = require("../module/const_var");
 const admin_auth = require("../middleware/admin");
 import client from "../module/redis";
+import moment from "moment";
 import SubmissionService from "../service/SubmissionService";
+const logger = log4js.logger("cheese", "info");
+const query = require("../module/mysql_cache");
 
 const GREATER = "greater"; // Keep constants if used elsewhere? 
 // Actually SECONDS..YEARS were used in calculateDiffTimeMilliseconds which is removed.
@@ -29,7 +31,19 @@ const WEEKS = 7 * DAYS;
 const MONTH = 30 * DAYS;
 const YEARS = 365 * DAYS;
 
+function info(content: any) {
+	if (typeof content !== "string") {
+		content = JSON.stringify(content);
+	}
+	logger.info(content);
+}
 
+function authPrivilege(req: any) {
+	if (req.session.isadmin || req.session.source_browser) {
+		return true;
+	}
+	return false;
+}
 
 function validateProblemId(req: any) {
 	let pid = req.params.problem_id;
@@ -216,7 +230,8 @@ router.get("/solution", async function (req: any, res: any) {
 					user_id: _result[0].user_id,
 					language: _result[0].language,
 					time: _result[0].time,
-					memory: _result[0].memory
+					memory: _result[0].memory,
+					source: await SubmissionService.getSourceCode(sid)
 				}
 			});
 		} else {

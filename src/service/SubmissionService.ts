@@ -443,6 +443,11 @@ export class SubmissionService {
     async getCodeLengthStats(statement: string = "1 = 1", sqlArr: any[] = []) {
         return await cache_query(`select in_date, code_length from solution where ${statement} and result = 4`, sqlArr);
     }
+
+    async getSourceCode(solutionId: number | string) {
+        const data = await cache_query("select source from source_code_user where solution_id = ?", [solutionId]);
+        return data && data.length > 0 ? data[0].source : "Code not found.";
+    }
 }
 
 export default new SubmissionService();
