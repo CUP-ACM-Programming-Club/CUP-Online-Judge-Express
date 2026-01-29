@@ -63,7 +63,7 @@ describe("Status Router Legacy Routes", function () {
 
         // 3. Clear cache
         Object.keys(require.cache).forEach(key => {
-            if (key.includes("routes\\status")) {
+            if (key.includes("routes") && key.includes("status")) {
                 delete require.cache[key];
             }
         });
