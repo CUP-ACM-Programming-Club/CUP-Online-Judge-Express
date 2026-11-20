@@ -41,10 +41,10 @@ export class PrependAppendManager {
 
     private async setCodeByPrependOrAppend(prependCodePayload: IPrefileDTOPayload, prepend: number) {
         const problemId = prependCodePayload.problemId;
-        prependCodePayload.payload.forEach(e => {
-            query(`insert into prefile(problem_id, prepend, code, type) values (?,?,?,?)`,
+        for (const e of prependCodePayload.payload) {
+            await query(`insert into prefile(problem_id, prepend, code, type) values (?,?,?,?)`,
                 [problemId, prepend, e.code, e.language]);
-        });
+        }
     }
 
     private async deleteCodeByPrependOrAppend(prependCodePayload: IPrefileDTOPayload, prepend: number) {
