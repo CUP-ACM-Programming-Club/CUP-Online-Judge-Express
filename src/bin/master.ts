@@ -3,6 +3,13 @@ import os from "os";
 
 const num_processes = Math.min(os.cpus().length, 32);
 
+// Node 16 renamed isMaster->isPrimary and setupMaster->setupPrimary; the old
+// names were removed in Node 24. Resolve whichever the running runtime exposes
+// so the same build runs on Node 16 through the current LTS.
+const clusterCompat: any = cluster;
+const isPrimary: boolean =
+    clusterCompat.isPrimary !== undefined ? clusterCompat.isPrimary : clusterCompat.isMaster;
+
 function buildProcessErrorEvent() {
     process.on("unhandledRejection", error => {
         // Prints "unhandledRejection woops!"
@@ -14,7 +21,13 @@ async function bootStrap() {
     global.currentDaemonName = "backend";
     buildProcessErrorEvent();
 
-    if (cluster.isMaster) {
+    if (isPrimary) {
+        // Pin the worker entry explicitly. Node 24+ no longer reliably infers the
+        // worker module from process.argv[1] under process managers like pm2, so
+        // cluster.fork() would otherwise receive an undefined module path.
+        const setupPrimary = clusterCompat.setupPrimary || clusterCompat.setupMaster;
+        setupPrimary.call(clusterCompat, { exec: __filename });
+
         const workers: any[] = [];
         global.workers = workers;
         global.clusterMode = true;
