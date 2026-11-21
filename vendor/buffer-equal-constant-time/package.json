@@ -1,0 +1,7 @@
+{
+  "name": "buffer-equal-constant-time",
+  "version": "1.0.2",
+  "description": "Drop-in replacement for buffer-equal-constant-time@1.0.1 that works on Node >= 25 (SlowBuffer removed). Uses crypto.timingSafeEqual.",
+  "main": "index.js",
+  "license": "BSD-3-Clause"
+}

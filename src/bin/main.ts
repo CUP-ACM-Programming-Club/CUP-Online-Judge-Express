@@ -118,8 +118,10 @@ function whiteBoardBroadCast(socket: UserSocket, content: string) {
  * 从ExpressJS提取Session信息，将Session与当前的Socket绑定
  */
 
-io.use((socket, next) => {
-	sessionMiddleware(socket.request, socket.request.res, next);
+io.use((socket: any, next: any) => {
+	// socket.io v4 no longer exposes a response object on the handshake request;
+	// express-session only needs a stub here (documented v4 pattern).
+	sessionMiddleware(socket.request, socket.request.res || {}, next);
 });
 
 /**

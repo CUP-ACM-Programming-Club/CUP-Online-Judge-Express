@@ -37,10 +37,10 @@ export default function (socket: UserSocket, next: (err?: any) => void) {
             user_id: socket.user_id!,
             url: [],
             nick: socket.user_nick!,
-            useragent: socket.handshake.headers["user-agent"]
+            useragent: socket.handshake.headers["user-agent"] || ""
         };
         if (socket.handshake.headers["x-forwarded-for"]) {
-            const iplist = socket.handshake.headers["x-forwarded-for"].split(",");
+            const iplist = String(socket.handshake.headers["x-forwarded-for"]).split(",");
             user.ip = iplist[0];
             user.intranet_ip = iplist[1];
         } else {
