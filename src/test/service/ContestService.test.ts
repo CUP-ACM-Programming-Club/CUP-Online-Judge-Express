@@ -122,8 +122,20 @@ describe("ContestService Tests", function () {
             expect(contestManagerStub.getContestListAsObjectByRequest.calledWith(mockReq)).to.be.true;
         });
         it("should delegate getAllContestList to Manager", async () => {
-            await ContestService.getAllContestList();
+            await ContestService.getAllContestList(mockReq);
             expect(contestManagerStub.getAllContestList.called).to.be.true;
+        });
+        it("should hide hidden contests from getAllContestList for normal users", async () => {
+            contestManagerStub.getAllContestList.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
+            const list = await ContestService.getAllContestList(mockReq);
+            expect(list.map((c: any) => c.contest_id)).to.deep.equal([1]);
+        });
+        it("should keep hidden contests in getAllContestList for admins and contest managers", async () => {
+            contestManagerStub.getAllContestList.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
+            const admin = { session: { ...mockReq.session, isadmin: true } };
+            const manager = { session: { ...mockReq.session, contest_manager: true } };
+            expect((await ContestService.getAllContestList(admin)).length).to.equal(2);
+            expect((await ContestService.getAllContestList(manager)).length).to.equal(2);
         });
         it("should delegate getTotalNumber to Manager", async () => {
             await ContestService.getTotalNumber(mockReq);
@@ -207,6 +219,49 @@ describe("ContestService Tests", function () {
             } catch (e: any) {
                 expect(e.statement).to.contain("Permission denied");
             }
+        });
+
+        it("should block a hidden public contest for a normal user", async () => {
+            cacheQueryStub.resolves([{
+                contest_id: 1000,
+                start_time: new Date(Date.now() - 10000),
+                cmod_visible: "0",
+                private: "0",
+                defunct: "Y"
+            }]);
+            try {
+                await ContestService.checkContestAccess(mockReq, 1000);
+                expect.fail("Should throw");
+            } catch (e: any) {
+                expect(e.statement).to.contain("Permission denied");
+            }
+        });
+
+        it("should allow a hidden contest for a listed contestant", async () => {
+            cacheQueryStub.resolves([{
+                contest_id: 1000,
+                start_time: new Date(Date.now() - 10000),
+                cmod_visible: "0",
+                private: "1",
+                defunct: "Y"
+            }]);
+            const listed = { session: { ...mockReq.session, contest: { c1000: true } } };
+            const res = await ContestService.checkContestAccess(listed, 1000);
+            expect(res.contest_id).to.equal(1000);
+        });
+
+        it("should allow a hidden contest for its maker and for contest managers", async () => {
+            cacheQueryStub.resolves([{
+                contest_id: 1000,
+                start_time: new Date(Date.now() - 10000),
+                cmod_visible: "0",
+                private: "0",
+                defunct: "Y"
+            }]);
+            const maker = { session: { ...mockReq.session, contest_maker: { m1000: true } } };
+            const manager = { session: { ...mockReq.session, contest_manager: true } };
+            expect((await ContestService.checkContestAccess(maker, 1000)).contest_id).to.equal(1000);
+            expect((await ContestService.checkContestAccess(manager, 1000)).contest_id).to.equal(1000);
         });
 
         it("should allow private contest if Assistant", async () => {

@@ -19,8 +19,13 @@ class ContestService {
         return await ContestManager.getContestListAsObjectByRequest(req);
     }
 
-    async getAllContestList() {
-        return await ContestManager.getAllContestList();
+    async getAllContestList(req: Request) {
+        const list = await ContestManager.getAllContestList();
+        if (req.session!.isadmin || req.session!.contest_manager) {
+            return list;
+        }
+        // same visibility rule as the paged contest list: hidden contests are for admins / contest managers only
+        return list.filter((contest: any) => contest.defunct === "N");
     }
 
     async getTotalNumber(req: Request) {
@@ -60,6 +65,16 @@ class ContestService {
         } else {
             if (parseInt(contestDetail.cmod_visible) === 1) {
                 throw new HttpError("Contest Mode Active", 403);
+            }
+        }
+
+        // Hidden Check: a hidden contest is only open to the people who can also submit to it
+        // (contest managers, listed contestants, assistants), same rule as SubmissionService.checkContestPrivilege.
+        if (contestDetail.defunct === "Y") {
+            const listed = req.session!.contest_manager || req.session!.contest?.[`c${cid}`]
+                || await ContestAssistantManager.userIsContestAssistant(cid, req.session!.user_id);
+            if (!listed) {
+                throw new HttpError("Permission denied", 403);
             }
         }
 

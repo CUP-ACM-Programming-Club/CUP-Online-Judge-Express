@@ -67,7 +67,7 @@ router.get("/v2/list", async (req: any, res: any) => {
 });
 
 router.get("/list/all", async (req: any, res: any) => {
-	res.json(await ContestService.getAllContestList());
+	res.json(await ContestService.getAllContestList(req));
 });
 
 router.get("/total", async (req: any, res: any) => {
