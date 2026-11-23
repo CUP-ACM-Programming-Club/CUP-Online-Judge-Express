@@ -20,12 +20,16 @@ class ContestService {
     }
 
     async getAllContestList(req: Request) {
-        const list = await ContestManager.getAllContestList();
+        // ContestManager wraps the rows as { status: "OK", data: [...] } (ErrorHandlerFactory(ok.okMaker))
+        const result = await ContestManager.getAllContestList();
         if (req.session!.isadmin || req.session!.contest_manager) {
-            return list;
+            return result;
         }
         // same visibility rule as the paged contest list: hidden contests are for admins / contest managers only
-        return list.filter((contest: any) => contest.defunct === "N");
+        if (result && Array.isArray(result.data)) {
+            return { ...result, data: result.data.filter((contest: any) => contest.defunct === "N") };
+        }
+        return result;
     }
 
     async getTotalNumber(req: Request) {

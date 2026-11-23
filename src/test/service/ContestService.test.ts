@@ -126,16 +126,17 @@ describe("ContestService Tests", function () {
             expect(contestManagerStub.getAllContestList.called).to.be.true;
         });
         it("should hide hidden contests from getAllContestList for normal users", async () => {
-            contestManagerStub.getAllContestList.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
-            const list = await ContestService.getAllContestList(mockReq);
-            expect(list.map((c: any) => c.contest_id)).to.deep.equal([1]);
+            contestManagerStub.getAllContestList.resolves({ status: "OK", data: [{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }] });
+            const res = await ContestService.getAllContestList(mockReq);
+            expect(res.status).to.equal("OK");
+            expect(res.data.map((c: any) => c.contest_id)).to.deep.equal([1]);
         });
         it("should keep hidden contests in getAllContestList for admins and contest managers", async () => {
-            contestManagerStub.getAllContestList.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
+            contestManagerStub.getAllContestList.resolves({ status: "OK", data: [{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }] });
             const admin = { session: { ...mockReq.session, isadmin: true } };
             const manager = { session: { ...mockReq.session, contest_manager: true } };
-            expect((await ContestService.getAllContestList(admin)).length).to.equal(2);
-            expect((await ContestService.getAllContestList(manager)).length).to.equal(2);
+            expect((await ContestService.getAllContestList(admin)).data.length).to.equal(2);
+            expect((await ContestService.getAllContestList(manager)).data.length).to.equal(2);
         });
         it("should delegate getTotalNumber to Manager", async () => {
             await ContestService.getTotalNumber(mockReq);
