@@ -1,5 +1,3 @@
-const simpleGit = require("simple-git");
-
 class GitManager {
     getFrontendGitVersion () {
 
