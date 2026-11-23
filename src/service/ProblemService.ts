@@ -120,7 +120,7 @@ class ProblemService {
             if (opt.source.length === 0) {
                 rows = await cache_query(`select a.*,privilege.user_id as creator
 from (SELECT * FROM problem WHERE problem_id = ?)a
-       left join privilege on privilege.rightstr = CONCAT('p', '?')`, [opt.id, opt.id]);
+       left join privilege on privilege.rightstr = CONCAT('p', ?)`, [opt.id, opt.id]);
             } else {
                 rows = await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [opt.id, opt.source]);
             }
