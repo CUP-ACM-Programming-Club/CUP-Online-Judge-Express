@@ -7,7 +7,7 @@ const rimraf = Bluebird.promisify(require("rimraf"));
 const jschardet = require("jschardet");
 const iconv = require("iconv-lite");
 const stripBom = require("strip-bom");
-const D2UConverter = require("dos2unix").dos2unix;
+import { dataUriToImageFile } from "../module/util/base64Image";
 
 interface ProblemFiles {
     input: any[];
@@ -167,10 +167,6 @@ class ProblemManageService {
         await this.writeFiles(save_path, inputFiles);
         await this.writeFiles(save_path, outputFiles);
 
-        // DOS2UNIX
-        const d2u = new D2UConverter({ glob: { cwd: __dirname } });
-        (d2u as any).process([`${save_path}/*`]);
-
         await this.writeFiles(save_path, special_judge);
 
         // Prefile handling
@@ -229,11 +225,10 @@ class ProblemManageService {
         const website_dir = this.config.website.dir;
         const picPath = path.join(website_dir, "images", problem_id.toString(), type);
         const { mkdirAsync } = require("../module/file/mkdir");
-        const base64Img = Bluebird.promisifyAll(require("base64-img"));
 
         await mkdirAsync(picPath);
         try {
-            await (base64Img as any).imgAsync(data, picPath, key);
+            await dataUriToImageFile(data, picPath, key);
         } catch (e) {
             console.log(e);
         }

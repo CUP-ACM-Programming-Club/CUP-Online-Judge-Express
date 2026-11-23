@@ -6,6 +6,7 @@ describe("ProblemManageService Tests", function () {
     let ProblemManageService: any;
     let queryStub: sinon.SinonStub;
     let fsStub: any;
+    let dataUriToImageFileStub: sinon.SinonStub;
     let previousLoad: any;
 
     const mockReq = {
@@ -30,8 +31,8 @@ describe("ProblemManageService Tests", function () {
             chownAsync: sinon.stub().resolves(),
             mkdirAsync: sinon.stub().resolves(),
             existsSync: sinon.stub().returns(false),
-            imgAsync: sinon.stub().resolves("/path/to/image.jpg")
         };
+        dataUriToImageFileStub = sinon.stub().resolves("/path/to/image.jpg");
 
         const bluebirdStub = {
             promisifyAll: (target: any) => fsStub, // check if target is fs? ignoring for now
@@ -51,7 +52,7 @@ describe("ProblemManageService Tests", function () {
             }
             if (request === "bluebird") return bluebirdStub;
             if (request === "rimraf") return () => { }; // mock rimraf function
-            if (request === "dos2unix") return { dos2unix: class { process() { } } };
+            if (request.endsWith("util/base64Image")) return { dataUriToImageFile: dataUriToImageFileStub };
             if (request === "jschardet") return { detect: () => ({ encoding: "utf8" }) };
             if (request === "iconv-lite") return { decode: (buf: any) => buf.toString() };
             if (request === "strip-bom") return (str: any) => str;
@@ -70,7 +71,7 @@ describe("ProblemManageService Tests", function () {
 
     // Mocking FS with Bluebird promisifyAll is tricky. 
     // Let's skip deep implementation details of FS mocking for now and test `createProblem`.
-    // FS mocking would require mocking `zlib`, `dos2unix` etc too.
+    // FS mocking would require mocking `zlib` etc too.
 
     describe("writeProblemData", () => {
         it("should write files to directory", async () => {
@@ -209,8 +210,11 @@ describe("ProblemManageService Tests", function () {
             expect(params).to.include("New Hint");
             expect(params).to.include(1); // spj
 
-            // Check image processing called (imgAsync on fsStub)
-            expect(fsStub.imgAsync.called).to.be.true;
+            // Check image processing called
+            expect(dataUriToImageFileStub.calledOnce).to.be.true;
+            expect(dataUriToImageFileStub.firstCall.args[0]).to.equal("img");
+            expect(dataUriToImageFileStub.firstCall.args[1]).to.match(/1000[\\/]description$/);
+            expect(dataUriToImageFileStub.firstCall.args[2]).to.equal("1");
 
             // Check cache clearing
             expect(problemInfoManagerStub.removeCache.called).to.be.true;

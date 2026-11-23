@@ -8,14 +8,6 @@ import Folder from "../../decorator/filesystem/parameter/Folder";
 import createFolderIfNotExists from "../util/filesystem/createFolderIfNotExists";
 import RunOnceEachKeyAsync from "../../decorator/RunOnceEachKeyAsync";
 
-const D2UConverter = require("dos2unix").dos2unix;
-const d2u = new D2UConverter({ glob: { cwd: __dirname } })
-    .on("error", function(err: any) {
-        console.error(err);
-    })
-    .on("end", function(stats: any) {
-        console.log(stats);
-    });
 class ProblemFileManager {
     constructor() {
     }
@@ -32,7 +24,6 @@ class ProblemFileManager {
     @CreateFolderIfNotExists
     async copyFileToDest(filePath: string, @Folder destPath: string) {
         await fs.promises.copyFile(filePath, destPath);
-        d2u.process([`${destPath}/*`]);
     }
 
     async removeFileFromDest(filePath: string) {

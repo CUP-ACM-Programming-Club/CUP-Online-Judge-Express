@@ -8,7 +8,6 @@ import ProblemManageService from "../service/ProblemManageService";
 const express = require("express");
 const website_dir = global.config.website.dir;
 const bluebird = require("bluebird");
-const base64Img = bluebird.promisifyAll(require("base64-img"));
 const { mkdirAsync } = require("../module/file/mkdir");
 const cache = require("../module/cachePool");
 const router = express.Router();

@@ -7,7 +7,7 @@ const path = require("path");
 const image_dir = path.join(website_dir, "images");
 const [error] = require("../module/const_var");
 const bluebird = require("bluebird");
-const base64Img = bluebird.promisifyAll(require("base64-img"));
+import { imageFileToDataUri } from "../module/util/base64Image";
 const fs = bluebird.promisifyAll(require("fs"));
 const isImage = require("is-image");
 const { mkdirAsync } = require("../module/file/mkdir");
@@ -32,7 +32,7 @@ async function readPhoto(problem_id: any, key: any) {
 	return await Promise.all(photoList.map(async (el: any) => {
 		return {
 			name: path.basename(el).substring(0, el.lastIndexOf(".")),
-			data: await base64Img.base64Async(path.join(dirPath, el))
+			data: await imageFileToDataUri(path.join(dirPath, el))
 		};
 	}));
 }
