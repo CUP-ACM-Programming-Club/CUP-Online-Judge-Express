@@ -6,9 +6,10 @@ import {ok} from "../constants/state";
 class ContestInfoManager {
 	async find (contestId: number) {
 		return Contest.findOne({
+			// 直接使用列名 contest_id（模型属性名为 contestId）；sequelize 会原样作为列名，v6 类型需显式放宽
 			where: {
 				contest_id: contestId
-			}
+			} as any
 		});
 	}
 

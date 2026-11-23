@@ -3,7 +3,9 @@ import { TYPES } from "../../di/types";
 import { ConfigService } from "../../service/ConfigService";
 import dayjs from "dayjs";
 const sequelize = require("../../orm/instance/sequelize");
-const User = sequelize.import("user", require("../../orm/models/users"));
+// sequelize v6 移除了 sequelize.import()；它对 (name, defineFn) 的调用等价于 defineFn(sequelize, DataTypes)
+const { DataTypes } = require("sequelize");
+const User = require("../../orm/models/users")(sequelize, DataTypes);
 const { encryptPassword } = require("../util");
 
 User.sync();

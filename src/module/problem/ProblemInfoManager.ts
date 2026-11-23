@@ -1,5 +1,7 @@
 const sequelize = require("../../orm/instance/sequelize");
-const Problem = sequelize.import("problem", require("../../orm/models/problem"));
+// sequelize v6 移除了 sequelize.import()；它对 (name, defineFn) 的调用等价于 defineFn(sequelize, DataTypes)
+const { DataTypes } = require("sequelize");
+const Problem = require("../../orm/models/problem")(sequelize, DataTypes);
 import ProblemCachePool from "./ProblemCachePool";
 import AwaitLock from "await-lock";
 const lock = new AwaitLock();

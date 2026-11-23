@@ -106,6 +106,10 @@ const mockSequelize = {
 	},
 	import(name) {
 		return modelProxy[name];
+	},
+	// sequelize v6 起旧式模型改为 defineFn(sequelize, DataTypes) 加载，会调用 define()
+	define(name) {
+		return modelProxy[name];
 	}
 };
 

@@ -12,12 +12,13 @@ export default function <T extends Model>(Model: ModelCtor<T>) {
     };
 
     MySQLStore.prototype.get = function (key: string) {
-        return Model.findOne({where: {key}});
+        // sequelize v6 的类型无法从泛型 T 推出 key 属性，运行时行为不变
+        return Model.findOne({where: {key} as any});
     };
 
     MySQLStore.prototype.remove = function (key: string) {
         return Model.destroy({
-            where: {key}
+            where: {key} as any
         });
     };
 
