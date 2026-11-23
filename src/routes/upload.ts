@@ -13,7 +13,8 @@ import ProblemManageService from "../service/ProblemManageService";
 
 let upload: any = false;
 try {
-	upload = multer({ dest: config.problem_upload_dest.dir });
+	// multer 2 默认按 latin1 解码文件名，显式指定 utf8 以保持 multer 1.4.4 的行为（中文文件名不乱码）
+	upload = multer({ dest: config.problem_upload_dest.dir, defParamCharset: "utf8" });
 } catch (e) {
 	console.error("Your upload directory in your config.json is invalid.Please modify it to a valid path.\nError message:", e);
 }

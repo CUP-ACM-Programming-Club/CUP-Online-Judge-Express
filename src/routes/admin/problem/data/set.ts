@@ -10,7 +10,8 @@ const storage = multer.diskStorage({
         cb(null, file.originalname)
     }
 });
-const middleware = multer({storage: storage});
+// multer 2 默认按 latin1 解码文件名，显式指定 utf8 以保持 multer 1.4.4 的行为（originalname 直接作为落盘文件名）
+const middleware = multer({storage: storage, defParamCharset: "utf8"});
 
 router.post("/:problemId", middleware.single("upload_file"), async (req, res) => {
     res.json(await ProblemFileManager.setFileByRequest(req));
