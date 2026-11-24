@@ -1,8 +1,9 @@
 import {Request} from "express";
 import {error} from "../../module/constants/state";
+import { canBrowseSource } from "../../policy/predicates";
 
 const checkPrivilege = (req: Request) => {
-    return req.session!.isadmin || req.session!.source_browser;
+    return canBrowseSource(req);
 };
 
 export default function ContestModeChecker(requestPos: number) {

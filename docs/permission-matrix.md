@@ -172,15 +172,15 @@
 | GET | `/runtime/:id` | auth | login |  | handler 从不响应（请求挂起）——功能缺陷，非权限 |  |
 | GET | `/scoreboard/:cid` | auth | contest-access(cid) | browserPrivilege = admin \| contest_manager \| assistant；敏感字段另加 maker(cid) |  |  |
 | GET | `/scoreboard/:cid/line` | auth | contest-access(cid) | 同上 |  |  |
-| GET | `/setting/ban_user` | auth → inline | admin |  |  |  |
-| GET | `/setting/ban_user/:user_id` | auth → inline | admin |  |  |  |
-| POST | `/setting/ban_user` | auth → inline | admin |  |  |  |
-| GET | `/setting/devconfig/config` | auth → inline | admin |  |  |  |
-| GET | `/setting/devconfig/switch` | auth → inline | admin |  |  |  |
-| POST | `/setting/devconfig/config/update` | auth → inline | admin |  |  |  |
-| POST | `/setting/devconfig/switch/update` | auth → inline | admin |  |  |  |
-| POST | `/setting/devconfig/config/delete` | auth → inline | admin |  |  |  |
-| POST | `/setting/devconfig/switch/delete` | auth → inline | admin |  |  |  |
+| GET | `/setting/ban_user` | auth → admin | admin |  |  |  |
+| GET | `/setting/ban_user/:user_id` | auth → admin | admin |  |  |  |
+| POST | `/setting/ban_user` | auth → admin | admin |  |  |  |
+| GET | `/setting/devconfig/config` | auth → admin | admin |  |  |  |
+| GET | `/setting/devconfig/switch` | auth → admin | admin |  |  |  |
+| POST | `/setting/devconfig/config/update` | auth → admin | admin |  |  |  |
+| POST | `/setting/devconfig/switch/update` | auth → admin | admin |  |  |  |
+| POST | `/setting/devconfig/config/delete` | auth → admin | admin |  |  |  |
+| POST | `/setting/devconfig/switch/delete` | auth → admin | admin |  |  |  |
 | GET | `/soa-proxy` | - | anonymous |  |  |  |
 | GET | `/soa-proxy/hello/:name` | - | anonymous |  |  |  |
 | GET | `/solution/info/:solutionId` | auth | admin \| owner（SolutionManager validator） |  |  |  |

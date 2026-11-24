@@ -1,14 +1,8 @@
 import AutoRouterUse from "../module/common/AutoRouterUse";
-import { error } from "../module/constants/state";
+import { requireAdmin } from "../policy/middleware";
 const router = AutoRouterUse.newRouter();
 import auth from "../middleware/auth";
-router.use((req, res, next) => {
-	if (!req.session!.isadmin) {
-		res.json(error.noprivilege);
-	} else {
-		next();
-	}
-});
+router.use(requireAdmin);
 
 AutoRouterUse.resolveDir(router, __dirname, "./setting");
 export = ["/setting", auth, router];

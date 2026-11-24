@@ -1,4 +1,7 @@
 import {Request} from "express";
+import { isAdmin } from "../../policy/predicates";
+
+/** 功能开关拦截器的“管理员绕过”判断，见 src/policy */
 export function isAdministrator (req: Request) {
-	return req && (<any>req.session) && !!(<any>req.session).isadmin;
+	return isAdmin(req);
 }

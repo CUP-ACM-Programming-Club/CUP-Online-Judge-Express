@@ -2,9 +2,10 @@ const cache_query = require("../module/mysql_cache");
 const [error] = require("../module/const_var");
 import dayjs from "dayjs";
 import { Request, Response, NextFunction } from "express";
+import { isAdmin } from "../policy/predicates";
 
 export = async (req: Request, res: Response, next: NextFunction) => {
-	if (req.session && req.session.isadmin) {
+	if (isAdmin(req)) {
 		if (typeof next === "function") {
 			next();
 		} else {
