@@ -6,6 +6,7 @@ const query = require("../../module/mysql_cache");
 
 describe("system router extra", function () {
 	let server;
+	let adminAgent;
 	const compilePath = path.join(__dirname, "..", "fixtures", "compile.json");
 
 	before(async function () {
@@ -18,9 +19,10 @@ describe("system router extra", function () {
 		await query("insert into users (user_id,password) values(?,?)",
 			["admin", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"]);
 		await query("insert into privilege (user_id,rightstr) values(?,?)", ["admin", "administrator"]);
+		adminAgent = request.agent(server);
 		await new Promise((done) => {
 			let data = { user_id: "admin", password: "123456" };
-			request(server)
+			adminAgent
 				.post("/login")
 				.send({
 					msg: Buffer.from(Buffer.from(JSON.stringify(data)).toString("base64")).toString("base64")
@@ -43,7 +45,7 @@ describe("system router extra", function () {
 	});
 
 	it("should return git info and dependencies", function (done) {
-		request(server)
+		adminAgent
 			.get("/system/config/version_control/git")
 			.expect(200)
 			.end(function (err, res) {
@@ -51,7 +53,7 @@ describe("system router extra", function () {
 					done(err);
 				}
 				expect(res.body).to.have.property("status").that.equal("OK");
-				request(server)
+				adminAgent
 					.get("/system/config/version_control/dependencies")
 					.expect(200)
 					.end(function (err2, res2) {
@@ -59,7 +61,7 @@ describe("system router extra", function () {
 							done(err2);
 						}
 						expect(res2.body).to.have.property("status").that.equal("OK");
-						request(server)
+						adminAgent
 							.get("/system/config/version_control/devDependencies")
 							.expect(200)
 							.end(function (err3, res3) {
@@ -71,6 +73,17 @@ describe("system router extra", function () {
 							});
 					});
 			});
+	});
+
+	it("git / dependencies / devDependencies 对未登录与非管理员拒绝（phase5 fix b）", async function () {
+		const noprivilege = require("../../module/constants/state").error.noprivilege;
+		for (const ep of ["git", "dependencies", "devDependencies"]) {
+			const res = await request(server).get(`/system/config/version_control/${ep}`).expect(200);
+			expect(res.body).to.deep.equal(noprivilege);
+		}
+		// version 仍然公开
+		const version = await request(server).get("/system/config/version_control/version").expect(200);
+		expect(version.body).to.have.property("status").that.equal("OK");
 	});
 
 	it("should return error when version info fails", async function () {
@@ -102,7 +115,7 @@ describe("system router extra", function () {
 			get: () => { throw new Error("mock error"); },
 			configurable: true
 		});
-		await request(server)
+		await adminAgent
 			.get("/system/config/version_control/git")
 			.expect(200)
 			.then(res => {
@@ -122,7 +135,7 @@ describe("system router extra", function () {
 			get: () => { throw new Error("mock error"); },
 			configurable: true
 		});
-		await request(server)
+		await adminAgent
 			.get("/system/config/version_control/dependencies")
 			.expect(200)
 			.then(res => {
@@ -142,7 +155,7 @@ describe("system router extra", function () {
 			get: () => { throw new Error("mock error"); },
 			configurable: true
 		});
-		await request(server)
+		await adminAgent
 			.get("/system/config/version_control/devDependencies")
 			.expect(200)
 			.then(res => {

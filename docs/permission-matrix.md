@@ -6,15 +6,15 @@
 
 - 路由总数（method + path，去重）：**224**；顶层路由均由 router_loader 同时挂在 `/x` 与 `/api/x`，下表只列 `/x`。
 - 计数（按有效要求归类）：
-  - admin: 83
+  - admin: 86
   - admin | editor: 4
   - admin | source_browser: 1
-  - anonymous: 21
+  - anonymous: 18
   - contest-specific: 10
   - init-only: 3
   - login: 93
   - owner / source-privilege: 9
-- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 1 条，见“已修复”列）
+- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 4 条，见“已修复”列）
 
 术语：
 - `login` = 经 `auth` 中间件（含 ban_check、contest_mode 刷新）；`admin` = `session.isadmin`；`editor` / `source_browser` / `contest_manager` 为全局权限位。
@@ -220,9 +220,9 @@
 | GET | `/status/solution` | auth | owner \| source-privilege(sid) \| share===1 | share 由 SQL 计算：share=1 或题解引用，且题目不在未结束的比赛中 |  |  |
 | GET | `/status/:sid/:tr` | auth → inline | login |  | 任意登录用户可读任意提交的编译错误 / 运行错误信息（绕过 runtime_info 的特权要求） |  |
 | GET | `/system/config/version_control/version` | - | anonymous | 前端“版本控制”页匿名调用，保持公开 |  |  |
-| GET | `/system/config/version_control/git` | - | anonymous |  | 匿名暴露仓库地址 |  |
-| GET | `/system/config/version_control/dependencies` | - | anonymous |  | 匿名暴露依赖及版本 |  |
-| GET | `/system/config/version_control/devDependencies` | - | anonymous |  | 匿名暴露开发依赖及版本 |  |
+| GET | `/system/config/version_control/git` | admin | admin（requireAdmin，无 auth，与 /system/log 一致） |  | 匿名暴露仓库地址 | phase5 fix(b)：限 admin（前端未调用） |
+| GET | `/system/config/version_control/dependencies` | admin | admin（requireAdmin，无 auth，与 /system/log 一致） |  | 匿名暴露依赖及版本 | phase5 fix(b)：限 admin（前端未调用） |
+| GET | `/system/config/version_control/devDependencies` | admin | admin（requireAdmin，无 auth，与 /system/log 一致） |  | 匿名暴露开发依赖及版本 | phase5 fix(b)：限 admin（前端未调用） |
 | GET | `/system/judge/compile` | - | anonymous | 前端“编译参数”页匿名调用，保持公开 |  |  |
 | GET | `/system/log/login/latest` | admin | admin | 只有 admin 中间件、没有 auth：靠 session.isadmin，不经 ban/contest_mode/权限刷新 |  |  |
 | GET | `/system/log/login/user/:userId` | admin | admin |  |  |  |

@@ -795,10 +795,14 @@ describe("权限矩阵（角色 × 接口）", function () {
 		}
 
 		for (const path of ["/system/config/version_control/git", "/system/config/version_control/dependencies", "/system/config/version_control/devDependencies"]) {
-			it(`${path}`, async function () {
-				await runCase({ name: path, path, expect: e("ok", {}, "ok") });
+			it(`${path}：只给管理员（phase5 fix b，之前匿名可读）`, async function () {
+				await runCase({ name: path, path, expect: e("deny", { admin: "ok" }, "deny") });
 			});
 		}
+
+		it("/system/stat/loadavg：仍然匿名（前端未用，低敏感，本阶段未改）", async function () {
+			await runCase({ name: "loadavg", path: "/system/stat/loadavg", expect: e("ok", {}, "ok") });
+		});
 	});
 
 	describe("contest_mode 开启", function () {

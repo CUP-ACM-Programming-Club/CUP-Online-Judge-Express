@@ -82,9 +82,9 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 	"GET /status": { note: "browse_code = admin | source_browser；ip/指纹/email 只对特权与本人保留" },
 
 	"GET /system/config/version_control/version": { note: "前端“版本控制”页匿名调用，保持公开" },
-	"GET /system/config/version_control/git": { flag: "匿名暴露仓库地址" },
-	"GET /system/config/version_control/dependencies": { flag: "匿名暴露依赖及版本" },
-	"GET /system/config/version_control/devDependencies": { flag: "匿名暴露开发依赖及版本" },
+	"GET /system/config/version_control/git": { req: "admin（requireAdmin，无 auth，与 /system/log 一致）", flag: "匿名暴露仓库地址", fixed: "phase5 fix(b)：限 admin（前端未调用）" },
+	"GET /system/config/version_control/dependencies": { req: "admin（requireAdmin，无 auth，与 /system/log 一致）", flag: "匿名暴露依赖及版本", fixed: "phase5 fix(b)：限 admin（前端未调用）" },
+	"GET /system/config/version_control/devDependencies": { req: "admin（requireAdmin，无 auth，与 /system/log 一致）", flag: "匿名暴露开发依赖及版本", fixed: "phase5 fix(b)：限 admin（前端未调用）" },
 	"GET /system/judge/compile": { note: "前端“编译参数”页匿名调用，保持公开" },
 	"GET /system/log/login/latest": { note: "只有 admin 中间件、没有 auth：靠 session.isadmin，不经 ban/contest_mode/权限刷新" },
 	"GET /system/stat/loadavg": { flag: "匿名可读服务器负载；前端未使用，本阶段未改（低敏感）" },
