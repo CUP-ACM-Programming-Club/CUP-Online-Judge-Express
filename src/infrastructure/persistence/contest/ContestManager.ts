@@ -1,34 +1,22 @@
-import AwaitLock from "await-lock";
 import Cacheable from "../../../shared/cache/Cacheable";
-import { Request } from "express";
-import "express-session";
 import Timer from "../../../shared/decorators/Timer";
-import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
-import { ok } from "../../../domain/constants/state";
 import isNumber from "../../../shared/isNumber";
-import ResponseLogger from "../../../interfaces/http/decorators/ResponseLogger";
+import ResponseLogger from "../../../shared/decorators/ResponseLogger";
 import CachePool from "../../../shared/cache/CachePool";
 import { MySQLManager } from "../../db/mysql/MySQLManager";
 import PrivilegeManager from "../user/PrivilegeManager";
-import { canSeeHiddenContests, isAdmin } from "../../../domain/policy/predicates";
+import ContestCachePool = require("../../cache/pools/ContestCachePool");
+import { ContestListCriteria } from "../../../application/ports/ContestRepository";
 const cache_query = require("../../db/legacy/mysql_cache");
-const ContestCachePool = require("../../../application/contest/ContestCachePool");
 const PAGE_SIZE = 50;
-function safeArrayParse(array: any[] | any) {
-    if (typeof array !== "object" && !array.length) {
-        return [];
-    }
-    return array.length ? array : Object.keys(array);
-}
-
 interface searchQuery {
     sql: string | null,
     sqlArr: any[]
 }
 
 /**
- * @deprecated Use src/service/ContestService.ts instead.
- * This class is kept for backward compatibility and internal usage by ContestService.
+ * 比赛表的数据访问（SQL 拼装 + 缓存）。从请求里推导筛选条件的部分在 application/services/ContestService，
+ * 这里只接收推导好的 ContestListCriteria。
  */
 class ContestManager {
     @Timer
@@ -87,17 +75,17 @@ class ContestManager {
         }
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async getTotalNumber(req: Request) {
-        const sql = this.buildSqlStructure(this.buildPrivilegeStr(req), this.getMyContestList(req));
+    /** 不带搜索条件的总数 */
+    async getTotalNumber(criteria: ContestListCriteria) {
+        const sql = this.buildSqlStructure(this.buildPrivilegeStr(criteria), this.getMyContestList(criteria.myContestIds));
         return await this.countTotalNumber(sql);
     }
 
     @Timer
-    getMyContestList(req: Request) {
+    getMyContestList(myContestIds: string[] | null) {
         let myContest = " 1 = 1 ";
-        if (req.query.myContest) {
-            myContest = `(${safeArrayParse(req.session!.contest_maker).concat(safeArrayParse(req.session!.contest)).map((el: any) => el.substring(1)).join(",")})`;
+        if (myContestIds) {
+            myContest = `(${myContestIds.join(",")})`;
             if (myContest === "()") {
                 myContest = " 1 = 1 ";
             } else {
@@ -108,13 +96,13 @@ class ContestManager {
     }
 
     @Timer
-    getSearchSql(req: Request) {
+    getSearchSql(search: string | null) {
         let sql = " 1 = 1 ";
-        if (typeof req.query.search === "string") {
+        if (typeof search === "string") {
             sql += ` and title like ? `;
             return {
                 sql,
-                sqlArr: [`%${req.query.search.trim()}%`]
+                sqlArr: [`%${search.trim()}%`]
             }
         }
 
@@ -124,34 +112,19 @@ class ContestManager {
         }
     }
 
-    buildLimit(req: Request) {
-        const page: any = req.query.page;
+    buildLimit(page: any) {
         const limit = (isNumber(page) ? parseInt(page) : 0) * PAGE_SIZE;
         return limit < 0 ? 0 : limit;
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
     @Timer
-    async getContestList(req: Request) {
-        return await this.getContestListByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.getSearchSql(req), this.buildLimit(req));
+    async getContestList(criteria: ContestListCriteria) {
+        return await this.getContestListByConditional(this.buildPrivilegeStr(criteria), this.getMyContestList(criteria.myContestIds), this.getSearchSql(criteria.search), this.buildLimit(criteria.page));
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
     @Timer
-    async getContestListAsObjectByRequest(req: Request) {
-        let resultList: any[];
-        let resultCount: any;
-        [resultList, resultCount] = await Promise.all([this.getContestList(req), this.getContestListCountByConditional(this.buildPrivilegeStr(req), this.getMyContestList(req), this.getSearchSql(req))]);
-        return {
-            contestInfoList: resultList,
-            total: resultCount
-        }
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    @Timer
-    async getAllContestList() {
-        return await this.getAllContest();
+    async getContestListCount(criteria: ContestListCriteria) {
+        return await this.getContestListCountByConditional(this.buildPrivilegeStr(criteria), this.getMyContestList(criteria.myContestIds), this.getSearchSql(criteria.search));
     }
 
     @Timer
@@ -183,14 +156,13 @@ class ContestManager {
     }
 
     @Timer
-    private buildPrivilegeStr(req: Request) {
+    buildPrivilegeStr(criteria: Pick<ContestListCriteria, "canSeeHidden" | "contestMode" | "isAdmin">) {
         let admin_str = " 1 = 1 ";
-        if (!canSeeHiddenContests(req)) {
+        if (!criteria.canSeeHidden) {
             admin_str += " and defunct = 'N' ";
         }
-        // @ts-ignore
-        if (global.contest_mode) {
-            admin_str = `${admin_str} and cmod_visible = '${!isAdmin(req) ? 1 : 0}'`;
+        if (criteria.contestMode) {
+            admin_str = `${admin_str} and cmod_visible = '${!criteria.isAdmin ? 1 : 0}'`;
         }
         return admin_str;
     }

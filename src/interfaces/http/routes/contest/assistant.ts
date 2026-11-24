@@ -1,9 +1,9 @@
 import express from "express";
-import ContestAssistantManager from "../../../../infrastructure/persistence/contest/ContestAssistantManager";
+import ContestAssistantController from "../../controllers/ContestAssistantController";
 const router = express.Router();
 
 router.get("/:contest_id", async (req, res) => {
-    res.json(await ContestAssistantManager.userIsContestAssistantByRequest(req));
+    res.json(await ContestAssistantController.userIsContestAssistant(req));
 });
 
 export = ["/assistant", router];

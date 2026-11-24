@@ -1,7 +1,6 @@
-import query from "../../../infrastructure/db/legacy/mysql_query";
-import { MySQLManager } from "../../../infrastructure/db/mysql/MySQLManager";
+import { adminContestRepository } from "../../ports/AdminContestRepository";
 import ProblemSetCachePool from "../../problemset/ProblemSetCachePool";
-import ContestCachePool from "../../contest/ContestCachePool";
+import { contestCache as ContestCachePool } from "../../ports/ContestCache";
 import { ConfigManager } from "../../ports/Config";
 import dayjs from "dayjs";
 import {
@@ -30,8 +29,8 @@ class AdminContestService {
         }
         const offset = page * limit;
         const [data, count] = await Promise.all([
-            query(`select * from contest ${[where, orderBy].join(" ")} limit ?,?`, [offset, limit]),
-            query(`select count(1) as cnt from contest ${[where, orderBy].join(" ")}`)
+            adminContestRepository.findContestPage(where, orderBy, offset, limit),
+            adminContestRepository.countContests(where, orderBy)
         ]);
 
         return {
@@ -42,11 +41,11 @@ class AdminContestService {
 
     // Adapted from module/admin/defunct.ts
     async toggleContestDefunct(contestId: number) {
-        const res = await query("select defunct from contest where contest_id = ?", [contestId]);
+        const res = await adminContestRepository.findContestDefunct(contestId);
         if (res.length > 0) {
             const current = res[0].defunct;
             const next = current === "Y" ? "N" : "Y";
-            await query("update contest set defunct = ? where contest_id = ?", [next, contestId]);
+            await adminContestRepository.updateContestDefunct(contestId, next);
             return next;
         }
     }
@@ -66,11 +65,10 @@ class AdminContestService {
         }
         defunct = defunct ? "Y" : "N"; // Align with existing logic
 
-        let sql = `insert into contest(title, start_time, end_time, private, langmask, description, password, vjudge,
-    ip_policy, cmod_visible, limit_hostname,defunct,maker,show_all_ranklist, show_sim) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-
-        const response = await query(sql, [title, startTime, endTime, Public ? "0" : "1", langmask, description, password, 0, classroomSelected, ContestMode,
-            hostname, defunct, userId, showAllRanklist, showSim]);
+        const response = await adminContestRepository.insertContest({
+            title, startTime, endTime, private: Public ? "0" : "1", langmask, description, password, ipPolicy: classroomSelected, cmodVisible: ContestMode,
+            limitHostname: hostname, defunct, showAllRanklist, showSim
+        }, userId);
         const contest_id = response.insertId;
 
         // Non-transactional logic from add.ts (could be improved to transaction, but keeping consistent for now)
@@ -86,8 +84,7 @@ class AdminContestService {
 
     // Adapted from routes/admin/contest/edit.ts
     async updateContest(contestId: number, data: any) {
-        const rawConnection = await MySQLManager.getConnection();
-        const connection = (rawConnection as any).promise();
+        const connection = await adminContestRepository.openConnection();
         try {
             await connection.beginTransaction();
             let { ContestMode, Public, classroomSelected, title, defunct, description, hostname, langmask } = trimProperty(data);
@@ -106,12 +103,10 @@ class AdminContestService {
             }
             defunct = defunct ? "Y" : "N";
 
-            let sql = `update contest set title = ?,description = ?, start_time = ?, end_time = ?, private = ?, langmask = ?,
-        limit_hostname = ?, password = ?, vjudge = 0, cmod_visible = ?, ip_policy = ?, defunct = ?,
-        show_all_ranklist = ?, show_sim = ? where contest_id = ?`;
-
-            await connection.query(sql, [title, description, startTime, endTime, Public ? "0" : "1", langmask, hostname, password, ContestMode, classroomSelected,
-                defunct, showAllRanklist, showSim, contestId]);
+            await adminContestRepository.updateContest(connection, contestId, {
+                title, description, startTime, endTime, private: Public ? "0" : "1", langmask, limitHostname: hostname, password, cmodVisible: ContestMode,
+                ipPolicy: classroomSelected, defunct, showAllRanklist, showSim
+            });
 
             await removeAllContestProblemWithTransaction(connection, contestId);
             await addContestProblemWithTransaction(connection, contestId, problemSelected);
@@ -131,7 +126,7 @@ class AdminContestService {
     }
 
     async getContestCompetitors(contestId: number | string) {
-        return await query("select user_id from privilege where rightstr = ?", [`c${contestId}`]);
+        return await adminContestRepository.findContestCompetitors(contestId);
     }
 }
 

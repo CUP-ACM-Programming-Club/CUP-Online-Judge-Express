@@ -3,8 +3,7 @@ import { isAdmin, isContestAssistant, isContestMakerStrict, isContestManager } f
 import express from "express";
 const router = express.Router();
 const { error, ok } = require("../../../../domain/constants/state");
-const ContestService = require("../../../../application/services/ContestService").default;
-const ProblemInfoManager = require("../../../../infrastructure/persistence/problem/ProblemInfoManager");
+const ContestProblemInfoUseCases = require("../../../../application/contest/ContestProblemInfoUseCases").default;
 
 async function privilegeMiddleware(req: any, res: any, next: any) {
 	// 注意：本中间件挂在挂载层（见文件末尾导出），此时 req.params.contestId 尚未解析，contestId 为 NaN，
@@ -21,36 +20,7 @@ async function privilegeMiddleware(req: any, res: any, next: any) {
 router.get("/:contestId", async (req: any, res: any) => {
 	try {
 		const contestId = parseInt(req.params.contestId);
-		// Using Service to get list (uncached for now per request logic but service caches list)
-		// Original code: await getProblemInfo(contestId, false) -> false means LOCAL? vjudge argument.
-		// Wait, module/contest/problem exports function(cid, vjudge).
-		// Here second arg is false.
-		// ContestService.getContestProblemList detects vjudge from contest info.
-		// It fetches contest info first.
-		// So ContestService is better.
-		const result = await ContestService.getContestProblemList(req, contestId);
-		const contestProblemInfo = result.data;
-		const problemInfo = (await Promise
-			.all(contestProblemInfo
-				.map((e: any) => ProblemInfoManager
-					.newInstance()
-					.setProblemId(e.pid)
-					.find()
-				)
-			)
-		).map((e: any) => {
-			const ret = e.get();
-			return {
-				problem_id: ret.problem_id,
-				title: ret.title,
-				source: ret.source,
-				label: ret.label,
-				in_date: ret.in_date,
-				accepted: ret.accepted,
-				submit: ret.submit,
-				solved: ret.solved
-			};
-		});
+		const problemInfo = await ContestProblemInfoUseCases.getProblemInfoList(req, contestId);
 		res.json(ok.okMaker(problemInfo));
 	}
 	catch (e) {

@@ -437,9 +437,9 @@ describe("权限矩阵（角色 × 接口）", function () {
 		});
 
 		it("POST /admin/contest/assistant/remove：走移除助教（phase5 fix a，之前被 /:topicId 遮蔽）", async function () {
-			const ContestAssistantManager = require("../../infrastructure/persistence/contest/ContestAssistantManager").default;
-			const removeStub = sinon.stub(ContestAssistantManager, "removeContestAssistantByRequest").resolves({ status: "OK", data: "remove" });
-			const topicStub = sinon.stub(ContestAssistantManager, "setContestAssistantByTopicByRequest").resolves({ status: "OK", data: "topic" });
+			const ContestAssistantController = require("../../interfaces/http/controllers/ContestAssistantController").default;
+			const removeStub = sinon.stub(ContestAssistantController, "removeContestAssistant").resolves({ status: "OK", data: "remove" });
+			const topicStub = sinon.stub(ContestAssistantController, "setContestAssistantByTopic").resolves({ status: "OK", data: "topic" });
 			try {
 				const res = await client("admin").post("/admin/contest/assistant/remove").send({ contestId: C_PRIVATE, userId: USER.assistant });
 				expect(res.body).to.deep.equal({ status: "OK", data: "remove" });

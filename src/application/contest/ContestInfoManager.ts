@@ -1,22 +1,18 @@
-import { contest as Contest } from "../../infrastructure/orm/ts-model";
+import { contestRepository } from "../ports/ContestRepository";
 import { Request } from "express";
 import {ErrorHandlerFactory} from "../../shared/decorators/ErrorHandler";
 import {ok} from "../../domain/constants/state";
 
 class ContestInfoManager {
+	/** 返回 ORM 模型实例（或 null），调用方用 .get() 取值 */
 	async find (contestId: number) {
-		return Contest.findOne({
-			// 直接使用列名 contest_id（模型属性名为 contestId）；sequelize 会原样作为列名，v6 类型需显式放宽
-			where: {
-				contest_id: contestId
-			} as any
-		});
+		return contestRepository.findContestModel(contestId);
 	}
 
 	@ErrorHandlerFactory(ok.okMaker)
 	async getConfigByRequest(req: Request) {
 		const contestId: number = parseInt(req.params.contestId);
-		const contestInfo: Contest = (await this.find(contestId))!.get() as Contest;
+		const contestInfo: any = (await this.find(contestId))!.get();
 		return {
 			showSim: contestInfo.showSim
 		}
