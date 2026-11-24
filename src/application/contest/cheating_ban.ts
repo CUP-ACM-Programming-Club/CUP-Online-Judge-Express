@@ -1,5 +1,6 @@
 const {assertInt, assertString} = require("../util");
-const query = require("../../infrastructure/db/legacy/mysql_query");
+import { contestCheatRepository } from "../ports/ContestCheatRepository";
+import { ContestCheatingRecorder } from "../ports/ContestCheatingRecorder";
 const dayjs = require("dayjs");
 const BanModel = require("../user/ban");
 const cache = {} as any;
@@ -17,8 +18,7 @@ function getSet(contest: number | string, user_id: string) {
 
 async function addToDatabase(payload: ICheatPayload) {
 	const {user_id, solution_id, contest, num} = payload;
-	await query("insert into contest_cheat(contest_id, solution_id, user_id, num, checked) values(?,?,?,?,?)",
-		[contest, solution_id, user_id, num, false]);
+	await contestCheatRepository.insertCheat({user_id, solution_id, contest, num});
 }
 
 function addToCache(payload: ICheatPayload) {
@@ -41,7 +41,7 @@ async function banUser(user_id: string, datetime: string) {
 }
 
 async function removeBannedSolution(contest: number | string, user_id: string) {
-	await Promise.all([...getSet(contest, user_id)].map(el => query("update contest_cheat set checked = true where solution_id = ?", [el])));
+	await Promise.all([...getSet(contest, user_id)].map(el => contestCheatRepository.markChecked(el as any)));
 }
 
 async function banChecker(contest: number | string, user_id: string) {
@@ -51,7 +51,7 @@ async function banChecker(contest: number | string, user_id: string) {
 	}
 }
 
-export class Cheating {
+export class Cheating implements ContestCheatingRecorder {
 	initContest(contest: number | string) {
 		if (!Object.prototype.hasOwnProperty.call(cache, contest)) {
 			cache[contest] = {};
@@ -69,7 +69,7 @@ export class Cheating {
 	}
 
 	async getCheatingList(contest: number | string, userId: string) {
-		const result = await query("select * from contest_cheat where user_id = ? and contest_id = ?", [userId, contest]);
+		const result = await contestCheatRepository.findCheats(userId, contest);
 		return result.map((el: any) => el.solution_id);
 	}
 

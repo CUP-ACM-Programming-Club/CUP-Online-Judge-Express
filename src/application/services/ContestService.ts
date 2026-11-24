@@ -2,26 +2,63 @@
 import { Request } from "express";
 import dayjs from "dayjs";
 import { error, ok } from "../../domain/constants/state";
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
-import query = require("../../infrastructure/db/legacy/mysql_query");
-import ContestManager from "../../infrastructure/persistence/contest/ContestManager";
-import ContestCachePool = require("../contest/ContestCachePool");
+import { ContestListCriteria, contestRepository } from "../ports/ContestRepository";
+import { contestCache as ContestCachePool } from "../ports/ContestCache";
 import HttpError from "../../domain/errors/HttpError";
-import { assertCanViewContest, canBrowseSource, canManageContest, canSeeHiddenContests } from "../../domain/policy/predicates";
+import { ErrorHandlerFactory } from "../../shared/decorators/ErrorHandler";
+import { assertCanViewContest, canBrowseSource, canManageContest, canSeeHiddenContests, isAdmin } from "../../domain/policy/predicates";
+
+function safeArrayParse(array: any[] | any) {
+    if (typeof array !== "object" && !array.length) {
+        return [];
+    }
+    return array.length ? array : Object.keys(array);
+}
+
+/**
+ * 从请求推导比赛列表的筛选条件（顺序与原 ContestManager 一致：权限 → 我的比赛 → 搜索 → 页码）。
+ * 「我的比赛」= session.contest_maker 与 session.contest 的键去掉首字母（m / c）。
+ */
+export function buildContestListCriteria(req: Request): ContestListCriteria {
+    const canSeeHidden = canSeeHiddenContests(req);
+    // @ts-ignore
+    const contestMode = !!global.contest_mode;
+    const admin = isAdmin(req);
+    let myContestIds: string[] | null = null;
+    if (req.query.myContest) {
+        myContestIds = safeArrayParse(req.session!.contest_maker).concat(safeArrayParse(req.session!.contest)).map((el: any) => el.substring(1));
+    }
+    const search = typeof req.query.search === "string" ? req.query.search : null;
+    return { canSeeHidden, isAdmin: admin, contestMode, myContestIds, search, page: req.query.page };
+}
 
 class ContestService {
 
+    @ErrorHandlerFactory(ok.okMaker)
     async getContestList(req: Request) {
-        return await ContestManager.getContestList(req);
+        return await contestRepository.listContests(buildContestListCriteria(req));
     }
 
+    @ErrorHandlerFactory(ok.okMaker)
     async getContestListAsObject(req: Request) {
-        return await ContestManager.getContestListAsObjectByRequest(req);
+        let resultList: any;
+        let resultCount: any;
+        // contestInfoList 是 getContestList 包装后的 {status, data}（原样保留）
+        [resultList, resultCount] = await Promise.all([this.getContestList(req), contestRepository.countContests(buildContestListCriteria(req))]);
+        return {
+            contestInfoList: resultList,
+            total: resultCount
+        }
+    }
+
+    @ErrorHandlerFactory(ok.okMaker)
+    private async findAllContests() {
+        return await contestRepository.findAllContests();
     }
 
     async getAllContestList(req: Request) {
-        // ContestManager wraps the rows as { status: "OK", data: [...] } (ErrorHandlerFactory(ok.okMaker))
-        const result = await ContestManager.getAllContestList();
+        // 包装成 { status: "OK", data: [...] }（ErrorHandlerFactory(ok.okMaker)）
+        const result: any = await this.findAllContests();
         if (canSeeHiddenContests(req)) {
             return result;
         }
@@ -32,8 +69,9 @@ class ContestService {
         return result;
     }
 
+    @ErrorHandlerFactory(ok.okMaker)
     async getTotalNumber(req: Request) {
-        return await ContestManager.getTotalNumber(req);
+        return await contestRepository.countAllMatching(buildContestListCriteria(req));
     }
 
     /**
@@ -46,7 +84,7 @@ class ContestService {
             throw new HttpError("Invalid Contest ID", 400);
         }
 
-        const contest = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]);
+        const contest = await contestRepository.findContestById(cid);
         if (!contest || contest.length === 0) {
             throw new HttpError("Contest not found", 404);
         }
@@ -64,10 +102,7 @@ class ContestService {
             return cache.data;
         }
 
-        const contest_general_detail = await cache_query(`select t1.contest_id,t1.title,t1.start_time,
-		t1.end_time,t1.description,t1.cmod_visible,t2.total_problem from (select * from contest where contest_id = ?)t1
-  left join (select count(1)total_problem,contest_id from contest_problem where contest_id = ?)t2
-  on t1.contest_id = t2.contest_id`, [cid, cid]);
+        const contest_general_detail = await contestRepository.findContestGeneralDetail(cid);
 
         if (contest_general_detail.length < 1) {
             throw new HttpError("Contest not found", 404, error.invalidParams);
@@ -86,88 +121,13 @@ class ContestService {
         // Fetch Problems (Cached)
         // This query matches the complicated logic in module/contest/problem.js
         const vjudge = contestDetail.vjudge;
-        if (vjudge) {
-            contestProblemList = await cache_query(`select * from (SELECT \`problem\`.\`title\` as \`title\`,\`problem\`.\`problem_id\` as \`pid\`,source as source,"LOCAL" as oj_name,contest_problem.num as pnum
-		FROM \`contest_problem\`,\`problem\`
-		WHERE \`contest_problem\`.\`problem_id\`=\`problem\`.\`problem_id\` 
-		AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\` IS NULL ORDER BY \`contest_problem\`.\`num\` 
-                ) problem
-                left join (select problem_id pid1,num,count(1) accepted from solution where result=4 and contest_id= ? group by pid1) p1 on problem.pid=p1.pid1
-                left join (select problem_id pid2,num,count(1) submit from solution where contest_id= ?  group by pid2) p2 on problem.pid=p2.pid2
-union all
-select * from (SELECT \`vjudge_problem\`.\`title\` as \`title\`,\`vjudge_problem\`.\`problem_id\` as \`pid\`,"" as source,source as oj_name,contest_problem.num as pnum FROM
- \`contest_problem\`,\`vjudge_problem\`
-WHERE \`contest_problem\`.\`problem_id\`=\`vjudge_problem\`.\`problem_id\`
-AND \`contest_problem\`.\`contest_id\`= ? AND \`contest_problem\`.\`oj_name\`=\`vjudge_problem\`.\`source\` ORDER BY \`contest_problem\`.\`num\`) vproblem
-left join(select problem_id pid1,num,count(1) accepted from vjudge_solution where result=4 and contest_id= ? group by num) vp1 on vproblem.pid=vp1.pid1 and vproblem.pnum=vp1.num
-left join(select problem_id pid2,num,count(1) submit from vjudge_solution where contest_id= ? group by num) vp2 on vproblem.pid=vp2.pid2 and vproblem.pnum=vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]);
-        } else {
-            contestProblemList = await cache_query(`select *
-from (SELECT
-        \`problem\`.\`title\`      as \`title\`,
-        \`problem\`.\`problem_id\` as \`pid\`,
-        source                 as source,
-        contest_problem.num    as pnum
-
-      FROM \`contest_problem\`, \`problem\`
-
-      WHERE \`contest_problem\`.\`problem_id\` = \`problem\`.\`problem_id\`
-
-            AND \`contest_problem\`.\`contest_id\` = ? AND \`contest_problem\`.\`oj_name\` IS NULL
-      ORDER BY \`contest_problem\`.\`num\`
-     ) problem
-  left join (select
-               problem_id pid1,
-               num,
-               count(1)   accepted
-             from solution
-             where result = 4 and contest_id = ?
-             group by pid1) p1 on problem.pid = p1.pid1
-  left join (select
-               problem_id pid2,
-               num,
-               count(1)   submit
-             from solution
-             where contest_id = ?
-             group by pid2) p2 on problem.pid = p2.pid2
-union all
-select *
-from (SELECT
-        \`vjudge_problem\`.\`title\`      as \`title\`,
-        \`vjudge_problem\`.\`problem_id\` as \`pid\`,
-        source                        as source,
-        contest_problem.num           as pnum
-      FROM
-        \`contest_problem\`, \`vjudge_problem\`
-      WHERE \`contest_problem\`.\`problem_id\` = \`vjudge_problem\`.\`problem_id\`
-            AND \`contest_problem\`.\`contest_id\` = ? AND \`contest_problem\`.\`oj_name\` = \`vjudge_problem\`.\`source\`
-      ORDER BY \`contest_problem\`.\`num\`) vproblem
-  left join (select
-               problem_id pid1,
-               num,
-               count(1)   accepted
-             from vjudge_solution
-             where result = 4 and contest_id = ?
-             group by num) vp1 on vproblem.pid = vp1.pid1 and vproblem.pnum = vp1.num
-  left join (select
-               problem_id pid2,
-               num,
-               count(1)   submit
-             from vjudge_solution
-             where contest_id = ?
-             group by num) vp2 on vproblem.pid = vp2.pid2 and vproblem.pnum = vp2.num
-order by pnum;`, [cid, cid, cid, cid, cid, cid]);
-        }
+        contestProblemList = await contestRepository.findContestProblems(cid, !!vjudge);
 
         // Fetch User Submission Status (Uncached/Short Cache?) - User specific
         // We only need to know if they AC'd or attempted
-        const submission_data = await cache_query(`select count(1) as cnt,problem_id,result,language from solution where 
-			user_id = ? and contest_id = ?
-and result <> 13
-group by problem_id,result`, [req.session!.user_id, cid]);
+        const submission_data = await contestRepository.findUserSubmissionSummary(req.session!.user_id, cid);
 
-        const limit_data = await cache_query("select limit_hostname from contest where contest_id = ?", [cid]);
+        const limit_data = await contestRepository.findContestLimitHostname(cid);
 
         // Merge User Status
         const submission_map: any = {};
@@ -235,20 +195,8 @@ group by problem_id,result`, [req.session!.user_id, cid]);
         // I will keep it open to avoid breaking changes, but maybe I should check if contest exists.
 
         const [contest_statistics_detail, total] = await Promise.all([
-            cache_query(`SELECT
-  \`result\`,
-  \`num\`,
-  \`language\`
-FROM \`solution\`
-WHERE \`contest_id\` = ? and num >= 0
-union all SELECT
-            \`result\`,
-            \`num\`,
-            \`language\`
-          FROM \`vjudge_solution\`
-          WHERE \`contest_id\` = ? and num >= 0`, [cid, cid])
-            ,
-            cache_query("select count(1)total_problem,contest_id from contest_problem where contest_id = ?", [cid])
+            contestRepository.findContestStatistics(cid),
+            contestRepository.countContestProblems(cid)
         ]);
 
         return {
@@ -263,7 +211,7 @@ union all SELECT
             throw new HttpError("Invalid Contest ID", 400, error.invalidParams);
         }
 
-        const contest_detail = await cache_query("select * from contest where contest_id = ?", [cid]);
+        const contest_detail = await contestRepository.findContestForPassword(cid);
         if (contest_detail.length < 1) {
             throw new HttpError("Contest not found", 404, error.invalidParams);
         }
@@ -273,10 +221,7 @@ union all SELECT
             req.session!.contest[`c${cid}`] = true;
 
             // Async privilege update
-            query("select * from privilege where user_id = ? and rightstr = ?", [req.session!.user_id, `c${cid}`])
-                .then((rows: any) => (rows.length === 0) ?
-                    query("insert into privilege(user_id,rightstr)values(?,?)", [req.session!.user_id, `c${cid}`]) : false
-                );
+            contestRepository.grantContestPrivilege(req.session!.user_id, cid);
 
             return { status: "OK" };
         } else {
@@ -285,8 +230,8 @@ union all SELECT
     }
     async getContestProblemDetails(req: Request, cid: number, pid: number, sid?: number) {
         const [contest, result] = await Promise.all([
-            cache_query("SELECT * FROM contest WHERE contest_id = ?", [cid]),
-            cache_query("SELECT * FROM contest_problem WHERE contest_id = ? and num = ?", [cid, pid])
+            contestRepository.findContestById(cid),
+            contestRepository.findContestProblem(cid, pid)
         ]);
 
         if (!contest || contest.length === 0) {

@@ -1,9 +1,9 @@
 import express, {Router} from "express";
-import ContestSetWithListManager from "../../../../../infrastructure/persistence/contestset/ContestSetWithListManager";
+import ContestSetController from "../../../controllers/ContestSetController";
 const router: Router =  express.Router();
 
 router.post("/", async (req, res) => {
-    res.json(await ContestSetWithListManager.addContestSet(req));
+    res.json(await ContestSetController.addContestSet(req));
 });
 
 export = ["/add", router];

@@ -5,7 +5,8 @@
  * - 权限位来自 session，由 src/module/login_action.ts 在登录 / 权限刷新时写入：
  *   isadmin、editor、source_browser、contest_manager（全局位，布尔），
  *   contest{c<cid>}、contest_maker{m<cid>}、problem_maker{p<pid>}（按 id 的 map）。
- *   比赛助教不在 session 里，查 ContestAssistantManager（缓存 1 小时）。
+ *   比赛助教不在 session 里，通过注入的 ContestAssistantLookup 查询（组装根把它接到 application 的
+ *   ContestAssistantRepository 端口，实现是 ContestAssistantManager，缓存 1 小时）。
  * - 这里的每个函数都逐字搬自原来散落在路由 / service 里的表达式，语义必须与之完全一致；
  *   改动任何一个都会改变线上权限，先改 src/test/policy/permission-matrix.test.ts 的期望并说明理由。
  * - 谓词只回答“是否满足”，返回 boolean；原代码把 session 原值直接回显给前端的字段（如 `isadmin: req.session.isadmin`）
@@ -93,13 +94,26 @@ export function isProblemMakerStrict(req: any, pid: number | string): boolean {
 	return !!req.session.problem_maker[`p${pid}`];
 }
 
+/**
+ * 「某用户是否为某比赛的助教（含所属专题的助教）」的查询。domain 不碰 I/O，由组装根（main/compose/contest）注入。
+ */
+export type ContestAssistantLookup = (cid: number | string, userId: string) => Promise<boolean>;
+
+let contestAssistantLookup: ContestAssistantLookup | undefined;
+
+/** 注入助教查询（只应由组装根调用；测试里也可以临时替换，返回原来的查询便于恢复）。 */
+export function provideContestAssistantLookup(lookup: ContestAssistantLookup | undefined): ContestAssistantLookup | undefined {
+	const previous = contestAssistantLookup;
+	contestAssistantLookup = lookup;
+	return previous;
+}
+
 /** 比赛助教（含所属专题的助教），沿用 ContestAssistantManager 的 1 小时缓存；userId 必须是字符串 */
 export async function isContestAssistant(cid: number | string, userId: string): Promise<boolean> {
-	// 调用时再取模块：既避免与 manager 层的循环依赖，也让按模块路径替换 ContestAssistantManager 的单元测试照常生效
-	// 取 default 的方式与 TS esModuleInterop 的 `import X from` 相同（__importDefault）
-	const mod = require("../../infrastructure/persistence/contest/ContestAssistantManager");
-	const ContestAssistantManager = mod && mod.__esModule ? mod.default : mod;
-	return await ContestAssistantManager.userIsContestAssistant(cid, userId);
+	if (!contestAssistantLookup) {
+		throw new Error("比赛助教查询还没有注入（应在 main/compose 里 provideContestAssistantLookup）");
+	}
+	return await contestAssistantLookup(cid, userId);
 }
 
 // ---------------------------------------------------------------- 组合规则

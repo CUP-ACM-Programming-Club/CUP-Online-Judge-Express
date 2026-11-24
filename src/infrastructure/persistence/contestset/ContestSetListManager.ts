@@ -1,24 +1,7 @@
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {Request} from "express";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {error, ok} from "../../../domain/constants/state";
-import ContestSetManager from "./ContestSetManager";
+import { ContestSetListDAO as IContestSetListDAO, ContestSetListItem as IContestSetList } from "../../../application/ports/ContestSetRepository";
 
-interface IContestSetListDAO {
-    contestset_id: number,
-    contest_id: number,
-    contest_set_record_id: number,
-    title: string,
-    start_time: string,
-    end_time: string,
-    maker: string
-}
-
-interface IContestSetList {
-    contestSetId: number,
-    contestId: number
-}
-
+/** 比赛集与比赛的关联（contest_set_list）的数据访问。 */
 class ContestSetListManager {
     async getContestSetListByContestSetId(contestSetId: number | string): Promise<IContestSetListDAO[]> {
         return await MySQLManager.execQuery(`
@@ -28,28 +11,9 @@ contest on
 contest.contest_id = clist.contest_id`, [contestSetId]);
     }
 
-    async checkLimitToAccess(req: Request, contestSetId: string | number) {
-        const result = await ContestSetManager.hasLimitToAccessContestSet(req, contestSetId);
-        if (!result) {
-            throw new Error(error.noprivilege.statement);
-        }
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getContestSetListByRequest(req: Request) {
-        const contestSetId = req.params.contestSetId;
-        await this.checkLimitToAccess(req, contestSetId);
-        return await this.getContestSetListByContestSetId(contestSetId);
-    }
-
     async getContestListByContestSetId (contestSetId: string | number) {
         const response = await this.getContestSetListByContestSetId(contestSetId) || [];
         return response.map(e => e.contest_id);
-    }
-
-    async getContestListByContestSetIdByRequest (req: Request) {
-        const contestSetId = req.body.contestSetId;
-        return await this.getContestListByContestSetId(contestSetId);
     }
 
     async deleteContestSetList(contestSetId: number) {
@@ -64,18 +28,6 @@ contest.contest_id = clist.contest_id`, [contestSetId]);
     async addContestSetListByContestSetIdAndContestIdMultiple(contestSetListArray: IContestSetList[]) {
         return await MySQLManager.execQuery(`insert into contest_set_list(contestset_id, contest_id) 
 values${contestSetListArray.map(() => "(?,?)").join(",")}`, contestSetListArray.flatMap(Object.values));
-    }
-
-    async updateContestSetListByRequest(req: Request) {
-        const contestSetId = req.body.contestSetId;
-        const contestIdList = req.body.contestIdList as number[];
-        await this.deleteContestSetList(contestSetId);
-        await this.addContestSetListByContestSetIdAndContestIdMultiple(contestIdList.map(contestId => {
-            return {
-                contestSetId,
-                contestId
-            };
-        }));
     }
 }
 

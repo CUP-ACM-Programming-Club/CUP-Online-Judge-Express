@@ -2,6 +2,11 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { bindPort, boundImpl } from "../../application/ports/registry";
+import { contestRepository } from "../../application/ports/ContestRepository";
+import { contestCache } from "../../application/ports/ContestCache";
+
+const REPO_PATH = "../../infrastructure/persistence/contest/MySqlContestRepository";
 
 describe("ContestService Tests", function () {
     let ContestService: any;
@@ -10,8 +15,12 @@ describe("ContestService Tests", function () {
     let contestManagerStub: any;
     let contestAssistantStub: any;
     let previousLoad: any;
+    let previousRepo: any;
+    let previousCache: any;
+    let buildContestListCriteria: any;
 
     const mockReq = {
+        query: {} as any,
         session: {
             user_id: "test_user",
             isadmin: false,
@@ -28,8 +37,8 @@ describe("ContestService Tests", function () {
 
         contestManagerStub = {
             getContestList: sinon.stub().resolves([]),
-            getContestListAsObjectByRequest: sinon.stub().resolves({ contestInfoList: [], total: 0 }),
-            getAllContestList: sinon.stub().resolves([]),
+            getContestListCount: sinon.stub().resolves(0),
+            getAllContest: sinon.stub().resolves([]),
             getTotalNumber: sinon.stub().resolves(0)
         };
 
@@ -54,13 +63,24 @@ describe("ContestService Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Re-require Service
+        // 3. Re-require Service；数据访问在仓储实现里：在拦截生效时重新加载真实仓储并绑定到端口，
+        //    这样仓储里的 mysql_cache / mysql_query / ContestManager 都走上面的桩
         delete require.cache[require.resolve("../../application/services/ContestService")];
-        ContestService = require("../../application/services/ContestService").default;
+        const serviceModule = require("../../application/services/ContestService");
+        ContestService = serviceModule.default;
+        buildContestListCriteria = serviceModule.buildContestListCriteria;
+        delete require.cache[require.resolve(REPO_PATH)];
+        previousRepo = boundImpl(contestRepository);
+        previousCache = boundImpl(contestCache);
+        bindPort(contestRepository, require(REPO_PATH).default);
+        bindPort(contestCache, contestCachePoolStart as any);
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        if (previousRepo) bindPort(contestRepository, previousRepo);
+        if (previousCache) bindPort(contestCache, previousCache);
+        delete require.cache[require.resolve(REPO_PATH)];
         sinon.restore();
     });
 
@@ -115,24 +135,25 @@ describe("ContestService Tests", function () {
     describe("Manager Delegates", () => {
         it("should delegate getContestList to Manager", async () => {
             await ContestService.getContestList(mockReq);
-            expect(contestManagerStub.getContestList.calledWith(mockReq)).to.be.true;
+            expect(contestManagerStub.getContestList.calledWith(buildContestListCriteria(mockReq))).to.be.true;
         });
         it("should delegate getContestListAsObject to Manager", async () => {
             await ContestService.getContestListAsObject(mockReq);
-            expect(contestManagerStub.getContestListAsObjectByRequest.calledWith(mockReq)).to.be.true;
+            expect(contestManagerStub.getContestList.calledWith(buildContestListCriteria(mockReq))).to.be.true;
+            expect(contestManagerStub.getContestListCount.calledWith(buildContestListCriteria(mockReq))).to.be.true;
         });
         it("should delegate getAllContestList to Manager", async () => {
             await ContestService.getAllContestList(mockReq);
-            expect(contestManagerStub.getAllContestList.called).to.be.true;
+            expect(contestManagerStub.getAllContest.called).to.be.true;
         });
         it("should hide hidden contests from getAllContestList for normal users", async () => {
-            contestManagerStub.getAllContestList.resolves({ status: "OK", data: [{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }] });
+            contestManagerStub.getAllContest.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
             const res = await ContestService.getAllContestList(mockReq);
             expect(res.status).to.equal("OK");
             expect(res.data.map((c: any) => c.contest_id)).to.deep.equal([1]);
         });
         it("should keep hidden contests in getAllContestList for admins and contest managers", async () => {
-            contestManagerStub.getAllContestList.resolves({ status: "OK", data: [{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }] });
+            contestManagerStub.getAllContest.resolves([{ contest_id: 1, defunct: "N" }, { contest_id: 2, defunct: "Y" }]);
             const admin = { session: { ...mockReq.session, isadmin: true } };
             const manager = { session: { ...mockReq.session, contest_manager: true } };
             expect((await ContestService.getAllContestList(admin)).data.length).to.equal(2);
@@ -140,7 +161,7 @@ describe("ContestService Tests", function () {
         });
         it("should delegate getTotalNumber to Manager", async () => {
             await ContestService.getTotalNumber(mockReq);
-            expect(contestManagerStub.getTotalNumber.calledWith(mockReq)).to.be.true;
+            expect(contestManagerStub.getTotalNumber.calledWith(buildContestListCriteria(mockReq))).to.be.true;
         });
     });
 

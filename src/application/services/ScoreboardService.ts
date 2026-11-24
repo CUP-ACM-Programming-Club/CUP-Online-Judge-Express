@@ -1,7 +1,5 @@
-import client from "../../infrastructure/redis/redis";
-import { withCache, clearCacheBatch } from "../../infrastructure/cache/cache-helper";
-import { MySQLManager } from "../../infrastructure/db/mysql/MySQLManager";
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
+import { scoreboardRepository } from "../ports/ScoreboardRepository";
+import { scoreboardCache } from "../ports/ScoreboardCache";
 import { redactRows, SUBMISSION_SENSITIVE_FIELDS } from "../../domain/policy/privacy";
 import { getLogger } from "../ports/Logger";
 const logger = getLogger("cheese", "info");
@@ -71,20 +69,7 @@ class ScoreboardService {
     async submitHandlerOptimized(cid: number, browserPrivilege = false) {
         try {
             // 第一阶段：查询提交核心数据（不包含用户信息）
-            const submissions = await cache_query(`
-            SELECT solution_id, user_id, result, num, in_date, 
-                   fingerprint, fingerprintRaw, ip, problem_id, code_length
-            FROM solution 
-            WHERE contest_id = ? AND num >= 0 
-            ${browserPrivilege ? "" : "AND problem_id > 0"}
-            UNION ALL
-            SELECT solution_id, user_id, result, num, in_date, 
-                   '' as fingerprint, '' as fingerprintRaw, 
-                   ip, problem_id, code_length
-            FROM vjudge_solution 
-            WHERE contest_id = ? AND num >= 0 AND problem_id > 0
-            ORDER BY user_id, in_date
-        `, [cid, cid]);
+            const submissions = await scoreboardRepository.findContestSubmissions(cid, browserPrivilege);
 
             if (submissions.length === 0) {
                 return [];
@@ -93,11 +78,7 @@ class ScoreboardService {
             // 第二阶段：批量查询用户信息（去重�?
             const userIds = this.extractUserIds(submissions);
             const users = userIds.length > 0
-                ? await cache_query(`
-                SELECT user_id, nick, avatar, avatarUrl 
-                FROM users 
-                WHERE user_id IN (?)
-              `, [userIds])
+                ? await scoreboardRepository.findUsersByIds(userIds)
                 : [];
 
             const userMap = this.createUserMap(users);
@@ -105,9 +86,7 @@ class ScoreboardService {
             // 第三阶段：批量查�?sim 数据（仅 solution 表）
             const solutionIds = this.extractSolutionIds(submissions);
             const sims = solutionIds.length > 0
-                ? await cache_query(`
-                SELECT s_id, sim FROM sim WHERE s_id IN (?)
-              `, [solutionIds])
+                ? await scoreboardRepository.findSimBySolutionIds(solutionIds)
                 : [];
 
             const simMap = this.createSimMap(sims);
@@ -121,23 +100,18 @@ class ScoreboardService {
     }
 
     private async contestUserHandler(cid: number) {
-        const sql4 = `select t.*,users.nick from (select user_id from privilege where rightstr = ?)t
-left join users on users.user_id = t.user_id`;
-        return cache_query(sql4, ["c" + cid]);
+        return scoreboardRepository.findContestUsers(cid);
     }
 
     async getScoreboard(cid: number, browserPrivilege = false) {
         const cacheKey = this.generateCacheKey(cid, browserPrivilege);
 
-        return withCache(
+        return scoreboardCache.withCache(
             { key: cacheKey, ttl: 180, name: 'Scoreboard' },
             async () => {
-                const sql2 = "select count(distinct num)total_problem from contest_problem where contest_id = ?";
-                const sql3 = "select start_time,title,show_all_ranklist from contest where contest_id = ?";
-
                 const _data = this.submitHandlerOptimized(cid, browserPrivilege);
-                const _total = cache_query(sql2, [cid]);
-                const _start_time = cache_query(sql3, [cid]);
+                const _total = scoreboardRepository.countContestProblems(cid);
+                const _start_time = scoreboardRepository.findContestHeader(cid);
                 const _user = this.contestUserHandler(cid);
 
                 const result = await Promise.all([_data, _total, _start_time, _user]);
@@ -160,23 +134,7 @@ left join users on users.user_id = t.user_id`;
     }
 
     async getLineBreakInfo(cid: number) {
-        const sql = `select code_stat.solution_id,
-       code_stat.line,
-       user.user_id, user.problem_id
-from (select solution_id,
-             length(source) - length(replace(source, '\n', '')) as line,
-             source
-      from source_code_user
-      where solution_id in
-            (select solution_id
-             from solution
-             where contest_id = ?
-               and num >= 0
-               and problem_id > 0)) code_stat
-         left join
-         (select user_id, solution_id, problem_id from solution where contest_id = ?) user
-         on user.solution_id = code_stat.solution_id`;
-        return await cache_query(sql, [cid, cid]);
+        return await scoreboardRepository.findLineBreakInfo(cid);
     }
 
     /**
@@ -194,7 +152,7 @@ from (select solution_id,
 
     async clearScoreboardCache(cid: number) {
         const keys = this.generateClearCacheKeys(cid);
-        await clearCacheBatch(keys, `Scoreboard for contest ${cid}`);
+        await scoreboardCache.clearCacheBatch(keys, `Scoreboard for contest ${cid}`);
     }
 }
 

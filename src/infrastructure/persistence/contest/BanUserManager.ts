@@ -1,4 +1,4 @@
-import Cheating from "../../../application/contest/cheating_ban";
+import { contestCheatingRecorder } from "../../../application/ports/ContestCheatingRecorder";
 import SubmissionManager from "../submission/SubmissionManager";
 const {ConfigManager} = require("../../config/config-manager");
 export class BanUserManager {
@@ -21,7 +21,7 @@ export class BanUserManager {
             }
             Object.assign(solution_pack, {state: 15});
             const {contest_id, num, user_id, solution_id} = solution_pack;
-            await Cheating.addCheating(user_id, contest_id, {solution_id, num});
+            await contestCheatingRecorder.addCheating(user_id, contest_id, {solution_id, num});
         }
     }
 }

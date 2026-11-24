@@ -1,13 +1,9 @@
-import { contestProblem as ContestProblem } from "../../infrastructure/orm/ts-model";
+import { contestRepository } from "../ports/ContestRepository";
 
 class ContestFinder {
-	async find (problemId: number) {
-		return ContestProblem.findAll({
-			// 直接使用列名 problem_id（模型属性名为 problemId）；sequelize 会原样作为列名，v6 类型需显式放宽
-			where: {
-				problem_id: problemId
-			} as any
-		});
+	/** 返回包含该题目的 contest_problem 行（ORM 模型实例） */
+	async find (problemId: number): Promise<any[]> {
+		return contestRepository.findContestProblemModelsByProblemId(problemId);
 	}
 }
 

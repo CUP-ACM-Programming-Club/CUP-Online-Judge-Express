@@ -1,13 +1,13 @@
 import express, {Router} from "express";
-import ContestSetManager from "../../../../infrastructure/persistence/contestset/ContestSetManager";
+import ContestSetController from "../../controllers/ContestSetController";
 const router: Router = express.Router();
 
 router.get("/:contestSetId", async (req, res) => {
-    res.json(await ContestSetManager.getContestSetByContestSetIdByRequest(req));
+    res.json(await ContestSetController.getContestSet(req));
 });
 
 router.get("/", async (req, res) => {
-    res.json(await ContestSetManager.getContestSetByRequest(req));
+    res.json(await ContestSetController.listContestSets(req));
 });
 
 export = ["/set", router];

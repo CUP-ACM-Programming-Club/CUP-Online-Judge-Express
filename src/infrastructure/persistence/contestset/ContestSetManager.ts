@@ -1,28 +1,11 @@
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {Request} from "express";
 import Cacheable from "../../../shared/cache/Cacheable";
 import CachePool from "../../../shared/cache/CachePool";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
 import ContestSetListManager from "./ContestSetListManager";
 import ContestManager from "../contest/ContestManager";
-import { isAdmin } from "../../../domain/policy/predicates";
+import { ContestSetDAO as IContestSetDAO, ContestSetDTO as IContestSetDTO } from "../../../application/ports/ContestSetRepository";
 const PAGE_OFFSET = 50;
 
-
-interface IContestSetDTO {
-    contestSetId?: number,
-    title: string,
-    creator?: string,
-    description: string,
-    visible: boolean,
-    defunct: string
-}
-
-interface IContestSetDAO extends IContestSetDTO{
-    contestset_id: number,
-    create_time: string,
-}
 
 export interface ITopicAssistantDAO {
     topic_id: number,
@@ -30,41 +13,8 @@ export interface ITopicAssistantDAO {
     user_id: string
 }
 
-class ContestSetPayloadValidator {
-
-    formatDefunct(defunct: any) {
-        if (typeof defunct === "string") {
-            if (defunct === "Y" || defunct === "N") {
-                return defunct;
-            }
-            else {
-                return "N";
-            }
-        }
-        else {
-            return !!defunct ? "Y" : "N";
-        }
-    }
-
-    contestSetIdValidate(contestSetId: any) {
-        contestSetId = parseInt(contestSetId);
-        if (isNaN(contestSetId)) {
-            throw new Error("Contest Set ID must be number");
-        }
-        else {
-            return contestSetId;
-        }
-    }
-
-    validate(payload: any) {
-        const contestPayload = payload as IContestSetDTO;
-        contestPayload.defunct = this.formatDefunct(contestPayload.defunct);
-        return contestPayload;
-    }
-}
-
+/** 比赛集（contest_set）的数据访问；校验与按请求取参数在 application/contestset/ContestSetUseCases。 */
 class ContestSetManager {
-    validator = new ContestSetPayloadValidator();
     async getAllContestSet (): Promise<IContestSetDAO[]> {
         return await MySQLManager.execQuery(`select * from contest_set`);
     }
@@ -83,13 +33,6 @@ class ContestSetManager {
         }
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async getContestSetByRequest(req: Request) {
-        const page = isNaN(parseInt(req.query.page as string)) ? 0 : parseInt(req.query.page as string);
-        const isAdministrator = isAdmin(req);
-        return await this.getContestSetByConditional(this.buildAdminSQL(isAdministrator), page);
-    }
-
     async addContestSetByDTO(payload: IContestSetDTO) {
         const {creator, title, defunct, description, visible} = payload;
         return await MySQLManager.execQuery(`insert into contest_set
@@ -101,19 +44,6 @@ class ContestSetManager {
         return await MySQLManager.execQuery(`update contest_set set 
 title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
             [title, description, visible, defunct, contestSetId!]);
-    }
-
-    async addContestSetByRequest(req: Request) {
-        const body = req.body;
-        body.creator = req.session!.user_id;
-        const payload = this.validator.validate(body);
-        const response = await this.addContestSetByDTO(payload);
-        return response.insertId as number;
-    }
-
-    async updateContestSetByRequest(req: Request) {
-        const payload = this.validator.validate(req.body);
-        await this.updateContestSetByDTO(payload);
     }
 
     async getContestSetByContestSetId(contestSetId: number | string) {
@@ -142,33 +72,6 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
         const userSet = new Set<string>();
         userList.forEach((e: any[]) => e.forEach(userWrapper => userSet.add(userWrapper.user_id)));
         return Array.from(userSet);
-    }
-
-    async mergeContestSetInfoAndTopicAssistantInfo(contestSetId: number | string) {
-        const [contestSetInfo, topicAssistantInfoList, userList] = await Promise.all([this.getContestSetByContestSetId(contestSetId), this.getTopicAssistantByContestSetId(contestSetId), this.getAllCompetitorByContestSetId(contestSetId)]) ;
-        return Object.assign(contestSetInfo as any, {assistant: topicAssistantInfoList}, {userList});
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getContestSetByContestSetIdByRequest(req: Request) {
-        const contestSetId = this.validator.contestSetIdValidate(req.params.contestSetId);
-        return await this.getContestSetByContestSetId(contestSetId);
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getContestSetForAdministratorByContestSetIdByRequest(req: Request) {
-        const contestSetId = this.validator.contestSetIdValidate(req.params.contestSetId);
-        return await this.mergeContestSetInfoAndTopicAssistantInfo(contestSetId);
-    }
-
-    async hasLimitToAccessContestSet(req: Request, contestSetId: string | number) {
-        if (isAdmin(req)) {
-            return true;
-        }
-        else {
-            const response = await this.getContestSetByContestSetId(contestSetId);
-            return response!.defunct === "N";
-        }
     }
 }
 

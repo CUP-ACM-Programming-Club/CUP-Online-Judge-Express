@@ -2,6 +2,11 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { bindPort, boundImpl } from "../../../application/ports/registry";
+import { adminContestRepository } from "../../../application/ports/AdminContestRepository";
+import { contestCache } from "../../../application/ports/ContestCache";
+
+const REPO_PATH = "../../../infrastructure/persistence/contest/MySqlAdminContestRepository";
 
 describe("AdminContestService Tests", function () {
     let AdminContestService: any;
@@ -13,6 +18,8 @@ describe("AdminContestService Tests", function () {
     let contestCacheStub: any;
     let configManagerStub: any;
     let previousLoad: any;
+    let previousRepo: any;
+    let previousCache: any;
 
     beforeEach(function () {
         // 1. Setup Stubs
@@ -77,10 +84,19 @@ describe("AdminContestService Tests", function () {
         // 3. Re-require Service
         delete require.cache[require.resolve("../../../application/services/admin/AdminContestService")];
         AdminContestService = require("../../../application/services/admin/AdminContestService").default;
+        // SQL 在仓储实现里：在拦截生效时重新加载真实仓储并绑定到端口，让它的 mysql_query / MySQLManager 走上面的桩
+        delete require.cache[require.resolve(REPO_PATH)];
+        previousRepo = boundImpl(adminContestRepository);
+        previousCache = boundImpl(contestCache);
+        bindPort(adminContestRepository, require(REPO_PATH).default);
+        bindPort(contestCache, contestCacheStub);
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        if (previousRepo) bindPort(adminContestRepository, previousRepo);
+        if (previousCache) bindPort(contestCache, previousCache);
+        delete require.cache[require.resolve(REPO_PATH)];
         sinon.restore();
     });
 
@@ -133,6 +149,7 @@ describe("AdminContestService Tests", function () {
             expect(id).to.equal(999);
             expect(utilStub.addContestProblem.calledWith(999)).to.be.true;
             expect(problemSetCacheStub.removeAll.called).to.be.true;
+            expect(contestCacheStub.removeAll.called).to.be.true;
         });
     });
 

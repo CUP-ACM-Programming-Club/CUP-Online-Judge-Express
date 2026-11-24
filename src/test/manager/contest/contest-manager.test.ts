@@ -2,6 +2,10 @@ const expect = require("chai").expect;
 const ContestManager = require("../../../infrastructure/persistence/contest/ContestManager").default || require("../../../infrastructure/persistence/contest/ContestManager");
 const PrivilegeManager = require("../../../infrastructure/persistence/user/PrivilegeManager").default || require("../../../infrastructure/persistence/user/PrivilegeManager");
 const fakeDb = require("../../mocks/fake-db");
+// 从请求推导筛选条件的部分已移到 application（ContestService.buildContestListCriteria），ContestManager 只接收推导结果
+const ContestServiceModule = require("../../../application/services/ContestService");
+const ContestService = ContestServiceModule.default;
+const { buildContestListCriteria } = ContestServiceModule;
 
 describe("ContestManager", function () {
 	beforeEach(function () {
@@ -18,9 +22,10 @@ describe("ContestManager", function () {
 
 	it("should compute limit and search sql", function () {
 		const req = {query: {page: "2", search: "hello"}};
-		const search = ContestManager.getSearchSql(req);
+		const criteria = buildContestListCriteria(req);
+		const search = ContestManager.getSearchSql(criteria.search);
 		expect(search.sqlArr[0]).to.equal("%hello%");
-		expect(ContestManager.buildLimit(req)).to.equal(100);
+		expect(ContestManager.buildLimit(criteria.page)).to.equal(100);
 	});
 
 	it("should build my contest list", function () {
@@ -31,7 +36,7 @@ describe("ContestManager", function () {
 				contest: {"c1000": true}
 			}
 		};
-		const list = ContestManager.getMyContestList(req);
+		const list = ContestManager.getMyContestList(buildContestListCriteria(req).myContestIds);
 		expect(list).to.include("contest_id in");
 	});
 
@@ -39,7 +44,7 @@ describe("ContestManager", function () {
 		await fakeDb.query("insert into contest (contest_id,defunct,cmod_visible,title,start_time,end_time,private) values(?,?,?,?,?,?,?)",
 			[1000, "N", 1, "t1", "2000-01-01 00:00:00", "2100-01-01 00:00:00", 0]);
 		const req = {query: {}, session: {isadmin: true, contest_manager: false}};
-		const result = await ContestManager.getContestList(req);
+		const result = await ContestService.getContestList(req);
 		const count = await ContestManager.getContestListCountByConditional("1=1", "1=1", {sql: null, sqlArr: []});
 		expect(result).to.have.property("status").that.equal("OK");
 		expect(result).to.have.property("data");
@@ -82,9 +87,9 @@ describe("ContestManager", function () {
 		await fakeDb.query("insert into contest (contest_id,defunct,cmod_visible,title,start_time,end_time,private) values(?,?,?,?,?,?,?)",
 			[2000, "N", 0, "t2", "2000-01-01 00:00:00", "2100-01-01 00:00:00", 0]);
 		const req = {query: {}, session: {isadmin: true, contest_manager: false, contest: {}, contest_maker: {}}};
-		const listResult = await ContestManager.getContestListAsObjectByRequest(req);
+		const listResult = await ContestService.getContestListAsObject(req);
 		expect(listResult).to.have.property("status").that.equal("OK");
-		const allResult = await ContestManager.getAllContestList();
+		const allResult = await ContestService.getAllContestList(req);
 		expect(allResult).to.have.property("status").that.equal("OK");
 	});
 
@@ -99,7 +104,7 @@ describe("ContestManager", function () {
 	it("should build privilege sql for contest mode", function () {
 		global.contest_mode = true;
 		const req = {session: {isadmin: false, contest_manager: false}};
-		const sql = ContestManager.buildPrivilegeStr(req);
+		const sql = ContestManager.buildPrivilegeStr(buildContestListCriteria(Object.assign({query: {}}, req)));
 		expect(sql).to.include("cmod_visible");
 		global.contest_mode = false;
 	});
