@@ -6,14 +6,14 @@
 
 - 路由总数（method + path，去重）：**224**；顶层路由均由 router_loader 同时挂在 `/x` 与 `/api/x`，下表只列 `/x`。
 - 计数（按有效要求归类）：
-  - admin: 82
+  - admin: 83
   - admin | editor: 4
   - admin | source_browser: 1
   - anonymous: 21
   - contest-specific: 10
   - init-only: 3
   - login: 93
-  - owner / source-privilege: 10
+  - owner / source-privilege: 9
 - 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 0 条，见“已修复”列）
 
 术语：
@@ -96,7 +96,7 @@
 | GET | `/captcha` | - | anonymous |  |  |  |
 | GET | `/contest/assistant/:contest_id` | auth | login | 只返回“我”是否为该比赛助教 |  |  |
 | GET | `/contest/config/:contestId` | auth | login | 无比赛访问检查，只返回 showSim |  |  |
-| GET | `/contest/problem_info/:contestId` | auth → privilegeMiddleware | (admin \| contest_manager \| maker(cid) \| assistant(cid)) 且 contest-access(cid) | maker 的 contest_maker 取值无可选链：session 无 contest_maker 时抛错 |  |  |
+| GET | `/contest/problem_info/:contestId` | auth → privilegeMiddleware | admin \| contest_manager（且 contest-access(cid)） | 中间件写的是 admin \| contest_manager \| maker(cid) \| assistant(cid)，但挂在挂载层，req.params.contestId 尚未解析（NaN），maker / assistant 两项永远为假；contest_maker 取值无可选链，session 无 contest_maker 时抛错 | 出题人 / 助教本意应可访问，实际被拒（矩阵测试锁定现状） |  |
 | GET | `/contest/rest/:contest_id` | auth | contest-access(cid) |  |  |  |
 | GET | `/contest/user/:cid` | auth | login |  | cid 合法时 handler 从不响应（请求挂起）——功能缺陷，非权限 |  |
 | GET | `/contest/general/:cid` | auth | contest-access(cid) |  |  |  |
@@ -154,7 +154,7 @@
 | GET | `/problem/:source` | auth | ?id 同 /problem/:id；?cid&pid：非 (admin\|source_browser) 且 contest_mode 且 cmod_visible=0 拒绝，private=1 时 contest-access(cid)；?tid&pid：contest_mode 下要求 admin\|source_browser |  | ?cid&pid 对公开比赛不做开始时间与 defunct 检查：未开始/隐藏的公开比赛题面可提前读取；?tid&pid 不检查专题 private/defunct，也不检查题目 defunct/比赛中 |  |
 | POST | `/problem/add` | auth | login |  | 任意登录用户可创建题目并获得 p<pid>（problem_maker） |  |
 | POST | `/problem/:source/:id` | auth | admin \| editor（handler 内，拒绝返回 "illegal request"） |  |  |  |
-| GET | `/problem/:source/:id/:sid` | auth | admin \| owner |  | 结果缓存（10 天）在权限检查之前读取：admin/本人看过之后，任意登录用户可拿到同一 key 的代码 |  |
+| GET | `/problem/:source/:id/:sid` | auth | admin（代码写的是 admin \| owner，但 owner 取 source_code.user_id，该表无此列，实际只有 admin） |  | 结果缓存（10 天）在权限检查之前读取：admin 看过之后，任意登录用户可拿到同一 key 的代码（矩阵测试锁定现状） |  |
 | GET | `/problemset` | auth → switch:enable_problemset(admin bypass) | login | admin \| source_browser \| editor 可见范围更大（含 defunct 等）；/problemset/* 同 |  |  |
 | GET | `/problemset/search/:search` | auth → switch:enable_problemset(admin bypass) | login |  |  |  |
 | GET | `/problemset/:start` | auth → switch:enable_problemset(admin bypass) | login |  |  |  |
@@ -217,7 +217,7 @@
 | GET | `/status/:problem_id/:user_id/:language/:result/:limit/:contest_id/:sim/:privilege` | auth | login |  |  |  |
 | GET | `/status` | auth | login | browse_code = admin \| source_browser；ip/指纹/email 只对特权与本人保留 |  |  |
 | GET | `/status/graph` | auth | login |  |  |  |
-| GET | `/status/solution` | auth | owner \| source-privilege(sid) \| share===1 |  | share===1 不排除进行中的比赛题 |  |
+| GET | `/status/solution` | auth | owner \| source-privilege(sid) \| share===1 | share 由 SQL 计算：share=1 或题解引用，且题目不在未结束的比赛中 |  |  |
 | GET | `/status/:sid/:tr` | auth → inline | login |  | 任意登录用户可读任意提交的编译错误 / 运行错误信息（绕过 runtime_info 的特权要求） |  |
 | GET | `/system/config/version_control/version` | - | anonymous | 前端“版本控制”页匿名调用，保持公开 |  |  |
 | GET | `/system/config/version_control/git` | - | anonymous |  | 匿名暴露仓库地址 |  |

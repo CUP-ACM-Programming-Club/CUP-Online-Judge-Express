@@ -18,7 +18,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 
 	"GET /contest/assistant/:contest_id": { note: "只返回“我”是否为该比赛助教" },
 	"GET /contest/config/:contestId": { note: "无比赛访问检查，只返回 showSim" },
-	"GET /contest/problem_info/:contestId": { req: "(admin | contest_manager | maker(cid) | assistant(cid)) 且 contest-access(cid)", note: "maker 的 contest_maker 取值无可选链：session 无 contest_maker 时抛错" },
+	"GET /contest/problem_info/:contestId": { req: "admin | contest_manager（且 contest-access(cid)）", note: "中间件写的是 admin | contest_manager | maker(cid) | assistant(cid)，但挂在挂载层，req.params.contestId 尚未解析（NaN），maker / assistant 两项永远为假；contest_maker 取值无可选链，session 无 contest_maker 时抛错", flag: "出题人 / 助教本意应可访问，实际被拒（矩阵测试锁定现状）" },
 	"GET /contest/rest/:contest_id": { req: "contest-access(cid)" },
 	"GET /contest/user/:cid": { flag: "cid 合法时 handler 从不响应（请求挂起）——功能缺陷，非权限" },
 	"GET /contest/general/:cid": { req: "contest-access(cid)" },
@@ -59,7 +59,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 	"GET /problem/:source": { req: "?id 同 /problem/:id；?cid&pid：非 (admin|source_browser) 且 contest_mode 且 cmod_visible=0 拒绝，private=1 时 contest-access(cid)；?tid&pid：contest_mode 下要求 admin|source_browser", flag: "?cid&pid 对公开比赛不做开始时间与 defunct 检查：未开始/隐藏的公开比赛题面可提前读取；?tid&pid 不检查专题 private/defunct，也不检查题目 defunct/比赛中" },
 	"POST /problem/add": { flag: "任意登录用户可创建题目并获得 p<pid>（problem_maker）" },
 	"POST /problem/:source/:id": { req: "admin | editor（handler 内，拒绝返回 \"illegal request\"）" },
-	"GET /problem/:source/:id/:sid": { req: "admin | owner", flag: "结果缓存（10 天）在权限检查之前读取：admin/本人看过之后，任意登录用户可拿到同一 key 的代码" },
+	"GET /problem/:source/:id/:sid": { req: "admin（代码写的是 admin | owner，但 owner 取 source_code.user_id，该表无此列，实际只有 admin）", flag: "结果缓存（10 天）在权限检查之前读取：admin 看过之后，任意登录用户可拿到同一 key 的代码（矩阵测试锁定现状）" },
 	"GET /problemset": { note: "admin | source_browser | editor 可见范围更大（含 defunct 等）；/problemset/* 同" },
 	"GET /problemstatus/:id": { note: "时间/内存分布与他人提交详情需 admin | source_browser | 比赛已结束 | 本人已通过" },
 	"GET /problemstatus/:source/:id": { note: "同上" },
@@ -77,7 +77,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 	"GET /status/compile_info/:solution_id": { req: "admin | source-privilege(sid) | owner" },
 	"GET /status/runtime_info/:solution_id": { req: "admin | source-privilege(sid)（本人不可）" },
 	"GET /status/:sid/:tr": { flag: "任意登录用户可读任意提交的编译错误 / 运行错误信息（绕过 runtime_info 的特权要求）" },
-	"GET /status/solution": { req: "owner | source-privilege(sid) | share===1", flag: "share===1 不排除进行中的比赛题" },
+	"GET /status/solution": { req: "owner | source-privilege(sid) | share===1", note: "share 由 SQL 计算：share=1 或题解引用，且题目不在未结束的比赛中" },
 	"GET /status/:problem_id/:user_id/:language/:result/:limit/:contest_id": { note: "browse_code = admin | source_browser | assistant(contest_id)；敏感字段另加 contest_manager / maker(cid)", flag: "按 contest_id 查询不做 contest-access：私有/隐藏比赛的提交列表（去敏后）对任意登录用户可见" },
 	"GET /status": { note: "browse_code = admin | source_browser；ip/指纹/email 只对特权与本人保留" },
 
