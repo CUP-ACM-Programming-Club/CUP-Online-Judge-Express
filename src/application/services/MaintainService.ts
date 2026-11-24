@@ -1,8 +1,8 @@
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
+import { submissionQueryRepository } from "../ports/SubmissionQueryRepository";
 
 class MaintainService {
     async getMaintainInfo(limit = false) {
-        return await cache_query(`select * from maintain_info order by mtime desc ${limit ? "limit 1" : ""}`);
+        return await submissionQueryRepository.findMaintainInfo(limit);
     }
 }
 

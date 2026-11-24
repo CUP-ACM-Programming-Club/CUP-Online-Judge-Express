@@ -2,6 +2,9 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { submissionJudger } from "../../../application/ports/SubmissionJudger";
+import { judgeQueueRepository } from "../../../application/ports/JudgeQueueRepository";
+import { bindTemporarily, rebindFresh } from "../../setup/rebind-port";
 
 describe("Rejudge Logic (update_solution_result)", function () {
     let rejudgeModule: any;
@@ -10,6 +13,7 @@ describe("Rejudge Logic (update_solution_result)", function () {
     let scoreboardStub: any;
     let redisStub: any;
     let previousLoad: any;
+    let restorePorts: (() => void)[] = [];
 
     beforeEach(function () {
         // 1. Mocks
@@ -37,6 +41,12 @@ describe("Rejudge Logic (update_solution_result)", function () {
             return previousLoad.apply(this, arguments);
         };
 
+        // 判题机与重判 SQL 现在经端口访问：判题机绑定 stub；仓储在拦截生效期间重新加载（mysql_query 仍是上面的 stub）
+        restorePorts = [
+            bindTemporarily(submissionJudger, judgerStub),
+            rebindFresh(judgeQueueRepository, require.resolve("../../../infrastructure/persistence/submission/MySqlJudgeQueueRepository"), m => new m.MySqlJudgeQueueRepository())
+        ];
+
         // 3. Load Module
         try {
             delete require.cache[require.resolve("../../../application/status/update_solution_result")];
@@ -45,6 +55,7 @@ describe("Rejudge Logic (update_solution_result)", function () {
     });
 
     afterEach(function () {
+        restorePorts.forEach(restore => restore());
         if (previousLoad) (Module as any)._load = previousLoad;
         sinon.restore();
     });

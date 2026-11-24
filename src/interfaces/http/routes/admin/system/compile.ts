@@ -1,13 +1,13 @@
 import express from "express";
-import CompilerManager from "../../../../../infrastructure/persistence/judge/CompilerManager";
+import CompilerController from "../../../controllers/CompilerController";
 const router = express.Router();
 
 router.get("/compile_arguments", async (req, res) => {
-    res.json(await CompilerManager.getCompileArgumentsByRequest(req));
+    res.json(await CompilerController.getCompileArgumentsByRequest(req));
 });
 
 router.post("/compile_arguments", async (req, res) => {
-    res.json(await CompilerManager.updateCompileArgumentsByRequest(req));
+    res.json(await CompilerController.updateCompileArgumentsByRequest(req));
 });
 
 export = ["/compile", router];

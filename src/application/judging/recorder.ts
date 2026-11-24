@@ -1,10 +1,8 @@
 import {getUserIdBySolutionId} from "../user/user";
-import SubmissionManager from "../../infrastructure/persistence/submission/SubmissionManager";
 import Maintainer from "./recorder/Maintainer";
 import ScoreboardInvalidator from "./recorder/ScoreboardInvalidator";
 import isNumber from "../../shared/isNumber";
-const query = require("../../infrastructure/db/legacy/mysql_query");
-const cache_query = require("../../infrastructure/db/legacy/mysql_cache");
+import { judgeResultRepository } from "../ports/JudgeResultRepository";
 
 type RawNumber = string | number;
 
@@ -49,7 +47,7 @@ async function checkValidSim(simId: any, simSourceId: any) {
 
 async function isAdministrator(solutionId: string | number) {
 	const userId = await getUserIdBySolutionId(solutionId);
-	const response = await cache_query(`select rightstr from privilege where user_id = ? and rightstr = 'administrator'`, [userId]);
+	const response = await judgeResultRepository.findAdministratorPrivilege(userId);
 	return !!(response && response.length && response.length > 0);
 
 }
@@ -57,23 +55,22 @@ async function isAdministrator(solutionId: string | number) {
 async function baseSubmissionStore(payload: SubmissionPayload) {
 	payload.result = payload.state;
 	let {time, memory, result, pass_point, pass_rate, judger, solution_id, sim, sim_s_id} = payload;
-	await query("update solution set time = ?, memory = ?, result = ?, pass_point = ?, pass_rate = ?, judger = ? where solution_id = ? and result != 4",
-		[time, memory, result, pass_point, pass_rate === null ? 0 : pass_rate, judger, solution_id]);
+	await judgeResultRepository.updateSolutionResult(time, memory, result, pass_point, pass_rate === null ? 0 : pass_rate, judger, solution_id);
 	if (isNumber(sim) && parseInt(<string>sim) > 0 && await checkValidSim(solution_id, sim_s_id) && !(await isAdministrator(solution_id))) {
-		await query("insert into sim(s_id,sim_s_id,sim) values(?,?,?) on duplicate key update  sim_s_id=?,sim=?", [solution_id, sim_s_id, sim, sim_s_id, sim]);
+		await judgeResultRepository.upsertSim(solution_id, sim_s_id, sim);
 	}
 }
 
 async function compileErrorStore(payload: CompileInfoPayload) {
 	const {compile_info, solution_id} = payload;
-	await query("delete from compileinfo where solution_id = ?", [solution_id]);
-	await query("insert into compileinfo values(?, ?)  on duplicate key update  error = ?", [solution_id, compile_info, compile_info]);
+	await judgeResultRepository.deleteCompileInfo(solution_id);
+	await judgeResultRepository.insertCompileInfo(solution_id, compile_info);
 }
 
 
 async function storeToRuntimeError(solution_id: any, info: any) {
-	await query("delete from runtimeinfo where solution_id = ?", [solution_id]);
-	await query("insert into runtimeinfo values(?, ?) on duplicate key update error = ?", [solution_id, info, info]);
+	await judgeResultRepository.deleteRuntimeInfo(solution_id);
+	await judgeResultRepository.insertRuntimeInfo(solution_id, info);
 }
 
 export async function runtimeErrorStore(payload: RuntimeInfoPayload) {
@@ -125,7 +122,7 @@ export async function storeSubmission(payload: SubmissionPayload) {
 	ScoreboardInvalidator.invalidateBySolution(payload.solution_id);
 	if (payload.state >= 4) {
 		await Maintainer.maintainUserInfo(payload.user_id);
-		await Maintainer.maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id))!.problem_id);
+		await Maintainer.maintainProblem((await judgeResultRepository.getSolutionInfo(<number>payload.solution_id))!.problem_id);
 	}
 	if (payload.runtime_info) {
 		delete payload.runtime_info;

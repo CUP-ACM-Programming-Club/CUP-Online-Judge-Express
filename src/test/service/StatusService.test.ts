@@ -8,6 +8,8 @@ const sinon = require("sinon");
 const Module = require("module");
 import { StatusService } from "../../application/services/StatusService";
 import { JudgeResult } from "../../domain/enums/JudgeResult";
+import { rebindFresh } from "../setup/rebind-port";
+import { submissionStatusRepository } from "../../application/ports/SubmissionStatusRepository";
 
 // Needs to be compatible with how the service imports mysql_cache (require)
 // But since we are testing the class instance which might have already imported it...
@@ -28,6 +30,7 @@ describe("Status Service Tests", function () {
     };
 
     let optimizerStub: any;
+    let restoreRepository: () => void;
 
     beforeEach(function () {
         // 1. Setup Stubs
@@ -51,13 +54,16 @@ describe("Status Service Tests", function () {
         previousLoad = Module._load;
         Module._load = function (request: any, parent: any, isMain: any) {
             if (request.includes("mysql_cache")) return queryStub;
-            // StatusService 现在通过 src/db 的 cachedQuery 访问数据库
-            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            // 状态页 SQL 在仓储实现里，经 src/db 的 cachedQuery 访问数据库（仓储里是 ../../db）
+            if (/(^|\/)db$/.test(request)) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return contestAssistantStub;
             if (request.includes("const_name")) return {}; // mock const_name
             if (request.includes("graph_data_optimizer")) return optimizerStub;
             return previousLoad.apply(this, arguments);
         };
+
+        // 状态页 SQL 在 MySqlSubmissionStatusRepository（经 ../../db 访问数据库）：拦截生效期间重新加载并绑定
+        restoreRepository = rebindFresh(submissionStatusRepository, require.resolve("../../infrastructure/persistence/submission/MySqlSubmissionStatusRepository"), m => new m.MySqlSubmissionStatusRepository());
 
         // 3. Clear cache and re-require the service
         delete require.cache[require.resolve("../../application/services/StatusService")];
@@ -66,6 +72,7 @@ describe("Status Service Tests", function () {
     });
 
     afterEach(function () {
+        restoreRepository();
         if (previousLoad) Module._load = previousLoad;
         sinon.restore();
     });

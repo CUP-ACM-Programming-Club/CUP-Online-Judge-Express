@@ -1,16 +1,2 @@
-import log4js, {Logger} from "log4js"
-
-log4js.configure({
-    appenders: {
-        app: {type: 'dateFile', filename: './log/log4j-log.log', pattern: `${global.currentDaemonName || "default"}-yyyy-MM-dd.log`, alwaysIncludePattern: true},
-        console: {type: "console"}
-    },
-    categories: {
-        default: {
-            appenders: ["app", "console"], level: "INFO"
-        }
-    }
-});
-const logger = log4js.getLogger("default");
-export default logger as Logger
-
+// log4js 的 dateFile 配置已移到 infrastructure/logging/log4j（判题机客户端也要在加载时用到它）；这里保留原入口
+export { default } from "../../infrastructure/logging/log4j";

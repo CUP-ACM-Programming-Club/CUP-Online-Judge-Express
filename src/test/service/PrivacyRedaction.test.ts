@@ -6,10 +6,19 @@ const sinon = require("sinon");
 const Module = require("module");
 const crypto = require("crypto");
 
+import { rebindFresh } from "../setup/rebind-port";
+import { submissionStatusRepository } from "../../application/ports/SubmissionStatusRepository";
+import { ranklistRepository } from "../../application/ports/RanklistRepository";
+
+// 状态页 / 排行榜的 SQL 在仓储实现里（经 ../../db 访问数据库）：拦截生效期间重新加载仓储并绑定到端口
+const STATUS_REPO = require.resolve("../../infrastructure/persistence/submission/MySqlSubmissionStatusRepository");
+const RANKLIST_REPO = require.resolve("../../infrastructure/persistence/submission/MySqlRanklistRepository");
+
 const md5 = (s: string) => crypto.createHash("md5").update(s).digest("hex");
 const SENSITIVE = ["ip", "fingerprint", "fingerprintRaw"];
 
 describe("StatusService privacy", function () {
+    let restoreRepository: () => void;
     let service: any;
     let queryStub: any;
     let assistantStub: any;
@@ -35,17 +44,19 @@ describe("StatusService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return queryStub;
-            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            if (/(^|\/)db$/.test(request)) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return assistantStub;
             if (request.includes("const_name")) return {};
             if (request.includes("graph_data_optimizer")) return { getGraphDataWithCache: sinon.stub(), getGraphLabel: sinon.stub(), TIME_GRANULARITY: {} };
             return previousLoad.apply(this, arguments);
         };
+        restoreRepository = rebindFresh(submissionStatusRepository, STATUS_REPO, m => new m.MySqlSubmissionStatusRepository());
         delete require.cache[require.resolve("../../application/services/StatusService")];
         service = new (require("../../application/services/StatusService").StatusService)();
     });
 
     afterEach(function () {
+        restoreRepository();
         Module._load = previousLoad;
         delete require.cache[require.resolve("../../application/services/StatusService")];
         sinon.restore();
@@ -211,6 +222,7 @@ describe("scoreboard route privacy", function () {
 });
 
 describe("RanklistService privacy", function () {
+    let restoreRepository: () => void;
     let previousLoad: any;
     let service: any;
     let queryStub: any;
@@ -224,14 +236,16 @@ describe("RanklistService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return { __esModule: true, default: queryStub };
-            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            if (/(^|\/)db$/.test(request)) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             return previousLoad.apply(this, arguments);
         };
+        restoreRepository = rebindFresh(ranklistRepository, RANKLIST_REPO, m => new m.MySqlRanklistRepository());
         delete require.cache[require.resolve("../../application/services/RanklistService")];
         service = require("../../application/services/RanklistService").default;
     });
 
     afterEach(function () {
+        restoreRepository();
         Module._load = previousLoad;
         delete require.cache[require.resolve("../../application/services/RanklistService")];
         sinon.restore();

@@ -1,13 +1,14 @@
-import {Request} from "express";
-import SubmissionManager, {ExportSolutionInfo, RESULT_CHINESE_STRING, SolutionInfoDAO} from "./SubmissionManager";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
-import CompileInfoManager from "../judge/CompileInfoManager";
-import RuntimeInfoManager from "../judge/RuntimeInfoManager";
-import {ConfigManager} from "../../config/config-manager";
+import {ExportSolutionInfo, SolutionInfoDAO, submissionSolutionRepository} from "../ports/SubmissionSolutionRepository";
+import {RESULT_CHINESE_STRING} from "../../domain/constants/result_chinese";
+import {ConfigManager} from "../ports/Config";
 import Mustache from "mustache";
 import dayjs from "dayjs";
-import { isAdmin } from "../../../domain/policy/predicates";
+import { isAdmin } from "../../domain/policy/predicates";
+
+/** 请求方：只用到 session（express Request 满足） */
+interface SolutionViewer {
+    session?: any;
+}
 
 const COMPILE_ERROR = 11;
 const TEST_RUN = 13;
@@ -21,19 +22,23 @@ interface SolutionInfoDTO {
 }
 
 class SolutionManagerPrivilegeValidator {
-    async validate (req: Request, solutionId: number) {
+    async validate (req: SolutionViewer, solutionId: number) {
         if (isAdmin(req)) {
             return;
         }
         const userId =  req.session!.user_id;
-        const response = await SubmissionManager.getSolutionInfo(solutionId);
+        const response = await submissionSolutionRepository.getSolutionInfo(solutionId);
         if (response!.user_id !== userId) {
             throw new Error("No privilege to access");
         }
     }
 }
 
-class SolutionManager {
+/**
+ * 提交判题信息查看与比赛提交导出（原 infrastructure/persistence/submission/SolutionManager）。
+ * HTTP 包装在 interfaces/http/controllers/SolutionController。
+ */
+export class SolutionUseCases {
     validator = new SolutionManagerPrivilegeValidator();
     async convertDaoToDto(solutionDao: SolutionInfoDAO) {
         const solutionInfoDTO: SolutionInfoDTO = {
@@ -41,10 +46,10 @@ class SolutionManager {
         };
         switch (solutionInfoDTO.state) {
             case COMPILE_ERROR:
-                solutionInfoDTO.compile_info = (await CompileInfoManager.getCompileInfoBySolutionId(solutionDao.solution_id))!.error;
+                solutionInfoDTO.compile_info = (await submissionSolutionRepository.getCompileInfo(solutionDao.solution_id))!.error;
                 break;
             case TEST_RUN:
-                solutionInfoDTO.test_run_result = (await RuntimeInfoManager.getRuntimeInfoBySolutionId(solutionDao.solution_id))!.error;
+                solutionInfoDTO.test_run_result = (await submissionSolutionRepository.getRuntimeInfo(solutionDao.solution_id))!.error;
                 break;
             default:
                 break;
@@ -72,24 +77,20 @@ class SolutionManager {
         return output;
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async getSolutionInfoByRequest(req: Request) {
-        const solutionId  = parseInt(req.params.solutionId);
+    async getSolutionInfo(req: SolutionViewer, solutionId: number) {
         await this.validator.validate(req, solutionId);
-        const solutionDAO = await SubmissionManager.getSolutionInfo(solutionId);
+        const solutionDAO = await submissionSolutionRepository.getSolutionInfo(solutionId);
         return await this.convertDaoToDto(solutionDAO!);
     }
 
-    async getSolutionExportInfoByContestId(req: Request) {
-        const contestId = parseInt(req.params.contestId);
-        const exportSolutionInfoList = await SubmissionManager.getSolutionExportInfoByContestId(contestId);
+    async getSolutionExportInfoByContestId(contestId: number) {
+        const exportSolutionInfoList = await submissionSolutionRepository.getSolutionExportInfoByContestId(contestId);
         this.enhanceResultString(exportSolutionInfoList)
         return this.convertFormatToMustache(exportSolutionInfoList);
     }
 
-    async getLastSolutionExportInfoByContestId(req: Request) {
-        const contestId = parseInt(req.params.contestId);
-        const exportSolutionInfoList = await SubmissionManager.getSolutionExportInfoByContestId(contestId);
+    async getLastSolutionExportInfoByContestId(contestId: number) {
+        const exportSolutionInfoList = await submissionSolutionRepository.getSolutionExportInfoByContestId(contestId);
         const userProblemInfoMap: {[id: string]: {[id: string]: ExportSolutionInfo[] | undefined } | undefined} = {};
         const resultProblemInfoMap: {[id: string]: {[id: string]: ExportSolutionInfo } | undefined} = {};
         const resultSolutionInfoList: ExportSolutionInfo[] = [];
@@ -157,4 +158,4 @@ class SolutionManager {
     }
 }
 
-export default new SolutionManager();
+export default new SolutionUseCases();

@@ -2,14 +2,16 @@ import Lock from "../../../shared/decorators/Lock";
 import SingleLock from "../../../shared/Lock";
 import Cacheable from "../../../shared/cache/Cacheable";
 import CachePool from "../../../shared/cache/CachePool";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
 import _ from "lodash";
 import isNumber from "../../../shared/isNumber";
 import Timer from "../../../shared/decorators/Timer";
 
 const cache_query = require("../../db/legacy/mysql_cache");
 
+/**
+ * 做题关系图数据（带缓存），实现 application 的 SubmissionSolveMap 端口。
+ * 结果包成 {status, data} 由 interfaces/http/controllers/SolveMapController 负责。
+ */
 export class SolveMapManager {
     @Timer
     async getUserList() {
@@ -17,7 +19,6 @@ export class SolveMapManager {
     }
 
     @Timer
-    @ErrorHandlerFactory(ok.okMaker)
     @Lock(new SingleLock())
     @Cacheable(new CachePool(), 1, "hour")
     async getTotalACList() {
@@ -26,14 +27,12 @@ export class SolveMapManager {
     }
 
     @Timer
-    @ErrorHandlerFactory(ok.okMaker)
     @Cacheable(new CachePool(), 1, "hour")
     async getUserListForRouter() {
         return await this.getUserList();
     }
 
     @Timer
-    @ErrorHandlerFactory(ok.okMaker)
     @Cacheable(new CachePool(), 30, "minute")
     async getUserACList(userId: string) {
         return await this.getUserACListByUserId(userId);
@@ -82,7 +81,6 @@ export class SolveMapManager {
     }
 
     @Timer
-    @ErrorHandlerFactory(ok.okMaker)
     @Lock(new SingleLock())
     @Cacheable(new CachePool(), 1, "day")
     async getSolveMap(problem_id?: number | string) {

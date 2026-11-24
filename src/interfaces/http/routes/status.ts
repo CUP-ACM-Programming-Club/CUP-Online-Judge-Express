@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
-import ContestAssistantManager from "../../../infrastructure/persistence/contest/ContestAssistantManager";
-import SourcePrivilegeCache from "../../../infrastructure/persistence/submission/SourcePrivilegeCache";
+import SubmissionViewUseCases from "../../../application/submission/SubmissionViewUseCases";
 
 const ENVIRONMENT = process.env.NODE_ENV || "prod";
 const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
@@ -13,11 +12,9 @@ const timediff = require("timediff");
 import auth from "../middleware/auth";
 const [error] = require("../../../domain/constants/const_var");
 const admin_auth = require("../middleware/admin");
-import client from "../../../infrastructure/redis/redis";
 import moment from "moment";
 import SubmissionService from "../../../application/services/SubmissionService";
 const logger = getLogger("cheese", "info");
-const query = require("../../../infrastructure/db/legacy/mysql_cache");
 
 const GREATER = "greater"; // Keep constants if used elsewhere? 
 // Actually SECONDS..YEARS were used in calculateDiffTimeMilliseconds which is removed.
@@ -212,7 +209,7 @@ router.get("/graph", async function (req: any, res: any) {
 
 router.get("/solution", async function (req: any, res: any) {
 	const sid = req.query.sid ? parseInt(req.query.sid) : null;
-	const browse_privilege = sid !== null && await SourcePrivilegeCache.checkPrivilege(req.session, sid);
+	const browse_privilege = sid !== null && await SubmissionViewUseCases.checkSourcePrivilege(req.session, sid);
 	if (sid) {
 		const _result = await SubmissionService.getSolutionInfo(sid);
 		if (_result.length > 0 && (_result[0].user_id === req.session.user_id || browse_privilege || _result[0].share === 1)) {
@@ -295,7 +292,6 @@ router.get("/:sid/:tr", async function (req: any, res: any) {
 const routes: any = ["/status", auth, router];
 
 // 导出缓存清除函数供其他模块使用（例如提交后清除相关比赛缓存）
-import { clearGraphDataCache as _clearGraphDataCache } from "./status/graph_data_optimizer";
-routes.clearGraphCache = _clearGraphDataCache;
+routes.clearGraphCache = (contestId: number) => StatusService.clearGraphDataCache(contestId);
 
 export = routes;

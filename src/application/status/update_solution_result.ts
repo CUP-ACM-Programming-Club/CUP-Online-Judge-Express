@@ -1,25 +1,25 @@
-import { Request, Response } from "express";
-import localJudger from "../../infrastructure/judger/localJudger";
-import client from "../../infrastructure/redis/redis";
+import { submissionJudger } from "../ports/SubmissionJudger";
+import { judgeQueueRepository } from "../ports/JudgeQueueRepository";
 import ScoreboardService from "../services/ScoreboardService";
 const { error, ok } = require("../../domain/constants/state");
-const query = require("../../infrastructure/db/legacy/mysql_query");
+
+/** 路由处理函数的最小形状（express 的 req/res 满足它），application 不依赖 express */
+interface RejudgeRequest {
+	body: any;
+}
+
+interface RejudgeResponse {
+	json(body: any): any;
+}
 
 async function resetSolutionStatus(idName: string, id: number | string) {
 	// Reset result to 1 (Pending/Rejudging) and clear performance metrics
-	await query(`UPDATE solution 
-                 SET result = 1, 
-                     time = 0, 
-                     memory = 0, 
-                     pass_rate = 0, 
-                     pass_point = 0, 
-                     judger = 'Waiting' 
-                 WHERE ${idName} = ?`, [id]);
+	await judgeQueueRepository.resetSolutionStatus(idName, id);
 }
 
 export async function rejudgeHandler(idName: string, id: number | string, result: number | string) {
 	// Legacy support wrapper, but we enforce result=1 for rejudge usually
-	await query(`UPDATE solution SET result = ? WHERE ${idName} = ?`, [result, id]);
+	await judgeQueueRepository.setSolutionResult(idName, id, result);
 }
 
 export async function rejudgeSolution(solutionId: number) {
@@ -27,12 +27,12 @@ export async function rejudgeSolution(solutionId: number) {
 		await resetSolutionStatus("solution_id", solutionId);
 
 		// Trigger Judger Immediately
-		const solution = await query("SELECT user_id, contest_id FROM solution WHERE solution_id = ?", [solutionId]);
+		const solution = await judgeQueueRepository.findSolutionOwner(solutionId);
 		if (solution && solution.length > 0) {
 			const { user_id } = solution[0];
-			const priv = await query("SELECT count(1) as cnt FROM privilege WHERE user_id = ? AND rightstr = 'administrator'", [user_id]);
+			const priv = await judgeQueueRepository.countAdministratorForRejudge(user_id);
 			const isAdmin = !!(priv && priv.length && priv[0].cnt);
-			await localJudger.addTask(solutionId, isAdmin);
+			await submissionJudger.addTask(solutionId, isAdmin);
 		}
 		return { status: "OK" };
 	} catch (e) {
@@ -76,7 +76,7 @@ export const rejudgeByProblem = async (problemId: number | string, result: numbe
 	return rejudgeProblem(Number(problemId));
 };
 
-export async function router(req: Request, res: Response, result: number | string) {
+export async function router(req: RejudgeRequest, res: RejudgeResponse, result: number | string) {
 	if (isNaN(<number>result)) {
 		res.json(error.invalidParams);
 		return;

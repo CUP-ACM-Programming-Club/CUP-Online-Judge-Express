@@ -2,6 +2,8 @@ import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
 import { ScoreboardInvalidator } from "../../../application/judging/recorder/ScoreboardInvalidator";
+import { judgeResultRepository } from "../../../application/ports/JudgeResultRepository";
+import { rebindFresh } from "../../setup/rebind-port";
 
 function flush() {
     return new Promise(resolve => setImmediate(resolve));
@@ -89,6 +91,7 @@ describe("recorder.storeSubmission scoreboard invalidation", function () {
     let queryStub: sinon.SinonStub;
     let invalidateStub: sinon.SinonStub;
     let recorder: any;
+    let restoreRepository: () => void;
 
     beforeEach(function () {
         queryStub = sinon.stub().resolves([]);
@@ -97,16 +100,19 @@ describe("recorder.storeSubmission scoreboard invalidation", function () {
         (Module as any)._load = function (request: string) {
             if (request.includes("recorder/ScoreboardInvalidator")) return { __esModule: true, default: { invalidateBySolution: invalidateStub } };
             if (request.includes("recorder/Maintainer")) return { __esModule: true, default: { maintainUserInfo: sinon.stub().resolves(), maintainProblem: sinon.stub().resolves() } };
-            if (request.includes("submission/SubmissionManager")) return { __esModule: true, default: { getSolutionInfo: sinon.stub().resolves({ problem_id: 1000 }) } };
+            if (request.includes("SubmissionManager")) return { __esModule: true, default: { getSolutionInfo: sinon.stub().resolves({ problem_id: 1000 }) } };
             if (request.includes("user/user")) return { getUserIdBySolutionId: sinon.stub().resolves("u") };
             if (request.includes("mysql_query") || request.includes("mysql_cache")) return queryStub;
             return previousLoad.apply(this, arguments);
         };
+        // 判题结果回写的 SQL 在 MySqlJudgeResultRepository 里：拦截生效期间重新加载并绑定
+        restoreRepository = rebindFresh(judgeResultRepository, require.resolve("../../../infrastructure/persistence/submission/MySqlJudgeResultRepository"), m => new m.MySqlJudgeResultRepository());
         delete require.cache[require.resolve("../../../application/judging/recorder")];
         recorder = require("../../../application/judging/recorder");
     });
 
     afterEach(function () {
+        restoreRepository();
         (Module as any)._load = previousLoad;
         delete require.cache[require.resolve("../../../application/judging/recorder")];
         sinon.restore();

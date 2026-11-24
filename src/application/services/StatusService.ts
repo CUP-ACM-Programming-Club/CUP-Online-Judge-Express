@@ -1,87 +1,13 @@
 import { JudgeResult } from "../../domain/enums/JudgeResult";
-import { getGraphDataWithCache, getGraphLabel, TIME_GRANULARITY } from "../../interfaces/http/routes/status/graph_data_optimizer";
+import { getGraphLabel, TIME_GRANULARITY } from "../../domain/constants/graph_granularity";
 import { redactRows, SUBMISSION_SENSITIVE_FIELDS } from "../../domain/policy/privacy";
 import { canBrowseSource, canSeeContestSensitive, isContestAssistant } from "../../domain/policy/predicates";
-
-import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../../infrastructure/db";
+import { StatusQueryOptions, submissionStatusRepository } from "../ports/SubmissionStatusRepository";
+import { submissionGraphData } from "../ports/SubmissionGraphData";
 
 const const_name = require("../../domain/constants/const_name");
 
-/** 与原 mysql_cache 相同的 2s 读缓存 */
-const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
-const cache_query = (sql: string, params?: any[]) => cachedQuery<any[]>(sql, params, CACHE);
-
-/** 原逐行查询（user_id = ?，按 MySQL 排序规则比较），批量结果对不上时用它兜底 */
-const USER_INFO_SQL = "SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?";
-const USER_INFO_BATCH_SQL = "SELECT user_id,nick,avatar,avatarUrl,email FROM users WHERE user_id IN (?)";
-
-interface StatusQueryOptions {
-    problem_id?: number | { type: number, value: number }[];
-    user_id?: string;
-    language?: number;
-    result?: number;
-    contest_id?: number;
-    sim?: boolean;
-    num?: number;
-    limit?: number;
-}
-
 export class StatusService {
-
-    private readonly NOT_EQUAL = 1;
-    private readonly EQUAL = 0;
-    private readonly LESS_OR_EQUAL = 2;
-    private readonly GREATER_OR_EQUAL = 3;
-    private readonly GREATER = 4;
-    private readonly LESSER = 5;
-    private readonly compareSymbol = ["!=", "=", "<=", ">=", ">", "<"];
-
-    private isCompareFlag(flag: any) {
-        return flag >= 0 && flag <= 5;
-    }
-
-    private generateSqlData(request_query: any) {
-        let where_sql: string[] = [], sql_arr: any[] = [];
-        for (let key in request_query) {
-            if (!Object.prototype.hasOwnProperty.call(request_query, key)) {
-                continue;
-            }
-            if (key === "limit" || key === "sim") {
-                continue;
-            }
-            const value = request_query[key];
-            if (typeof value === "undefined" || typeof value === "boolean") {
-                continue;
-            }
-
-            if (typeof value === "string" || typeof value === "number") {
-                where_sql.push(` ${key} = ?`);
-                sql_arr.push(value);
-            } else if (typeof value === "object") {
-                const ele = value;
-                if (Array.isArray(ele)) {
-                    for (let val of ele) {
-                        if (typeof val === "undefined" || val === null) {
-                            continue;
-                        }
-                        if (typeof val === "string" || typeof val === "number") {
-                            where_sql.push(` ${key} = ?`);
-                            sql_arr.push(val);
-                        } else if (val && this.isCompareFlag(val.type)) {
-                            where_sql.push(` ${key} ${this.compareSymbol[val.type]} ?`);
-                            sql_arr.push(val.value);
-                        }
-                    }
-                } else {
-                    if (ele && this.isCompareFlag(ele.type)) {
-                        where_sql.push(` ${key} ${this.compareSymbol[ele.type]} ?`);
-                        sql_arr.push(ele.value);
-                    }
-                }
-            }
-        }
-        return { where_sql, sql_arr };
-    }
 
     private check_owner(data: any, owner: boolean) {
         return owner ? data : "----";
@@ -105,14 +31,14 @@ export class StatusService {
         if (userIds.length === 0) {
             return infoById;
         }
-        const users = await cache_query(USER_INFO_BATCH_SQL, [userIds]);
+        const users = await submissionStatusRepository.findUsersByIds(userIds);
         for (const user of users) {
             if (userIds.includes(user.user_id) && !infoById.has(user.user_id)) {
                 infoById.set(user.user_id, [{ nick: user.nick, avatar: user.avatar, avatarUrl: user.avatarUrl, email: user.email }]);
             }
         }
         const unmatched = userIds.filter(id => !infoById.has(id));
-        const fallback = await Promise.all(unmatched.map(id => cache_query(USER_INFO_SQL, [id])));
+        const fallback = await Promise.all(unmatched.map(id => submissionStatusRepository.findUserInfo(id)));
         unmatched.forEach((id, i) => infoById.set(id, fallback[i]));
         return infoById;
     }
@@ -143,97 +69,22 @@ export class StatusService {
 
     public async getStatusList(req: any, request_query: StatusQueryOptions) {
         const limit = request_query.limit || 0;
-        let { where_sql, sql_arr } = this.generateSqlData(request_query);
-        let pre_sim = "", end_sim = "";
-
-        if (request_query.sim) {
-            if (request_query.user_id) {
-                let user_id_sql = "";
-                // Logic preserved from original, though redundant if request_query.user_id is already in sql_arr via generateSqlData?
-                // Actually generateSqlData handles 'user_id' if strictly passed.
-                // But original logic specially handles subquery for sim.
-                // Let's refine this: existing logic appends to where_sql.
-
-                // Original: if (request_query.user_id) ... sql_arr.push ...
-                // Note: generateSqlData might have already added 'user_id = ?'. 
-                // We should be careful not to duplicate if the caller passes user_id in the generic object.
-                // In the original code, `request_query` passed to `generateSqlData` is the SAME object passed to this block.
-                // So `user_id` might be added twice?
-                // Let's check original: generateSqlData(request_query) -> creates where_sql terms.
-                // Then `if (request_query.user_id)` -> pushes another param to sql_arr and adds a subquery clause.
-                // This implies `user_id` is used TWICE in SQL: once for `s_user_id` in subquery, and maybe once in main table?
-                // Actually, looking at original code: `if (request_query.sim)` block handles specific logic.
-
-                user_id_sql = " where s_user_id = ?";
-                sql_arr.push(request_query.user_id);
-                where_sql.push(` solution_id in (select s_id as solution_id from sim${user_id_sql})`);
-            } else {
-                pre_sim = "select * from(";
-                end_sim = ")t where sim is not null";
-            }
-        }
 
         let _end: any = false;
         // 原样保留取值：非特权且无 contest_id 时为 undefined（响应里 browse_code 键缺失）
         const browser_privilege: any = canBrowseSource(req) ||
             (request_query.contest_id && await isContestAssistant(request_query.contest_id, req.session.user_id));
 
+        // 筛选条件（含 sim）到 SQL 的转换在仓储实现里，三种口径的字段、排序与原实现一致
         let _res;
-        let where_clause = "";
-
-        // Standardize where clause
         if (browser_privilege) {
-            if (where_sql.length > 0) {
-                where_clause = ` where ${where_sql.join(" and ").trim()}`;
-            }
-
-            sql_arr.push(limit);
-
-            let common_fields = "fingerprint,fingerprintRaw,solution_id,pass_rate,ip,contest_id,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, \"local\" as oj_name";
-            if (!request_query.contest_id) {
-                common_fields = common_fields.replace("pass_rate,ip", "pass_rate,share,ip");
-            }
-
-            const orderBy = request_query.contest_id ? "order by sol.in_date desc,sol.solution_id desc" : "order by sol.solution_id desc";
-
-            _res = await cache_query(`${pre_sim}select * from
-                                (select ${common_fields}
-                                from solution ${where_clause}) sol
-                                left join sim on sim.s_id = sol.solution_id
-                                ${orderBy}${end_sim} limit ?,20`, sql_arr);
-
+            _res = await submissionStatusRepository.findStatusPage("privileged", request_query, limit);
         } else if (request_query.contest_id) {
-            where_sql.unshift("problem_id > 0");
-            where_clause = ` where ${where_sql.join(" and ").trim()}`;
-
-            sql_arr.push(limit);
-            const end_cnt = await cache_query("select count(1),end_time as cnt from contest where end_time<NOW() and contest_id = ?", [request_query.contest_id]);
+            const end_cnt = await submissionStatusRepository.findContestEnded(request_query.contest_id);
             _end = end_cnt[0].cnt;
-
-            _res = await cache_query(`${pre_sim}select * from
-                                (select fingerprint,fingerprintRaw,solution_id,contest_id,ip,num,problem_id,user_id,time,memory,in_date,result,language,code_length,judger, "local" as oj_name 
-                                from solution ${where_clause}) sol
-                                left join sim on sim.s_id = sol.solution_id
-                                order by sol.in_date desc, sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
+            _res = await submissionStatusRepository.findStatusPage("contest", request_query, limit);
         } else {
-            where_sql.unshift("problem_id > 0");
-            where_sql.unshift("contest_id is null");
-            where_clause = ` where ${where_sql.join(" and ").trim()}`;
-
-            sql_arr.push(limit);
-
-            const share_check = `if((share = 1 and not exists (select * from contest where contest_id in
-           (select contest_id from contest_problem where solution.problem_id = contest_problem.problem_id)
-          and end_time > NOW()) ),1,0) as share`;
-
-            _res = await cache_query(`${pre_sim}select * from
-                                (select fingerprint,fingerprintRaw,solution_id,
-                                ${share_check}
-                                ,pass_rate,problem_id,ip,contest_id,num,user_id,time,
-                                memory,in_date,result,language,code_length,judger, "local" as oj_name from solution
-                                ${where_clause}) sol
-                                left join sim on sim.s_id = sol.solution_id
-                                order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
+            _res = await submissionStatusRepository.findStatusPage("global", request_query, limit);
         }
 
         const userInfo = await this.loadUserInfo(_res);
@@ -259,6 +110,11 @@ export class StatusService {
         };
     }
 
+    /** 清除比赛的图表缓存（原 routes/status 导出的 clearGraphCache） */
+    public async clearGraphDataCache(contestId: number) {
+        return await submissionGraphData.clearGraphDataCache(contestId);
+    }
+
     public async getGraphData(contestId?: number) {
         const SECONDS = 1000;
         const MINUTES = 60 * SECONDS;
@@ -279,7 +135,7 @@ export class StatusService {
         };
 
         if (contestId) {
-            const result = await cache_query("SELECT * FROM contest WHERE contest_id = ?", [contestId]);
+            const result = await submissionStatusRepository.findContest(contestId);
             if (result.length) {
                 const start_time = new Date(result[0].start_time), end_time = new Date(result[0].end_time);
                 // @ts-ignore
@@ -299,7 +155,7 @@ export class StatusService {
                     granularity = TIME_GRANULARITY.SECOND;
                 }
 
-                const data = await getGraphDataWithCache(contestId, granularity);
+                const data = await submissionGraphData.getGraphDataWithCache(contestId, granularity);
                 return {
                     result: data,
                     label: getGraphLabel(granularity)
@@ -308,7 +164,7 @@ export class StatusService {
         }
 
         // Global stats
-        const data = await getGraphDataWithCache(0, TIME_GRANULARITY.MONTH);
+        const data = await submissionGraphData.getGraphDataWithCache(0, TIME_GRANULARITY.MONTH);
         return {
             result: data,
             label: getGraphLabel(TIME_GRANULARITY.MONTH)

@@ -1,18 +1,18 @@
 import Lock from "../../../shared/decorators/Lock";
 import SingleLock from "../../../shared/Lock";
 
-const query = require("../../../infrastructure/db/legacy/mysql_query");
+import { judgeResultRepository } from "../../ports/JudgeResultRepository";
 
 export class Maintainer {
     @Lock(new SingleLock())
     async maintainUserInfo(user_id: string) {
-        await query("UPDATE `users` SET `solved`=(SELECT count(DISTINCT `problem_id`) FROM `solution` WHERE `user_id`= ? AND `result`='4') WHERE `user_id`= ?", [user_id, user_id]);
-        await query("UPDATE `users` SET `submit`=(SELECT count(*) FROM `solution` WHERE `user_id`= ? and problem_id>0) WHERE `user_id`= ?", [user_id, user_id]);
+        await judgeResultRepository.updateUserSolved(user_id);
+        await judgeResultRepository.updateUserSubmit(user_id);
     }
     @Lock(new SingleLock())
     async maintainProblem(problem_id: number | string) {
-        await query("UPDATE `problem` SET `accepted`=(SELECT count(*) FROM `solution` WHERE `problem_id`= ? AND `result`='4') WHERE `problem_id`= ?", [problem_id, problem_id]);
-        await query("UPDATE `problem` SET `submit`=(SELECT count(*) FROM `solution` WHERE `problem_id`= ?) WHERE `problem_id`= ?", [problem_id, problem_id]);
+        await judgeResultRepository.updateProblemAccepted(problem_id);
+        await judgeResultRepository.updateProblemSubmit(problem_id);
     }
 }
 

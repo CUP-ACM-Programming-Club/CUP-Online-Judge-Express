@@ -1,6 +1,4 @@
-import client from "../../infrastructure/redis/redis";
-import { withCache, clearCacheBatch } from "../../infrastructure/cache/cache-helper";
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
+import { submissionProblemStatusRepository as repository } from "../ports/SubmissionProblemStatusRepository";
 import { getLogger } from "../ports/Logger";
 const logger = getLogger("cheese", "info");
 
@@ -55,27 +53,8 @@ class ProblemStatusService {
     /**
      * 合并统计查询（将 4 个独立查询合并为 1 个）
      */
-    private async getMergedStats(problemId: number, userId: string, from: string, ojFrom: string = "") {
-        const hasOJName = ojFrom ? "and oj_name = ?" : "";
-
-        const sql = `
-        SELECT 
-            result,
-            COUNT(*) as count,
-            COUNT(DISTINCT user_id) as distinct_users,
-            SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as user_submit_count,
-            (SELECT COUNT(1) FROM ${from} WHERE problem_id = ? ${hasOJName}) as total_all,
-            (SELECT COUNT(DISTINCT user_id) FROM ${from} WHERE problem_id = ? ${hasOJName}) as total_distinct_users
-        FROM ${from}
-        WHERE problem_id = ? ${hasOJName}
-        GROUP BY result
-    `;
-
-        const finalParams = ojFrom
-            ? [userId, problemId, ojFrom, problemId, ojFrom, problemId, ojFrom]
-            : [userId, problemId, problemId, problemId];
-
-        return await cache_query(sql, finalParams);
+    private async getMergedStats(problemId: number, userId: string, source: boolean, ojFrom: string = "") {
+        return await repository.findMergedStats(problemId, userId, source, ojFrom);
     }
 
     /**
@@ -90,33 +69,12 @@ class ProblemStatusService {
         ojFrom: string = ""
     ) {
         try {
-            const from = source ? "solution" : "vjudge_solution";
-            const hasOJName = ojFrom ? "and oj_name = ?" : "";
-
             // 合并后的查询：5个并发请求
             const [mergedStats, solutions, end_contest, problem_limit] = await Promise.all([
-                this.getMergedStats(problemId, userId, from, ojFrom),
-
-                cache_query(`
-                select user_id,solution_id,language,code_length,in_date,time,memory 
-                from ${from}
-                where problem_id = ? and result = 4 ${hasOJName}
-                order by time,memory,code_length,in_date,solution_id limit ?,?
-            `, ojFrom
-                    ? [problemId, ojFrom, page * page_cnt, page_cnt]
-                    : [problemId, page * page_cnt, page_cnt]
-                ),
-
-                cache_query(`
-                select max(end_time) as end_time from contest 
-                where contest_id in (
-                    select contest_id from contest_problem where problem_id = ?
-                )
-            `, [problemId]),
-
-                cache_query(`
-                select time_limit, memory_limit from problem where problem_id = ?
-            `, [problemId])
+                this.getMergedStats(problemId, userId, source, ojFrom),
+                repository.findAcceptedSolutions(problemId, source, ojFrom, page * page_cnt, page_cnt),
+                repository.findContestEndTime(problemId),
+                repository.findProblemLimit(problemId)
             ]);
 
             const stats = this.extractStats(mergedStats);
@@ -148,17 +106,13 @@ class ProblemStatusService {
         const cacheKey = this.generateProblemStatusCacheKey(problemId, source, ojFrom, page);
 
         try {
-            const cached = await client.getAsync(cacheKey);
+            const cached = await repository.getCachedStatus(cacheKey);
             if (cached) {
                 logger.debug(`ProblemStatus cache hit for problem ${problemId}`);
                 const cachedData = JSON.parse(cached);
 
                 // 更新用户个人数据（user_passed）
-                const from = source ? "solution" : "vjudge_solution";
-                const userPassed = await cache_query(`
-                select count(1) as passed from ${from}
-                where problem_id = ? and user_id = ? and result = 4
-            `, [problemId, userId]);
+                const userPassed = await repository.findUserPassed(problemId, userId, source);
 
                 cachedData.stats.user_passed = userPassed[0]?.passed || 0;
                 return cachedData;
@@ -170,7 +124,7 @@ class ProblemStatusService {
             );
 
             // 缓存 30 分钟（题目统计变化慢）
-            await client.setexAsync(cacheKey, 1800, JSON.stringify(result));
+            await repository.setCachedStatus(cacheKey, 1800, JSON.stringify(result));
 
             return result;
         } catch (e) {
@@ -188,21 +142,9 @@ class ProblemStatusService {
         const time_step = parseFloat(String(time_limit)) * 2 / 25;
         const memory_step = parseFloat(String(memory_limit)) * 2 / 25;
 
-        let sql1 = `select count(1)total,language,diff from (select case`;
-        for (let i = 0; i <= time_limit; i += time_step) {
-            sql1 += ` when time between ${parseInt(String(i))} and ${parseInt(String(i + time_step))} then '${parseInt(String(i))}-${parseInt(String(i + time_step))}' `;
-        }
-        sql1 += `else '>${time_limit}' end as diff ,language from solution where problem_id = ? and result = 4)t group by diff,language`;
-
-        let sql2 = `select count(1)total,language,diff from (select case`;
-        for (let i = 0; i <= memory_limit; i += memory_step) {
-            sql2 += ` when memory between ${parseInt(String(i))} and ${parseInt(String(i + memory_step))} then '${parseInt(String(i))}-${parseInt(String(i + memory_step))}' `;
-        }
-        sql2 += `else '>${memory_limit}' end as diff,language from solution where problem_id = ? and result = 4)t group by diff,language`;
-
         const [_time_range, _memory_range] = await Promise.all([
-            cache_query(sql1, [problemId]),
-            cache_query(sql2, [problemId])
+            repository.findTimeDistribution(problemId, time_limit, time_step),
+            repository.findMemoryDistribution(problemId, memory_limit, memory_step)
         ]);
         return { time_range: _time_range, memory_range: _memory_range };
     }
@@ -212,7 +154,7 @@ class ProblemStatusService {
      */
     async clearProblemStatusCache(problemId: number): Promise<void> {
         const keys = this.generateProblemStatusClearKeys(problemId);
-        await clearCacheBatch(keys, `ProblemStatus for problem ${problemId}`);
+        await repository.clearCachedStatus(keys, `ProblemStatus for problem ${problemId}`);
     }
 }
 

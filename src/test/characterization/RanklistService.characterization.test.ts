@@ -9,6 +9,8 @@
 import { expect } from "chai";
 import dayjs from "dayjs";
 import { ciEqual, Engine, freshRequire, interceptQueryLayer, lcg, loadOrWriteSnapshot, normalizeSql, project, QueryLog, settle } from "./harness";
+import { rebindFresh } from "../setup/rebind-port";
+import { ranklistRepository } from "../../application/ports/RanklistRepository";
 
 const SPECIAL_IDS = ["2019010101", "123", "0", "007", "4294967294", "4294967295", "99999999999", "Alice", "alice", "zed", "ghost1", "ghost2", "-5", "1e3", "1.5"];
 const MISSING = new Set(["ghost1", "ghost2", "alice", "1.5"]);
@@ -231,11 +233,14 @@ function buildScenarios(): Scenario[] {
 
 export async function runRankScenario(opt: any, viewer: any, data: RankData, log: QueryLog[]) {
     const restore = interceptQueryLayer(makeRankEngine(data, log));
+    // SQL 在仓储实现里：拦截生效期间重新加载仓储并绑定到端口，让它的数据库访问同样落到 engine
+    const restorePort = rebindFresh(ranklistRepository, require.resolve("../../infrastructure/persistence/submission/MySqlRanklistRepository"), m => new m.MySqlRanklistRepository());
     try {
         const service = freshRequire("../../application/services/RanklistService").default;
         // routes/ranklist 把 invalidParams 以外的任何异常都返回 error.database，所以只记录是否抛错
         return await settle(() => service.getRanklist(Object.assign({}, opt), viewer), false);
     } finally {
+        restorePort();
         restore();
     }
 }

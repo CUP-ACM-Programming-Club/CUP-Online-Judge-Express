@@ -1,69 +1,15 @@
 import Cacheable from "../../../shared/cache/Cacheable";
 import CachePool from "../../../shared/cache/CachePool";
-import ErrorLogger from "../../../interfaces/http/decorators/ErrorLogger";
 import RetryAsync from "../../../shared/decorators/RetryAsync";
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
-import {Request} from "express";
+import {RESULT_CHINESE_STRING} from "../../../domain/constants/result_chinese";
+import {ExportSolutionInfo, SolutionInfoDAO} from "../../../application/ports/SubmissionSolutionRepository";
 
 const cache_query = require("../../db/legacy/mysql_cache");
 
-export const RESULT_CHINESE_STRING = [
-    "等待",
-    "等待重判",
-    "编译中",
-    "运行并评判",
-    "答案正确",
-    "格式错误",
-    "答案错误",
-    "时间超限",
-    "内存超限",
-    "输出超限",
-    "运行错误",
-    "编译错误",
-    "编译成功",
-    "运行完成",
-    "已加入队列",
-    "提交被拒绝",
-    "系统错误",
-    ""
-]
-
-export interface SolutionInfoDAO {
-    problem_id: number,
-    user_id: string,
-    language: number
-    solution_id: number,
-    time: number,
-    memory: number,
-    in_date: string,
-    result: number,
-    ip: string,
-    contest_id: number,
-    topic_id: number,
-    valid: number,
-    pass_point: number,
-    num: number,
-    code_length: number,
-    judgetime: string,
-    pass_rate: number,
-    judger: string,
-    share: number,
-    fingerprint: string,
-    fingerprintRaw: string
-}
-
-export interface ExportSolutionInfo {
-    user_id: string,
-    problem_id: number,
-    solution_id: number,
-    nick: string,
-    source: string,
-    in_date: string,
-    result: number,
-    result_string?: string,
-}
+// 结果中文名与 DAO 类型现在定义在 domain / application 端口里，这里保留原有导出
+export { RESULT_CHINESE_STRING };
+export type { SolutionInfoDAO, ExportSolutionInfo };
 
 interface ProblemInfo {
     time_limit: number,
@@ -142,11 +88,6 @@ class SubmissionManager {
             submit,
             login
         }
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getSubmissionHourInfo(req: Request) {
-        return await this.getSubmissionHourInfoCache();
     }
 }
 

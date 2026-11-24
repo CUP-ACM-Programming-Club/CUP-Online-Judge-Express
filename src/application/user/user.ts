@@ -1,9 +1,9 @@
-const cache_query = require("../../infrastructure/db/legacy/mysql_cache");
+import { submissionUserRepository } from "../ports/SubmissionUserRepository";
 
 export async function getUserInfoByUserId(user_id: string) {
-	return await cache_query("select * from users where user_id = ?", [user_id]);
+	return await submissionUserRepository.findUserById(user_id);
 }
 
 export async function getUserIdBySolutionId(solution_id: string | number) {
-	return (await cache_query("select user_id from solution where solution_id = ?", [solution_id]))[0].user_id;
+	return (await submissionUserRepository.findSolutionUser(solution_id))[0].user_id;
 }

@@ -1,20 +1,28 @@
-import { MySQLManager, MySQLTransaction } from "../../infrastructure/db/mysql/MySQLManager";
 import Logger from "../../shared/Logger";
-import ContestManager from "../../infrastructure/persistence/contest/ContestManager";
 import { canAccessHiddenProblem, isAdmin, isContestAssistant } from "../../domain/policy/predicates";
 import { SubmissionData, SubmissionResponse } from "../../domain/types/SubmissionType";
 import { SubmissionType, ProblemPublicStatus } from "../../domain/enums/SubmissionEnums";
-import { Request } from "express";
+import {
+    submissionContestLookup,
+    submissionLoginTokens,
+    submissionSubmitRepository,
+    SubmitTransaction
+} from "../ports/SubmissionSubmitRepository";
+import { submissionQueryRepository } from "../ports/SubmissionQueryRepository";
 
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
 const const_variable = require("../../domain/constants/const_name");
 const dayjs = require("dayjs");
-const client = require("../../infrastructure/redis/redis").default;
 const detectClassroom = require("../detect_classroom");
-const getIP = require("../../interfaces/http/getIP");
+const getIP = require("../submission/getIP");
 const [error] = require("../../domain/constants/const_var");
 const crypto = require("crypto");
 const login_action = require("../auth/login_action");
+
+/**
+ * 提交请求的最小形状：HTTP 的 express Request 与 WebSocket 的 socket.request 都满足。
+ * login_action 会往 req.session 写登录态。
+ */
+type SubmitRequest = any;
 
 export class SubmissionService {
     private readonly LANGMASK = const_variable.langmask;
@@ -36,14 +44,12 @@ export class SubmissionService {
     }
 
     private async problemInFutureOrCurrentContest(problem_id: number) {
-        const data = await cache_query(`select contest_id,start_time,end_time from contest where
-    contest_id in (select contest_id from contest_problem where problem_id = ?)
-    and end_time > NOW()`, [problem_id]);
+        const data = await submissionSubmitRepository.findOngoingOrFutureContestsOfProblem(problem_id);
         return (data && data.length > 0);
     }
 
     private async contestIsStart(contest_id: number) {
-        const data = await cache_query("select start_time,end_time from contest where contest_id = ?", [contest_id]);
+        const data = await submissionSubmitRepository.findContestTime(contest_id);
         const start_time = dayjs(data[0].start_time);
         const end_time = dayjs(data[0].end_time);
         const now = dayjs();
@@ -51,19 +57,17 @@ export class SubmissionService {
     }
 
     private async getLangmaskForContest(contest_id: number) {
-        const data = await cache_query(`select langmask from contest 
-        where contest_id = ?`, [contest_id]);
+        const data = await submissionSubmitRepository.findContestLangmask(contest_id);
         return data[0].langmask;
     }
 
     private async getLangmaskForTopic(topic_id: number) {
-        const data = await cache_query(`select langmask from special_subject 
-        where topic_id = ?`, [topic_id]);
+        const data = await submissionSubmitRepository.findTopicLangmask(topic_id);
         return data[0].langmask;
     }
 
-    private async checkContestPrivilege(req: Request, contest_id: number) {
-        if (await ContestManager.isContestSubmittable(contest_id, req.session!.user_id)) {
+    private async checkContestPrivilege(req: SubmitRequest, contest_id: number) {
+        if (await submissionContestLookup.isContestSubmittable(contest_id, req.session!.user_id)) {
             return true;
         }
         if (await isContestAssistant(contest_id, req.session!.user_id)) {
@@ -71,7 +75,7 @@ export class SubmissionService {
         }
         await login_action(req, req.session!.user_id);
 
-        const data = await cache_query("select private,defunct from contest where contest_id = ?", [contest_id]);
+        const data = await submissionSubmitRepository.findContestVisibility(contest_id);
         const _private = parseInt(data[0].private) === 1;
         const defunct = data[0].defunct === "Y";
         if (defunct) {
@@ -80,9 +84,9 @@ export class SubmissionService {
         return !_private;
     }
 
-    private async limitAddressForContest(connection: MySQLTransaction, req: Request, contest_id: number) {
+    private async limitAddressForContest(connection: SubmitTransaction, req: SubmitRequest, contest_id: number) {
         const referer = req && req.headers && req.headers.referer ? req.headers.referer : "no-referer";
-        const data = await connection.query("select limit_hostname from contest where contest_id = ?", [contest_id]);
+        const data = await connection.findContestLimitHostname(contest_id);
         let limit_hostname;
         if (data && data[0] && data[0].limit_hostname) {
             limit_hostname = data[0].limit_hostname;
@@ -98,11 +102,11 @@ export class SubmissionService {
         }
     }
 
-    private async limitClassroomAccess(connection: MySQLTransaction, req: Request, contest_id: number) {
+    private async limitClassroomAccess(connection: SubmitTransaction, req: SubmitRequest, contest_id: number) {
         const ip = getIP(req);
         let detectResult = detectClassroom(ip);
         // console.log("Detect IP result:", detectResult);
-        const data = await connection.query("select ip_policy from contest where contest_id = ?", [contest_id]);
+        const data = await connection.findContestIpPolicy(contest_id);
         let limitClassroom;
         if (data && data[0] && data[0].ip_policy) {
             limitClassroom = data[0].ip_policy.split(",").map((e: any) => e.trim());
@@ -124,11 +128,11 @@ export class SubmissionService {
         return result;
     }
 
-    private async checkTopicPrivilege(req: Request, topic_id: number) {
+    private async checkTopicPrivilege(req: SubmitRequest, topic_id: number) {
         if (isAdmin(req)) {
             return;
         }
-        const data = await cache_query("select private,defunct from special_subject where topic_id = ?", [topic_id]);
+        const data = await submissionSubmitRepository.findTopicVisibility(topic_id);
         const _private = parseInt(data[0].private) === 1;
         const defunct = data[0].defunct === "Y";
         if (defunct || _private === true) {
@@ -136,8 +140,8 @@ export class SubmissionService {
         }
     }
 
-    private async includeProblem(id: number, num: number, sql: string) {
-        const data = await cache_query(sql, [id, num]);
+    private async includeProblem(lookup: Promise<any[]>) {
+        const data = await lookup;
         if (!data || data.length === 0) {
             return false;
         } else {
@@ -146,8 +150,7 @@ export class SubmissionService {
     }
 
     private async contestIncludeProblem(contest_id: number, num: number) {
-        const result = await this.includeProblem(contest_id, num, `select problem_id from contest_problem
-         where contest_id = ? and num = ?`);
+        const result = await this.includeProblem(submissionSubmitRepository.findContestProblem(contest_id, num));
         if (result === false) {
             throw error.errorMaker("problem is not in contest");
         }
@@ -155,8 +158,7 @@ export class SubmissionService {
     }
 
     private async TopicIncludeProblem(topic_id: number, num: number) {
-        const result = await this.includeProblem(topic_id, num, `select problem_id from special_subject_problem
-         where topic_id = ? and num = ?`);
+        const result = await this.includeProblem(submissionSubmitRepository.findTopicProblem(topic_id, num));
         if (result === false) {
             throw error.errorMaker("problem is not in topic");
         }
@@ -164,7 +166,7 @@ export class SubmissionService {
     }
 
     private async problemPublic(problem_id: number) {
-        const data = await cache_query("select defunct from problem where problem_id = ?", [problem_id]);
+        const data = await submissionSubmitRepository.findProblemDefunct(problem_id);
         if (!data || data.length === 0) {
             return ProblemPublicStatus.NOT_EXIST;
         } else {
@@ -173,7 +175,7 @@ export class SubmissionService {
     }
 
     private async makePrependAndAppendCode(problem_id: number, source: string, language: number) {
-        const data = await cache_query("select * from prefile where problem_id = ? and type = ?", [problem_id, language]);
+        const data = await submissionSubmitRepository.findPrefiles(problem_id, language);
 
         let new_source = this.deepCopy(source);
 
@@ -197,7 +199,7 @@ export class SubmissionService {
         return Boolean((~langmask) & (2 ** language));
     }
 
-    private async checkContestValidate(connection: MySQLTransaction, req: Request, originalContestID: number, originalPID: number, language: number) {
+    private async checkContestValidate(connection: SubmitTransaction, req: SubmitRequest, originalContestID: number, originalPID: number, language: number) {
         if (isNaN(originalContestID) || isNaN(originalPID)) {
             throw error.errorMaker("Invalid contest_id or pid");
         }
@@ -224,14 +226,14 @@ export class SubmissionService {
         return true;
     }
 
-    private async prepareRequest(req: Request, cookie: Record<string, string>) {
+    private async prepareRequest(req: SubmitRequest, cookie: Record<string, string>) {
         if (!req.session || !req.session.user_id) {
             let obj: any = {};
             obj.session = {};
             obj.session.user_id = cookie["user_id"];
             let user_id = cookie["user_id"];
             let token = cookie["token"];
-            const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
+            const original_token = await submissionLoginTokens.listTokens(user_id);
             if (original_token.indexOf(token) !== -1) {
                 await login_action(obj, user_id);
             }
@@ -264,27 +266,24 @@ export class SubmissionService {
         return submission_type;
     }
 
-    private async insertTransaction(connection: MySQLTransaction, { result, source_code, source_code_user, data }: any, testRun: boolean) {
+    private async insertTransaction(connection: SubmitTransaction, { result, source_code, source_code_user, data }: any, testRun: boolean) {
         const solution_id = result.insertId;
-        let promiseArray = [connection.query(`insert into source_code_user(solution_id,source,hash)
-        values(?,?,?)`, [solution_id, source_code_user, this.createCodeHash(source_code_user)]),
-        connection.query(`insert into source_code(solution_id, source)
-        values(?,?)`, [solution_id, source_code])
+        let promiseArray = [connection.insertSourceCodeUser(solution_id, source_code_user, this.createCodeHash(source_code_user)),
+        connection.insertSourceCode(solution_id, source_code)
         ];
         if (testRun) {
             data.input_text = this.dos2unix(data.input_text);
-            promiseArray.push(connection.query(`insert into custominput(solution_id, input_text)
-            values(?,?)`, [solution_id, data.input_text]));
+            promiseArray.push(connection.insertCustomInput(solution_id, data.input_text));
         }
         await Promise.all(promiseArray);
-        await connection.query("COMMIT");
+        await connection.commit();
         return {
             status: "OK",
             solution_id
         };
     }
 
-    private async normalSubmissionTransaction(connection: MySQLTransaction, req: any, data: SubmissionData) {
+    private async normalSubmissionTransaction(connection: SubmitTransaction, req: any, data: SubmissionData) {
         // @ts-ignore
         const originalProblemId = parseInt(data.id);
         const language = parseInt(data.language as string);
@@ -315,15 +314,14 @@ export class SubmissionService {
         const source_code = await this.makePrependAndAppendCode(positiveProblemId, data.source, language);
         const [source_code_user, IP, judger, fingerprint, fingerprintRaw, share] = [this.deepCopy(data.source), getIP(req), "待分配", data.fingerprint, data.fingerprintRaw, Boolean(data.share)];
         const code_length = source_code_user.length;
-        const result = await connection.query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,share,judger,fingerprint,fingerprintRaw)
-        values(?,?,NOW(),?,?,?,?,?,?,?)`, [originalProblemId, req.session!.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw]);
+        const result = await connection.insertProblemSolution(originalProblemId, req.session!.user_id, language, IP, code_length, share, judger, fingerprint, fingerprintRaw);
         Logger.log("result", result);
         return await this.insertTransaction(connection, { result, source_code, source_code_user, data }, originalProblemId !== positiveProblemId);
     }
 
     // Core Logic Placeholder
-    public async submit(req: Request, data: SubmissionData, cookie: Record<string, string>): Promise<SubmissionResponse> {
-        const connection = await MySQLManager.transaction();
+    public async submit(req: SubmitRequest, data: SubmissionData, cookie: Record<string, string>): Promise<SubmissionResponse> {
+        const connection = await submissionSubmitRepository.beginTransaction();
         Logger.log("start submit transaction.");
         try {
             await this.prepareRequest(req, cookie);
@@ -351,8 +349,7 @@ export class SubmissionService {
                 if (testRunFlag) {
                     problemId = -Math.abs(problemId);
                 }
-                const result = await connection.query(`INSERT INTO solution(problem_id,user_id,in_date,language,ip,code_length,contest_id,num,judger,fingerprint,fingerprintRaw)
-        values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session!.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw]);
+                const result = await connection.insertContestSolution(problemId, req.session!.user_id, language, IP, code_length, positiveContestID, originalPID, judger, fingerprint, fingerprintRaw);
                 return await this.insertTransaction(connection, { result, source_code, source_code_user, data }, testRunFlag);
             } else if (submissionType === SubmissionType.TOPIC) {
                 const originalTopicID = parseInt(data.tid as string);
@@ -372,8 +369,7 @@ export class SubmissionService {
                 if (testRunFlag) {
                     problemId = -Math.abs(problemId);
                 }
-                const result = await connection.query(`insert into solution(problem_id,user_id,in_date,language,ip,code_length,topic_id,num,judger,fingerprint,fingerprintRaw)
-        values(?,?,NOW(),?,?,?,?,?,?,?,?)`, [problemId, req.session!.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw]);
+                const result = await connection.insertTopicSolution(problemId, req.session!.user_id, language, IP, code_length, positiveTopicID, originalPID, judger, fingerprint, fingerprintRaw);
                 return await this.insertTransaction(connection, {
                     result,
                     source_code: sourceCode,
@@ -386,7 +382,7 @@ export class SubmissionService {
         catch (err: any) {
             Logger.log("failed submitControl", err);
             try {
-                await connection.query("ROLLBACK");
+                await connection.rollback();
             } catch (rollbackErr) {
                 // 回滚失败不覆盖原始错误；release() 会兜底回滚/销毁连接
                 Logger.log("submit transaction rollback failed", rollbackErr);
@@ -399,58 +395,37 @@ export class SubmissionService {
     }
 
     async getSimRelatedSolution(contestId?: number) {
-        let sql = `select s.*,u2.nick as snick from(select t.*,u1.nick from (select * from sim where
-		 s_user_id is not null and s_s_user_id is not null 
-		 ${!contestId ? "" : ` and s_id in (select solution_id from
-		 solution where contest_id = ?)`} )t left join users as u1
-		on u1.user_id = t.s_user_id)s
- left join users as u2
-		on u2.user_id = s.s_s_user_id`;
-        const params = [];
-        if (contestId) {
-            params.push(contestId);
-        }
-        return await cache_query(sql, params);
+        return await submissionQueryRepository.findSimRelatedSolutions(contestId);
     }
 
     async getRuntimeInfo(solutionId: number | string) {
-        const sql = "SELECT `error` FROM `runtimeinfo` WHERE `solution_id`= ?";
-        const data = await cache_query(sql, [solutionId]);
+        const data = await submissionQueryRepository.findRuntimeInfo(solutionId);
         return data; // Return raw data as route expects array
     }
 
     async getCompileInfo(solutionId: number | string) {
-        const sql = "SELECT `error` FROM `compileinfo` WHERE `solution_id`= ?";
-        const data = await cache_query(sql, [solutionId]);
+        const data = await submissionQueryRepository.findCompileInfo(solutionId);
         return data;
     }
 
     async getSolutionInfo(solutionId: number | string) {
-        const _result = await cache_query(`SELECT user_id,
-                                            language,
-                                            if((share = 1 or solution_id in (select solution_id from
-                                             tutorial where solution.solution_id = ?)) and not exists
-                                             (select * from contest where contest_id in (select contest_id
-                                             from contest_problem where solution.problem_id = contest_problem.problem_id)
-                                             and end_time > NOW()), 1, 0) as share,time,memory,code_length from solution
-                                     WHERE solution_id = ?`, [solutionId, solutionId]);
-        return _result;
+        return await submissionQueryRepository.findSharedSolutionInfo(solutionId);
     }
 
     async getSolutionDetail(solutionId: number | string) {
-        return await cache_query("select * from solution where solution_id=?", [solutionId]);
+        return await submissionQueryRepository.findSolutionDetail(solutionId);
     }
 
     async getSubmissionResultStats() {
-        return await cache_query("select count(1) as cnt,result from solution group by result order by result");
+        return await submissionQueryRepository.countByResult();
     }
 
     async getCodeLengthStats(statement: string = "1 = 1", sqlArr: any[] = []) {
-        return await cache_query(`select in_date, code_length from solution where ${statement} and result = 4`, sqlArr);
+        return await submissionQueryRepository.findAcceptedCodeLength(statement, sqlArr);
     }
 
     async getSourceCode(solutionId: number | string) {
-        const data = await cache_query("select source from source_code_user where solution_id = ?", [solutionId]);
+        const data = await submissionQueryRepository.findUserSourceCode(solutionId);
         return data && data.length > 0 ? data[0].source : "Code not found.";
     }
 }

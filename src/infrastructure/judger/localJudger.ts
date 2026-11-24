@@ -6,18 +6,17 @@ import fsDefault from "fs";
 import Promise from "bluebird";
 import SocketIoClient from "socket.io-client";
 import JudgeManager from "../persistence/judge/JudgeManager";
-import JudgeResultManager from "../../interfaces/websocket/managers/JudgeResultManager";
-import SubmissionSet from "../../interfaces/websocket/set/SubmissionSet";
-import UnjudgedSubmissionCollector from "../../application/judging/UnjudgedSubmissionCollector";
+import { judgerEventListener, RejectJudgeInfo, SubmissionJudger } from "../../application/ports/SubmissionJudger";
+// 原先经 JudgeResultManager 间接加载：log4j 在加载时 configure log4js，保持它在判题机客户端加载时生效
+import "../logging/log4j";
 const os = require("os");
 const eventEmitter = require("events").EventEmitter;
-interface IRejectInfo {
-	reason: string,
-	solutionId: number | string,
-	problemId: number | string
-}
 
-export class localJudger extends eventEmitter {
+/**
+ * 判题机客户端，实现 application 的判题机端口（SubmissionJudger）。
+ * 判题结果、拒绝判题等事件交给 application 的 JudgerEventListener 端口处理。
+ */
+export class localJudger extends eventEmitter implements SubmissionJudger {
 	socket:SocketIOClient.Socket;
 	oj_home: string;
 	status: any = {free_judger: []};
@@ -36,7 +35,7 @@ export class localJudger extends eventEmitter {
 			});
 		});
 		socket.on("judger", (payload: any) => {
-			JudgeResultManager.messageHandle(payload);
+			judgerEventListener.onJudgeResult(payload);
 		});
 
 		socket.on("status", (payload: any) => {
@@ -52,14 +51,8 @@ export class localJudger extends eventEmitter {
 			this.errorHandle(solutionId, recordId);
 		});
 
-		socket.on("reject_judge", (payload: IRejectInfo) => {
-			UnjudgedSubmissionCollector.addNewNoDataProblemId(payload.problemId);
-			const userSocket = SubmissionSet.get(payload.solutionId);
-			if (userSocket) {
-				userSocket.emit("remoteJudge", {
-					solutionId: payload.solutionId
-				});
-			}
+		socket.on("reject_judge", (payload: RejectJudgeInfo) => {
+			judgerEventListener.onRejectJudge(payload);
 		});
 
 		socket.emit("status", {});

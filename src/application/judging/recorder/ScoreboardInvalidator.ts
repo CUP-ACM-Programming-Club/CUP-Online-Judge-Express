@@ -1,4 +1,4 @@
-import { MySQLManager } from "../../../infrastructure/db/mysql/MySQLManager";
+import { judgeResultRepository } from "../../ports/JudgeResultRepository";
 import ScoreboardService from "../../services/ScoreboardService";
 
 import { getLogger } from "../../ports/Logger";
@@ -13,7 +13,7 @@ export interface ScoreboardInvalidatorDeps {
 }
 
 async function defaultLookupContestId(solutionId: number | string): Promise<number | null> {
-    const rows: any[] = await MySQLManager.execQuery("select contest_id from solution where solution_id = ?", [solutionId]);
+    const rows: any[] = await judgeResultRepository.findContestIdBySolution(solutionId);
     if (!rows || rows.length === 0) {
         return null;
     }

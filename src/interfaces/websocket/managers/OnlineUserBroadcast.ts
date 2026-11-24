@@ -4,7 +4,7 @@ import NormalUserSet from "../set/NormalUserSet";
 import AdminUserSet from "../set/AdminUserSet";
 import {BaseUserSet} from "../set/BaseUserSet";
 import Throttle from "../../../shared/decorators/Throttle";
-import localJudger from "../../../infrastructure/judger/localJudger";
+import JudgerUseCases from "../../../application/judging/JudgerUseCases";
 
 /**
  * 向不同权限的用户广播用户信息
@@ -23,7 +23,7 @@ export class OnlineUserBroadcast {
 
     private sendMessage(userSet: BaseUserSet, userList: any) {
         BroadcastManager.sendMessage(userSet.getInnerStorage(), "user", {
-            user: userList, judger: localJudger.getStatus().free_judger
+            user: userList, judger: JudgerUseCases.getStatus().free_judger
         });
     }
 

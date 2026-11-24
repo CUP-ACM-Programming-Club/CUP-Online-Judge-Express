@@ -2,6 +2,7 @@ const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
 import { openTransaction } from "../../infrastructure/db/mysql/transaction";
+import { rebindSubmissionServicePorts } from "../setup/submission-ports";
 
 /**
  * 提交路径的事务语义：用真实 openTransaction + 假连接，断言
@@ -14,6 +15,7 @@ describe("SubmissionService submit transaction", function () {
     let previousLoad: any;
     let log: string[];
     let failOn: RegExp | null;
+    let restorePorts: () => void;
 
     const mockReq = () => ({ session: { user_id: "test_user", isadmin: false }, headers: {} });
 
@@ -77,12 +79,15 @@ describe("SubmissionService submit transaction", function () {
             if (request.includes("getIP")) return () => "127.0.0.1";
             return previousLoad.apply(this, arguments);
         };
+        // 提交的 SQL / 事务在仓储里：拦截生效期间重新加载并绑定到端口
+        restorePorts = rebindSubmissionServicePorts();
         delete require.cache[require.resolve("../../application/services/SubmissionService")];
         const ServiceModule = require("../../application/services/SubmissionService");
         service = new ServiceModule.SubmissionService();
     });
 
     afterEach(function () {
+        restorePorts();
         Module._load = previousLoad;
         delete require.cache[require.resolve("../../application/services/SubmissionService")];
         sinon.restore();

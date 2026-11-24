@@ -1,5 +1,4 @@
 import express from "express";
-import cache_query = require("../../../../infrastructure/db/legacy/mysql_cache");
 const router = express.Router();
 import UserService from "../../../../application/services/UserService";
 import const_var from "../../../../domain/constants/const_var";

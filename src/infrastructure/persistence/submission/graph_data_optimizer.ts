@@ -3,21 +3,17 @@
  * 使用 SQL 优化 + Redis 缓存来提升性能
  */
 
-import client from "../../../../infrastructure/redis/redis";
-import { withCache, clearCacheBatch } from "../../../../infrastructure/cache/cache-helper";
+import client from "../../redis/redis";
+import { withCache, clearCacheBatch } from "../../cache/cache-helper";
+import { SubmissionGraphData } from "../../../application/ports/SubmissionGraphData";
+import { TIME_GRANULARITY, indexToGranularity, getGraphLabel } from "../../../domain/constants/graph_granularity";
 
-const cache_query = require("../../../../infrastructure/db/legacy/mysql_cache");
-import { getLogger } from "../../../../application/ports/Logger";
+const cache_query = require("../../db/legacy/mysql_cache");
+import { getLogger } from "../../../application/ports/Logger";
 const logger = getLogger("cheese", "info");
 
-// 时间粒度常量
-export const TIME_GRANULARITY = {
-    MONTH: 'month',
-    DAY: 'day',
-    HOUR: 'hour',
-    MINUTE: 'minute',
-    SECOND: 'second'
-};
+// 时间粒度常量与标签（纯函数）在 domain/constants/graph_granularity，这里保留原有导出
+export { TIME_GRANULARITY, indexToGranularity, getGraphLabel };
 
 /**
  * 构建优化后的图表数据 SQL
@@ -176,30 +172,13 @@ export async function clearGraphDataCache(contestId: number): Promise<void> {
     await clearCacheBatch(keys, `Graph Data for contest ${contestId}`);
 }
 
-/**
- * 将粒度映射到索引 (用于与现有代码兼容)
- */
-export function indexToGranularity(idx: number): string {
-    const map = [
-        TIME_GRANULARITY.MONTH,  // 0
-        TIME_GRANULARITY.DAY,    // 1
-        TIME_GRANULARITY.HOUR,   // 2
-        TIME_GRANULARITY.MINUTE, // 3
-        TIME_GRANULARITY.SECOND  // 4
-    ];
-    return map[idx] || TIME_GRANULARITY.MONTH;
-}
+/** SubmissionGraphData 端口实现 */
+export class MySqlSubmissionGraphData implements SubmissionGraphData {
+    getGraphDataWithCache(contestId: number, granularity: string) {
+        return getGraphDataWithCache(contestId, granularity);
+    }
 
-/**
- * 获取图表标签
- */
-export function getGraphLabel(granularity: string): string[] {
-    switch (granularity) {
-        case TIME_GRANULARITY.MONTH: return ["year", "month"];
-        case TIME_GRANULARITY.DAY: return ["month", "day"];
-        case TIME_GRANULARITY.HOUR: return ["day", "hour"];
-        case TIME_GRANULARITY.MINUTE: return ["hour", "minute"];
-        case TIME_GRANULARITY.SECOND: return ["minute", "second"];
-        default: return ["year", "month"];
+    clearGraphDataCache(contestId: number) {
+        return clearGraphDataCache(contestId);
     }
 }
