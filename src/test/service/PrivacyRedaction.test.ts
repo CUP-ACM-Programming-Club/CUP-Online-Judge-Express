@@ -35,6 +35,7 @@ describe("StatusService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return queryStub;
+            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return assistantStub;
             if (request.includes("const_name")) return {};
             if (request.includes("graph_data_optimizer")) return { getGraphDataWithCache: sinon.stub(), getGraphLabel: sinon.stub(), TIME_GRANULARITY: {} };
@@ -223,6 +224,7 @@ describe("RanklistService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return { __esModule: true, default: queryStub };
+            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             return previousLoad.apply(this, arguments);
         };
         delete require.cache[require.resolve("../../service/RanklistService")];
