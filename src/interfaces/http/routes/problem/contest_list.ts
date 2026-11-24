@@ -3,7 +3,7 @@ import express from "express";
 import ContestInfoManager from "../../../../application/contest/ContestInfoManager";
 import ContestFinder from "../../../../application/problem/ContestFinder";
 const router = express.Router();
-const ErrorCollector = require("../../../../application/error/collector");
+const ErrorCollector = require("../../../../shared/ErrorCollector");
 const {error, ok} = require("../../../../domain/constants/state");
 const adminMiddleware = require("../../middleware/admin");
 

@@ -200,26 +200,6 @@ registerOverride(path.join(srcRoot, "main", "init", "build_env.ts"), mockBuildEn
 registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
 registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
 registerOverride(path.join(srcRoot, "shared", "cache", "CacheScheduler.ts"), mockCacheScheduler);
-registerOverride(path.join(srcRoot, "infrastructure", "persistence", "user", "UserRegisterManager.ts"), {
-	UserRegisterValidator: class {
-		async validate(payload: any) { }
-		async validateWithoutInviteCode(payload: any) { }
-	},
-	UserRegisterManager: class {
-		userRegisterValidator: any;
-		constructor() {
-			this.userRegisterValidator = {
-				validate: async () => { },
-				validateWithoutInviteCode: async () => { }
-			};
-		}
-		async registerUserRequest(req: any) { return { status: "OK" }; }
-		async initSystemAdminUserRequest(req: any) { }
-	},
-	default: {
-		registerUserRequest: () => Promise.resolve({ status: "OK" })
-	}
-});
 registerOverride(path.join(srcRoot, "main", "init", "manager", "InitManager.ts"), {
 	default: {
 		setInitFlag: () => { }

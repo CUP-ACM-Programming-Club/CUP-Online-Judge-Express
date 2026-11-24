@@ -3,7 +3,7 @@ const CachePool = require("../../shared/cache/CachePool").default || require("..
 const Cacheable = require("../../shared/cache/Cacheable").default || require("../../shared/cache/Cacheable");
 const Lock = require("../../shared/decorators/Lock").default || require("../../shared/decorators/Lock");
 const Timer = require("../../shared/decorators/Timer").default || require("../../shared/decorators/Timer");
-const ResponseLogger = require("../../interfaces/http/decorators/ResponseLogger").default || require("../../interfaces/http/decorators/ResponseLogger");
+const ResponseLogger = require("../../shared/decorators/ResponseLogger").default || require("../../shared/decorators/ResponseLogger");
 const {ErrorHandlerFactory} = require("../../shared/decorators/ErrorHandler");
 
 describe("decorators", function () {

@@ -3,7 +3,7 @@ const router = express.Router();
 const captchaChecker = require("../../captcha_checker");
 const Account = require("../../../../application/account/index");
 const { error, ok } = require("../../../../domain/constants/state");
-const ErrorCollector = require("../../../../application/error/collector");
+const ErrorCollector = require("../../../../shared/ErrorCollector");
 const getIP = require("../../getIP");
 router.post("/", async (req: any, res: any) => {
 	try {

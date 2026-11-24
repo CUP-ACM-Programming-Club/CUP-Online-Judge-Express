@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
 const configModule = require("../../../infrastructure/config/config-manager");
 const { SystemConfigManager, ConfigManager } = configModule;
-const ErrorCollector = require("../../../application/error/collector");
+const ErrorCollector = require("../../../shared/ErrorCollector");
 
 describe("ConfigManager", function () {
 	it("should set/get/remove config values", function () {
