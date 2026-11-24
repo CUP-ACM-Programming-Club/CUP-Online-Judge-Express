@@ -2,13 +2,12 @@
 import { Request } from "express";
 import dayjs from "dayjs";
 import { error, ok } from "../../domain/constants/state";
-import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
-import query = require("../../infrastructure/db/legacy/mysql_query");
 import const_variable = require("../../domain/constants/const_name");
-import ProblemInfoManager = require("../../infrastructure/persistence/problem/ProblemInfoManager");
-import SourcePrivilegeCache from "../../infrastructure/persistence/submission/SourcePrivilegeCache";
 import { canBrowseSource, isAdmin, isContestAssistant } from "../../domain/policy/predicates";
-const cache = require("../../infrastructure/cache/nodeCache");
+import { problemRepository } from "../ports/ProblemRepository";
+import { problemInfoStore } from "../ports/ProblemInfoStore";
+import { problemResultCache as cache } from "../ports/ProblemResultCache";
+import { problemSourcePrivilege } from "../ports/ProblemSourcePrivilege";
 const cheerio = require("cheerio");
 
 interface ProblemQueryOptions {
@@ -61,7 +60,7 @@ class ProblemService {
 
     async checkUploader(problem_id: any) {
         try {
-            const _uploader = await cache_query("SELECT user_id from privilege where rightstr = ?", ["p" + problem_id]);
+            const _uploader = await problemRepository.findUploaderRows(problem_id);
             if (_uploader && _uploader.length > 0) {
                 return _uploader[0].user_id;
             } else {
@@ -78,13 +77,13 @@ class ProblemService {
     }
 
     async checkProblemAvailable(problem_id: any) {
-        const problemInfo = await ProblemInfoManager.newInstance().setProblemId(problem_id).find();
+        const problemInfo = await problemInfoStore.find(problem_id);
         const data = problemInfo ? problemInfo.get() : null;
         return !(!data || data.defunct === "Y");
     }
 
     async checkProblemInContest(problem_id: any) {
-        const data = await cache_query("select problem_id from contest_problem where contest_id in (select contest_id from contest where end_time > NOW()) and problem_id = ?", [problem_id]);
+        const data = await problemRepository.findRunningContestProblemRows(problem_id);
         return !!(data && data.length && data.length > 0);
     }
 
@@ -113,25 +112,20 @@ class ProblemService {
 
     async getProblem(req: Request, opt: ProblemQueryOptions) {
         const copyVal: any = {};
-        this.prependAppendHandler(await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.id]), opt);
+        this.prependAppendHandler(await problemRepository.findPrefiles(opt.id), opt);
         let rows;
 
         if (isAdmin(req)) {
             if (opt.source.length === 0) {
-                rows = await cache_query(`select a.*,privilege.user_id as creator
-from (SELECT * FROM problem WHERE problem_id = ?)a
-       left join privilege on privilege.rightstr = CONCAT('p', ?)`, [opt.id, opt.id]);
+                rows = await problemRepository.findLocalProblemWithCreator(opt.id);
             } else {
-                rows = await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [opt.id, opt.source]);
+                rows = await problemRepository.findVjudgeProblem(opt.id, opt.source);
             }
         } else {
             if (opt.source.length === 0) {
-                rows = await cache_query("SELECT * FROM problem WHERE problem_id = ?", [opt.id]);
+                rows = await problemRepository.findLocalProblem(opt.id);
             } else {
-                rows = await cache_query(`SELECT * FROM vjudge_problem WHERE problem_id = ? and source = ? 
-			and CONCAT(problem_id,source) NOT IN (SELECT CONCAT(problem_id,source) FROM contest_problem 
-			where  contest_id IN (SELECT contest_id FROM contest WHERE end_time > NOW()
-			OR private = 1))`, [opt.id, opt.source]);
+                rows = await problemRepository.findPublicVjudgeProblem(opt.id, opt.source);
             }
         }
 
@@ -153,19 +147,13 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
                 packed_problem.source = "";
             }
             if (opt.solution_id && ~opt.solution_id) {
-                const browse_privilege = await SourcePrivilegeCache.checkPrivilege(req.session!, opt.solution_id);
-                const resolve = await cache_query(`SELECT source FROM source_code_user WHERE solution_id = ?
-			${browse_privilege ? "" : " AND solution_id in (select solution_id from solution where user_id = ? or if((share = 1\n" +
-                        "           and not exists\n" +
-                        "           (select * from contest where contest_id in\n" +
-                        "           (select contest_id from contest_problem\n" +
-                        "           where solution.problem_id = contest_problem.problem_id)\n" +
-                        "          and end_time > NOW()) ),1,0))"}`, [opt.solution_id, req.session!.user_id]);
+                const browse_privilege = await problemSourcePrivilege.checkPrivilege(req.session!, opt.solution_id);
+                const resolve = await problemRepository.findUserSourceCode(opt.solution_id, req.session!.user_id, browse_privilege);
 
                 const source_code = resolve ? resolve[0] ? resolve[0].source : "" : "";
                 const source: any = { source_code };
                 if (source_code.length > 0) {
-                    const data = await cache_query("select language from solution where solution_id = ?", [opt.solution_id]);
+                    const data = await problemRepository.findSolutionLanguage(opt.solution_id);
                     source.language = data[0].language;
                 }
                 Object.assign(copyVal, { source: source });
@@ -195,8 +183,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
         const _res = cache.get(cacheKey);
         if (_res === undefined) {
             const queryVal = `%${val}%`;
-            const rows = await cache_query(`SELECT * FROM problem WHERE ${(isAdmin ? "" : " defunct='N' AND")} 
-			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [queryVal, queryVal, queryVal, queryVal, queryVal]);
+            const rows: any = await problemRepository.searchProblems(queryVal, isAdmin);
 
             if (isDropdown) {
                 // Dropdown mode returns raw rows (or we can process it here if needed, but the controller does post-processing)
@@ -221,7 +208,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
     }
     async maintainLabels(vjudge: string) {
         try {
-            const rows: any = await cache_query(`select label from ${vjudge}problem`);
+            const rows: any = await problemRepository.findAllLabels(vjudge);
             let all_label: any[] = [];
             for (let i of rows) {
                 if (typeof i.label === "string" && i.label.length > 0) {
@@ -231,11 +218,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
                 }
             }
             const data = [...new Set(all_label)];
-            await Promise.all(data.map(i => query(`INSERT INTO ${vjudge}label_list (label_name)
-SELECT * FROM (SELECT ?) AS tmp
-WHERE NOT EXISTS (
-    SELECT label_name FROM ${vjudge}label_list WHERE label_name = ?
-) LIMIT 1;`, [i, i])));
+            await Promise.all(data.map(i => problemRepository.insertLabelIfAbsent(vjudge, i)));
             return true;
         } catch (e) {
             console.log(e);
@@ -244,7 +227,7 @@ WHERE NOT EXISTS (
     }
 
     async getLabels(vjudge: string) {
-        const rows: any = await cache_query(`select label_name from ${vjudge}label_list`);
+        const rows: any = await problemRepository.findLabelList(vjudge);
         return {
             status: "OK",
             data: rows.map((val: any) => val.label_name)
@@ -252,14 +235,13 @@ WHERE NOT EXISTS (
     }
 
     async checkProblemContestStatus(id: any) {
-        const _end_time = await cache_query(`select UNIX_TIMESTAMP(end_time) as t from contest where contest_id in (select contest_id from contest_problem
-         where problem_id = ?)`, [id]);
+        const _end_time = await problemRepository.findContestEndTimesOfProblem(id);
         return (_end_time.length > 0 && dayjs().isBefore(dayjs(_end_time[0].t * 1000)));
     }
 
     async getSourceCode(req: Request, id: number, sid: number, source: string, vjudge: boolean = false) {
         const prefix = vjudge ? "vjudge_" : "";
-        const rows2 = await cache_query(`SELECT source,user_id FROM ${prefix}source_code WHERE solution_id=?`, [sid]);
+        const rows2 = await problemRepository.findSourceCodeWithOwner(sid, prefix);
         if (!rows2 || rows2.length === 0) {
             throw error.errorMaker("Solution not found");
         }
@@ -286,9 +268,9 @@ WHERE NOT EXISTS (
 
             let problemInfo: any;
             if (!vjudge) {
-                problemInfo = (await ProblemInfoManager.newInstance().setProblemId(id).find()).get();
+                problemInfo = (await problemInfoStore.find(id))!.get();
             } else {
-                const pj = await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source]);
+                const pj = await problemRepository.findVjudgeProblem(id, source);
                 problemInfo = pj[0];
             }
 
@@ -302,8 +284,13 @@ WHERE NOT EXISTS (
         }
     }
 
+    /** 读取 getSourceCode 留下的缓存；未命中返回 undefined */
+    getCachedSourceCode(source: string, id: number, sid: number) {
+        return cache.get("source/id/" + source + id + "/" + sid);
+    }
+
     async getVjudgeProblem(id: number, source: string) {
-        return await cache_query("SELECT * FROM vjudge_problem WHERE problem_id=? AND source=?", [id, source]);
+        return await problemRepository.findVjudgeProblem(id, source);
     }
 }
 

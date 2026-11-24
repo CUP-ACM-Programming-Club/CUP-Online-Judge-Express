@@ -2,6 +2,9 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { PortHarness } from "../../helpers/problem-port-harness";
+import { adminProblemRepository } from "../../../application/ports/AdminProblemRepository";
+import { problemDataStorage } from "../../../application/ports/ProblemDataStorage";
 
 describe("AdminProblemService Tests", function () {
     let AdminProblemService: any;
@@ -9,6 +12,7 @@ describe("AdminProblemService Tests", function () {
     let rejudgeStub: any;
     let problemFileManagerStub: any;
     let previousLoad: any;
+    const ports = new PortHarness();
 
     beforeEach(function () {
         // 1. Setup Stubs
@@ -33,16 +37,14 @@ describe("AdminProblemService Tests", function () {
             // console.log("Req:", request);
             if (request.includes("mysql_query")) return queryStub;
             if (request.includes("status/update_solution_result")) return rejudgeStub;
-            if (request.includes("ProblemFileManager")) {
-                // Support both check 
-                (problemFileManagerStub as any).default = problemFileManagerStub;
-                return problemFileManagerStub;
-            }
-
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Re-require Service
+        // 3. 仓储用重新加载的真实实现（拿到上面拦截的 mysql_query）；数据文件存储直接换成桩
+        ports.bindFresh(adminProblemRepository, "infrastructure/persistence/problem/MySqlAdminProblemRepository", "MySqlAdminProblemRepository");
+        ports.bind(problemDataStorage, problemFileManagerStub);
+
+        // 4. Re-require Service
         Object.keys(require.cache).forEach(key => {
             const normalized = key.replace(/\\/g, "/");
             if (normalized.includes("application/status/update_solution_result") || normalized.includes("services/admin/AdminProblemService")) {
@@ -54,6 +56,7 @@ describe("AdminProblemService Tests", function () {
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        ports.restore();
         sinon.restore();
     });
 

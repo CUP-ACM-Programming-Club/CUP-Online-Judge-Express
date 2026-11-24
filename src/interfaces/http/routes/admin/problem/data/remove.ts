@@ -1,9 +1,9 @@
 import express, {Router} from "express";
-import ProblemFileManager from "../../../../../../infrastructure/storage/ProblemFileManager";
+import ProblemDataController from "../../../../controllers/ProblemDataController";
 const router: Router = express.Router();
 
 router.get("/:problemId/:fileName", async (req, res) => {
-    res.json(await ProblemFileManager.removeFileByRequest(req));
+    res.json(await ProblemDataController.removeFile(req));
 });
 
 export = ["/remove", router];

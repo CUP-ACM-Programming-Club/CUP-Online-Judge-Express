@@ -2,12 +2,16 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
-// We cannot import ProblemSetManager directly here because we need to mock dependencies first.
+import { PortHarness } from "../helpers/problem-port-harness";
+import { problemSetRepository } from "../../application/ports/ProblemSetRepository";
+// 原 ProblemSetManager 已拆成 ProblemSetController（HTTP）+ ProblemSetUseCases + MySqlProblemSetRepository（SQL），
+// 这里经控制器走完整链路，仓储在拦截 mysql_cache 之后重新加载。
 
 describe("ProblemSetManager Tests", function () {
     let ProblemSetManager: any;
     let cacheQueryStub: any;
     let previousLoad: any;
+    const ports = new PortHarness();
 
     const mockReq = {
         params: {},
@@ -45,13 +49,15 @@ describe("ProblemSetManager Tests", function () {
         };
 
         // 3. Re-require
-        delete require.cache[require.resolve("../../infrastructure/persistence/problem/ProblemSetManager")];
         delete require.cache[require.resolve("../../shared/cache/CachePool")]; // decorators use this
-        ProblemSetManager = require("../../infrastructure/persistence/problem/ProblemSetManager").default;
+        ports.bindFresh(problemSetRepository, "infrastructure/persistence/problem/MySqlProblemSetRepository", "MySqlProblemSetRepository");
+        delete require.cache[require.resolve("../../interfaces/http/controllers/ProblemSetController")];
+        ProblemSetManager = require("../../interfaces/http/controllers/ProblemSetController").default;
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        ports.restore();
         sinon.restore();
     });
 
