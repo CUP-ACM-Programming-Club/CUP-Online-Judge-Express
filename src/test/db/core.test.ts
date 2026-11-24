@@ -151,10 +151,19 @@ describe("src/db core", function () {
 
         it("cachedQueryByKey：shouldCacheOnMiss=false 时直接查询且不写缓存", async function () {
             const { db, calls, cache } = setup();
-            await db.cachedQueryByKey("k", "delete from x", [], 2000, () => false);
-            await db.cachedQueryByKey("k", "delete from x", [], 2000, () => false);
+            await db.cachedQueryByKey("k", "delete from x", [], 2000, { cacheOnMiss: () => false });
+            await db.cachedQueryByKey("k", "delete from x", [], 2000, { cacheOnMiss: () => false });
             expect(calls.length).to.equal(2);
             expect(cache.store.size).to.equal(0);
+        });
+
+        it("cachedQueryByKey：mapHit 只作用于命中（含过期刷新）路径，首次未命中返回原始结果", async function () {
+            const { db, cache } = setup(() => [{ n: 1 }]);
+            const tag = (d: any) => ({ hit: d });
+            expect(await db.cachedQueryByKey("k", "select n", [], 2000, { mapHit: tag })).to.deep.equal([{ n: 1 }]);
+            expect(await db.cachedQueryByKey("k", "select n", [], 2000, { mapHit: tag })).to.deep.equal({ hit: [{ n: 1 }] });
+            cache.age("k", 3000);
+            expect(await db.cachedQueryByKey("k", "select n", [], 2000, { mapHit: tag })).to.deep.equal({ hit: [{ n: 1 }] });
         });
     });
 

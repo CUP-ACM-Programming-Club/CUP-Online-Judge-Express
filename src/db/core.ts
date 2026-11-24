@@ -29,10 +29,16 @@ export interface Db {
     cachedQuery<T = any>(sql: string, params: any[] | undefined, options: CachedQueryOptions): Promise<T>;
     tx<T>(fn: (t: TxContext) => Promise<T>): Promise<T>;
     /**
-     * 以调用方给定的缓存键做读穿透缓存。仅供兼容层（module/mysql_cache）沿用旧键格式使用。
-     * shouldCacheOnMiss 返回 false 时，未命中则直接查询且不写缓存（旧版「看起来像写语句」的判断）。
+     * 以调用方给定的缓存键做读穿透缓存。仅供兼容层（module/mysql_cache）沿用旧键格式与旧行为使用，新代码用 cachedQuery。
      */
-    cachedQueryByKey<T = any>(key: string, sql: string, params: any[] | undefined, ttlMs: number, shouldCacheOnMiss?: () => boolean): Promise<T>;
+    cachedQueryByKey<T = any>(key: string, sql: string, params: any[] | undefined, ttlMs: number, options?: CachedByKeyOptions): Promise<T>;
+}
+
+export interface CachedByKeyOptions {
+    /** 返回 false 时，未命中则直接查询且不写缓存（旧版「看起来像写语句」的判断） */
+    cacheOnMiss?: () => boolean;
+    /** 命中缓存（含过期后刷新）时对返回值的变换（旧版 opt.copy 只作用于这两条路径） */
+    mapHit?: (data: any) => any;
 }
 
 export function cacheKeyOf(sql: string, params: any[] = []) {
@@ -63,19 +69,20 @@ export function createDb(deps: DbDeps): Db {
         return deps.execQuery(sql, params);
     }
 
-    async function cachedQueryByKey<T = any>(key: string, sql: string, params: any[] = [], ttlMs: number, shouldCacheOnMiss: () => boolean = () => true): Promise<T> {
+    async function cachedQueryByKey<T = any>(key: string, sql: string, params: any[] = [], ttlMs: number, options: CachedByKeyOptions = {}): Promise<T> {
         const now = dayjs();
         const cache = await deps.cache.get(key);
         if (cache) {
+            let data = cache.data;
             if (cache.time.add(ttlMs, "millisecond").isBefore(now)) {
                 const value = await runOnce(key, sql, params);
                 // 与旧版一致：过期刷新时不等待写缓存完成
                 deps.cache.set(key, value);
-                return value;
+                data = value;
             }
-            return cache.data;
+            return options.mapHit ? options.mapHit(data) : data;
         }
-        if (!shouldCacheOnMiss()) {
+        if (options.cacheOnMiss && !options.cacheOnMiss()) {
             return deps.execQuery(sql, params);
         }
         const resp = await runOnce(key, sql, params);
