@@ -309,6 +309,11 @@ io.on("connection", async function (socket: UserSocket) {
 	 * 全局推送功能
 	 */
 	socket.on("msg", function (data) {
+		// Site-wide push is an admin tool: the payload is rendered as HTML in every receiver's browser,
+		// so a normal user must not be able to send it (it was open to any logged-in socket).
+		if (!socket.privilege) {
+			return;
+		}
 		if (data.to) {
 			for (const soc of SocketSet.toArray()) {
 				if (soc.url.indexOf(data.to) === 0) {

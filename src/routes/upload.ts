@@ -83,4 +83,13 @@ router.get("/", async (req: any, res: any) => {
 	}
 });
 
-export = ["/upload", auth, router];
+// Importing problems creates problems, writes test data to disk and inserts solutions;
+// it was reachable by any logged-in user. Limit it to admins and problem editors.
+const uploadPrivilege = (req: any, res: any, next: any) => {
+	if (req.session && (req.session.isadmin || req.session.editor)) {
+		return next();
+	}
+	res.status(403).json({ status: "error", statement: "Permission denied" });
+};
+
+export = ["/upload", auth, uploadPrivilege, router];

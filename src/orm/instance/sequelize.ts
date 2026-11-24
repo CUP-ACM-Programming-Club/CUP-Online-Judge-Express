@@ -6,6 +6,8 @@ const sequelize = new Sequelize("jol", mysqlConfig.user, mysqlConfig.password, {
 	host: mysqlConfig.host,
 	dialect: "mysql",
 	timezone: "+08:00",
+	// every query used to be printed to stdout (config polling every 10s x 33 processes => tens of GB of pm2 logs)
+	logging: process.env.KC_SQL_LOG === "1" ? console.log : false,
 	retry  : {
 		match: [
 			/ETIMEDOUT/,

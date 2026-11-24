@@ -20,7 +20,9 @@ console.error = function (message: any, ...args: any[]) {
 export = async function (TEST_MODE: boolean = false) {
 	const _get = express.Router.prototype.get;
 	const _post = express.Router.prototype.post;
-	const wrapper = (fn: any) => (...args: any) => fn(...args).catch((e: any) => {
+	// Catch rejected async route handlers and hand the error to Express (500) instead of leaving the request hanging.
+	// The old check isPromise(handler) was always false for a function, so nothing was ever wrapped.
+	const wrapper = (fn: any) => (...args: any) => Promise.resolve().then(() => fn(...args)).catch((e: any) => {
 		console.log("Catch error: ");
 		console.log(e);
 		console.log("argument: ", args);
@@ -30,7 +32,7 @@ export = async function (TEST_MODE: boolean = false) {
 	});
 	express.Router.prototype.get = function (...args: any[]) {
 		const handler = args[args.length - 1];
-		if (isPromise(handler)) {
+		if (typeof handler === "function" && handler.length < 4) {
 			args[args.length - 1] = wrapper(handler);
 		}
 		return _get.apply(this, args);
@@ -38,7 +40,7 @@ export = async function (TEST_MODE: boolean = false) {
 
 	express.Router.prototype.post = function (...args: any[]) {
 		const handler = args[args.length - 1];
-		if (isPromise(handler)) {
+		if (typeof handler === "function" && handler.length < 4) {
 			args[args.length - 1] = wrapper(handler);
 		}
 		return _post.apply(this, args);

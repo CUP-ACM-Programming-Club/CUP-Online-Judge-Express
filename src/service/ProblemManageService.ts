@@ -121,7 +121,11 @@ class ProblemManageService {
             if (!i || !i.name || !i.content) {
                 continue;
             }
-            const name = i.name;
+            // names come from the uploaded archive: keep only the file name so nothing is written outside savePath
+            const name = path.basename(String(i.name));
+            if (!name || name === "." || name === "..") {
+                continue;
+            }
             const data = this.base64ToString(i.content);
             await (fs as any).writeFileAsync(path.join(savePath, name), data);
             await (fs as any).chownAsync(path.join(savePath, name), 48, 48);
@@ -143,9 +147,8 @@ class ProblemManageService {
             const rows = await query(`INSERT INTO solution(problem_id,language,user_id,in_date,code_length,ip)
             VALUES(?,?,?,NOW(),?,'127.0.0.1')`, [pid, this.convertLanguage(i.name)[0], req.session.user_id, content.length]);
             const solution_id = rows.insertId;
-            query(`INSERT INTO source_code(solution_id,source)VALUES(?,'${prepend_code + content + append_code}')`
-                , [solution_id]);
-            query(`INSERT INTO source_code_user(solution_id,source)VALUES(?,'${content}')`, [solution_id]);
+            query("INSERT INTO source_code(solution_id,source)VALUES(?,?)", [solution_id, prepend_code + content + append_code]);
+            query("INSERT INTO source_code_user(solution_id,source)VALUES(?,?)", [solution_id, content]);
         }
     }
 

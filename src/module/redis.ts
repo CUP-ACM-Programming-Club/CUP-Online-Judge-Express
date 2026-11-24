@@ -35,6 +35,10 @@ if (global.unit_test === "autotest") {
 	} as unknown as IRedis;
 } else {
 	redisClient = redis.createClient(config.redis) as IRedis;
+	// an "error" event without a listener throws and kills the process; log it and let the client reconnect
+	(redisClient as any).on("error", (err: any) => {
+		console.error("redis error", err && err.message ? err.message : err);
+	});
 	bluebird.promisifyAll(redisClient);
 	bluebird.promisifyAll(redisClient);
 }
