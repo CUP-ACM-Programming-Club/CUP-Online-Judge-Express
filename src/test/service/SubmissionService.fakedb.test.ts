@@ -1,11 +1,18 @@
+require("../setup/mock-external");
 const expect = require("chai").expect;
 const query = require("../../module/mysql_cache");
 const table_name = ["solution", "source_code", "source_code_user"];
-const submitControl = require("../../module/submitControl");
 const fakeDb = require("../mocks/fake-db");
-describe("test submit controller", function () {
+// 从已删除的 module/submitControl.test.ts 迁移而来：submitControl.ts 是 SubmissionService 的旧副本（已无引用）。
+// 这里只保留 SubmissionService.test.ts / SubmissionTransaction.test.ts 尚未覆盖的用例，跑在 fake-db 上。
+describe("SubmissionService.submit (fake-db, ported from submitControl)", function () {
+    let submitControl: (req: any, data: any, cookie: any) => Promise<any>;
 
     before(async function () {
+        // SubmissionService.test.ts 会用桩替换依赖后重新加载该模块，这里强制取一份真实依赖的实例
+        delete require.cache[require.resolve("../../service/SubmissionService")];
+        const service = require("../../service/SubmissionService").default;
+        submitControl = (req, data, cookie) => service.submit(req, data, cookie);
         await query("delete from problem where problem_id = 1000");
         await query("insert into problem (problem_id, defunct)values(?,?)", [1000, "N"]);
         await query("insert into users (user_id, nick) values(?,?)", ["test_name", "tester"]);
@@ -20,36 +27,6 @@ describe("test submit controller", function () {
 
     beforeEach(async function () {
         await query("delete from solution");
-    });
-
-    it('should insert into normal problem', async function () {
-        const req = {
-            session: {
-                auth: true,
-                user_id: "test_name"
-            },
-            headers: {
-                "x-forwarded-for": "127.0.0.1"
-            }
-        };
-        const postdata = {
-            id: 1000,
-            cid: undefined,
-            tid: undefined,
-            pid: undefined,
-            input_text: "1 1\n",
-            language: 0,
-            source: "#include <iostream>\nusing namespace std;\nint main(){}",
-            share: 0,
-            type: "problem",
-            fingerprintRaw: "fingerprintRaw",
-            fingerprint: "fingerprint"
-        };
-        const response = await submitControl(req, postdata, {});
-        expect(response).to.have.property("status")
-            .that.equal("OK");
-        expect(response).to.have.property("solution_id")
-            .that.is.a("number");
     });
 
     it('should insert into normal problem as Test Run (negative ID)', async function () {
@@ -69,125 +46,6 @@ describe("test submit controller", function () {
             source: "int main(){}",
             share: 0,
             type: "problem"
-        };
-        const response = await submitControl(req, postdata, {});
-        expect(response).to.have.property("status").that.equal("OK");
-    });
-
-    it('should reject invalid language for normal submission', async function () {
-        const req = { session: { auth: true, user_id: "test_name" } };
-        const postdata = {
-            id: 1000,
-            language: 999, // Invalid language
-            source: "int main(){}",
-            type: "problem"
-        };
-        try {
-            await submitControl(req, postdata, {});
-            throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement").that.includes("language is not valid");
-        }
-    });
-
-    it('should reject normal submission if problem is in active contest', async function () {
-        const req = {
-            session: {
-                auth: true,
-                user_id: "other_user", // User without any privileges
-                problem_maker: {},
-                contest: {},
-                contest_maker: {}
-            },
-            headers: {
-                "x-forwarded-for": "127.0.0.1"
-            }
-        };
-        try {
-            await submitControl(req, { type: "problem", id: 1000, language: 0, source: "code" }, {});
-            // If it didn't throw, maybe the mock DB didn't return data for the subquery?
-            // throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement").that.includes("problem is in current or future contest");
-        }
-    });
-
-    it('should reject normal submission if problem is private', async function () {
-        await query("update problem set defunct = 'Y' where problem_id = 1000");
-        const req = {
-            session: {
-                auth: true,
-                user_id: "test_name",
-                problem_maker: {},
-                contest: {},
-                contest_maker: {}
-            },
-            headers: {
-                "x-forwarded-for": "127.0.0.1"
-            }
-        };
-        try {
-            await submitControl(req, { type: "problem", id: 1000, language: 0, source: "code" }, {});
-            throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement");
-        } finally {
-            await query("update problem set defunct = 'N' where problem_id = 1000");
-        }
-    });
-
-
-    it("should insert contest submission", async function () {
-        const req = {
-            session: {
-                auth: true,
-                user_id: "test_name",
-                contest: {},
-                contest_maker: {},
-                contest_manager: false
-            },
-            headers: {
-                "x-forwarded-for": "127.0.0.1"
-            }
-        };
-        const postdata = {
-            cid: 1000,
-            pid: 0,
-            input_text: "1 1\n",
-            language: 0,
-            source: "int main(){}",
-            share: 0,
-            type: "contest",
-            fingerprintRaw: "fingerprintRaw",
-            fingerprint: "fingerprint"
-        };
-        const response = await submitControl(req, postdata, {});
-        expect(response).to.have.property("status").that.equal("OK");
-    });
-
-    it("should insert topic submission", async function () {
-        const req = {
-            session: {
-                auth: true,
-                user_id: "test_name",
-                contest: {},
-                contest_maker: {},
-                contest_manager: false
-            },
-            headers: {
-                "x-forwarded-for": "127.0.0.1"
-            }
-        };
-        const postdata = {
-            tid: 100,
-            pid: 0,
-            input_text: "1 1\n",
-            language: 0,
-            source: "int main(){}",
-            share: 0,
-            type: "topic",
-            fingerprintRaw: "fingerprintRaw",
-            fingerprint: "fingerprint"
         };
         const response = await submitControl(req, postdata, {});
         expect(response).to.have.property("status").that.equal("OK");
@@ -300,8 +158,6 @@ describe("test submit controller", function () {
         }
     });
 
-
-
     it("should build session from cookie token", async function () {
         const req = {
             headers: { "x-forwarded-for": "127.0.0.1" }
@@ -320,17 +176,6 @@ describe("test submit controller", function () {
     it("should reject invalid submission type", async function () {
         try {
             await submitControl({ session: { auth: true, user_id: "test_name" } }, { type: "unknown" }, {});
-            throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement");
-        }
-    });
-
-    it("should reject long source code", async function () {
-        const req = { session: { auth: true, user_id: "test_name" } };
-        const longSource = "a".repeat(64 * 1024 + 1);
-        try {
-            await submitControl(req, { type: "problem", id: 1000, source: longSource }, {});
             throw new Error("should throw");
         } catch (err) {
             expect(err).to.have.property("statement");
@@ -357,46 +202,6 @@ describe("test submit controller", function () {
             expect(err).to.have.property("statement");
         } finally {
             await query("update contest set langmask = 0 where contest_id = 1000");
-        }
-    });
-
-    it("should reject contest submission if contest is private and user not privileged", async function () {
-        await query("update contest set private = 1 where contest_id = 1000");
-        // Ensure user is not privileged
-        const req = {
-            session: {
-                auth: true,
-                user_id: "other_user",
-                contest: {},
-                contest_maker: {},
-                contest_manager: false
-            },
-            headers: { "x-forwarded-for": "127.0.0.1" }
-        };
-        try {
-            await submitControl(req, { type: "contest", cid: 1000, pid: 0, language: 0, source: "code" }, {});
-            throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement");
-        } finally {
-            await query("update contest set private = 0 where contest_id = 1000");
-        }
-    });
-
-    it("should reject contest submission if contest is not started", async function () {
-        // Set start_time to future
-        await query("update contest set start_time = '2100-01-01' where contest_id = 1000");
-        const req = {
-            session: { auth: true, user_id: "test_name", contest: {}, contest_maker: {} },
-            headers: { "x-forwarded-for": "127.0.0.1" }
-        };
-        try {
-            await submitControl(req, { type: "contest", cid: 1000, pid: 0, language: 0, source: "code" }, {});
-            throw new Error("should throw");
-        } catch (err) {
-            expect(err).to.have.property("statement").that.includes("Contest is not start");
-        } finally {
-            await query("update contest set start_time = '2000-01-01' where contest_id = 1000");
         }
     });
 
@@ -465,51 +270,6 @@ describe("test submit controller", function () {
         const response = await submitControl(req, { type: "problem", id: 1000, language: 0, source: "code" }, {});
         expect(response).to.have.property("status", "OK");
     });
-
-
-
-
-    /*
-    it("should rollback transaction on error", async function () {
-        const manager = require("../../manager/mysql/MySQLManager").MySQLManager;
-        const originalTx = manager.transaction;
-
-        let rollbackCalled = false;
-
-        manager.transaction = async function () {
-            return {
-                query: async function (sql) {
-                    if (sql && typeof sql === "string") {
-                        if (sql.toLowerCase().includes("insert")) {
-                            throw new Error("mock db error");
-                        }
-                        if (sql.toUpperCase().includes("ROLLBACK")) {
-                            rollbackCalled = true;
-                            return [];
-                        }
-                    }
-                    return [];
-                },
-                release: async function () { },
-                commit: async function () { },
-                rollback: async function () {
-                    // This might not be called if code uses query("ROLLBACK")
-                }
-            };
-        };
-
-        const req = { session: { auth: true, user_id: "test_name" } };
-        try {
-            await submitControl(req, { type: "problem", id: 1000, language: 0, source: "code" }, {});
-            // Should throw
-        } catch (err) {
-            // check rollback called
-        }
-
-        manager.transaction = originalTx;
-        expect(rollbackCalled).to.equal(true);
-    });
-    */
 
     afterEach(async function () {
         await query("delete from solution");
