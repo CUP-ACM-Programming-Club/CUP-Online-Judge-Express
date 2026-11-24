@@ -10,12 +10,9 @@ require("debug")("express:server");
 const log4js = require("../module/logger");
 const logger = log4js.logger("normal", "info");
 let port: number | string;
-// let dockerRunner;
 import localJudge from "../module/judger";
 import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
 import initEnv from "../middleware/init_env";
-// const _dockerRunner = require("../module/docker_runner");
-// dockerRunner = new _dockerRunner(config.judger.oj_home, config.judger.oj_judge_num);
 import { app, server } from "../module/init/http-server";
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
