@@ -10,6 +10,7 @@ import ResponseLogger from "../../decorator/ResponseLogger";
 import CachePool from "../../module/common/CachePool";
 import { MySQLManager } from "../mysql/MySQLManager";
 import PrivilegeManager from "../user/PrivilegeManager";
+import { canSeeHiddenContests, isAdmin } from "../../policy/predicates";
 const cache_query = require("../../module/mysql_cache");
 const ContestCachePool = require("../../module/contest/ContestCachePool");
 const PAGE_SIZE = 50;
@@ -184,12 +185,12 @@ class ContestManager {
     @Timer
     private buildPrivilegeStr(req: Request) {
         let admin_str = " 1 = 1 ";
-        if (!req.session!.isadmin && !req.session!.contest_manager) {
+        if (!canSeeHiddenContests(req)) {
             admin_str += " and defunct = 'N' ";
         }
         // @ts-ignore
         if (global.contest_mode) {
-            admin_str = `${admin_str} and cmod_visible = '${!req.session!.isadmin ? 1 : 0}'`;
+            admin_str = `${admin_str} and cmod_visible = '${!isAdmin(req) ? 1 : 0}'`;
         }
         return admin_str;
     }

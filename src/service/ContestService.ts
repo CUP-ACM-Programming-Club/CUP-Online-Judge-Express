@@ -4,10 +4,10 @@ import dayjs from "dayjs";
 import { error, ok } from "../module/constants/state";
 import cache_query = require("../module/mysql_cache");
 import query = require("../module/mysql_query");
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import ContestManager from "../manager/contest/ContestManager";
 import ContestCachePool = require("../module/contest/ContestCachePool");
 import HttpError from "../module/util/HttpError";
+import { assertCanViewContest, canBrowseSource, canManageContest, canSeeHiddenContests } from "../policy/predicates";
 
 class ContestService {
 
@@ -22,7 +22,7 @@ class ContestService {
     async getAllContestList(req: Request) {
         // ContestManager wraps the rows as { status: "OK", data: [...] } (ErrorHandlerFactory(ok.okMaker))
         const result = await ContestManager.getAllContestList();
-        if (req.session!.isadmin || req.session!.contest_manager) {
+        if (canSeeHiddenContests(req)) {
             return result;
         }
         // same visibility rule as the paged contest list: hidden contests are for admins / contest managers only
@@ -52,56 +52,8 @@ class ContestService {
         }
 
         const contestDetail = contest[0];
-        const start_time = dayjs(contestDetail.start_time);
-        const now = dayjs();
-        const privilege = req.session!.isadmin || req.session!.contest_maker?.[`m${cid}`];
-
-        if (privilege) {
-            return contestDetail;
-        }
-
-        // Contest Mode Check
-        // @ts-ignore
-        if (global.contest_mode) {
-            if (parseInt(contestDetail.cmod_visible) === 0) {
-                throw new HttpError("Contest Mode Active", 403);
-            }
-        } else {
-            if (parseInt(contestDetail.cmod_visible) === 1) {
-                throw new HttpError("Contest Mode Active", 403);
-            }
-        }
-
-        // Hidden Check: a hidden contest is only open to the people who can also submit to it
-        // (contest managers, listed contestants, assistants), same rule as SubmissionService.checkContestPrivilege.
-        if (contestDetail.defunct === "Y") {
-            const listed = req.session!.contest_manager || req.session!.contest?.[`c${cid}`]
-                || await ContestAssistantManager.userIsContestAssistant(cid, req.session!.user_id);
-            if (!listed) {
-                throw new HttpError("Permission denied", 403);
-            }
-        }
-
-        // Time Check
-        if (start_time.isAfter(now)) {
-            throw new HttpError("Contest not start!", 403);
-        }
-
-        // Private Check
-        if (parseInt(contestDetail.private) === 1) {
-            if (req.session!.contest_manager || req.session!.contest?.[`c${cid}`]) {
-                return contestDetail;
-            } else if (await ContestAssistantManager.userIsContestAssistant(cid, req.session!.user_id)) {
-                return contestDetail;
-            } else {
-                // Try login action logic - usually for auto-login or IP check, but here we just check if they have it
-                // The original code called require("../login_action"), which might set session based on IP?
-                // That logic is side-effect heavy. For safety, let's replicate the check.
-                // If the user doesn't have privilege, we throw.
-                throw new HttpError("Permission denied", 403);
-            }
-        }
-
+        // 判定规则见 src/policy/predicates.ts assertCanViewContest（admin | maker 豁免、contest_mode、隐藏、未开始、私有）
+        await assertCanViewContest(req, contestDetail, cid);
         return contestDetail;
     }
 
@@ -235,7 +187,7 @@ group by problem_id,result`, [req.session!.user_id, cid]);
             }
         }
 
-        const browse_privilege = req.session!.isadmin || req.session!.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session!.user_id);
+        const browse_privilege = await canManageContest(req, cid);
 
         if (!browse_privilege && !contest_is_end) {
             // Mask PIDs during contest
@@ -349,7 +301,7 @@ union all SELECT
         // 1. check Privilege(req) (admin/browser) -> if false: check cmod_visible
         // 2. check private -> if 1: checkContestPrivilege
 
-        const isPrivileged = req.session!.isadmin || req.session!.source_browser;
+        const isPrivileged = canBrowseSource(req);
         if (!isPrivileged) {
             // @ts-ignore
             if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {

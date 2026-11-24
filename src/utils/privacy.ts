@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { canSeeContestSensitive } from "../policy/predicates";
 
 /** 只对特权用户（及本人）返回的提交级敏感字段 */
 export const SUBMISSION_SENSITIVE_FIELDS = ["ip", "fingerprint", "fingerprintRaw"];
@@ -63,12 +64,5 @@ export function redactRows<T extends Record<string, any>>(rows: T[], opts: Redac
  * 助教等其他特权由调用方按现有逻辑追加。
  */
 export function isContestSensitivePrivileged(session: any, contestId: any): boolean {
-    if (!session) {
-        return false;
-    }
-    if (session.isadmin || session.contest_manager) {
-        return true;
-    }
-    const cid = parseInt(contestId);
-    return !isNaN(cid) && !!(session.contest_maker && session.contest_maker[`m${cid}`]);
+    return canSeeContestSensitive({ session }, contestId);
 }

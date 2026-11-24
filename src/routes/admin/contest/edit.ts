@@ -1,16 +1,12 @@
-import ContestAssistantManager from "../../../manager/contest/ContestAssistantManager";
+import { canManageContest } from "../../../policy/predicates";
 import { error, ok } from "../../../module/constants/state";
 import AdminContestService from "../../../service/admin/AdminContestService";
 import isNumber from "../../../module/util/isNumber";
 
+// admin | contest_manager（全局）| 该比赛助教；比赛 id：GET 取 params.id，其余取 body.contest_id
 async function privilegeMiddleware(req: any, res: any, next: any) {
-	if (req.session.isadmin || req.session.contest_manager) {
-		return next();
-	}
-	const method = req.method;
-	const contestId = method.toLowerCase() === "get" ? req.params.id : req.body.contest_id;
-	const result = await ContestAssistantManager.userIsContestAssistant(contestId, req.session.user_id);
-	if (result) {
+	const contestId = req.method.toLowerCase() === "get" ? req.params.id : req.body.contest_id;
+	if (await canManageContest(req, contestId)) {
 		return next();
 	}
 	else {

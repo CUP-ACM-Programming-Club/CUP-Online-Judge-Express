@@ -6,6 +6,7 @@ import {ErrorHandlerFactory} from "../../decorator/ErrorHandler";
 import {ok} from "../../module/constants/state";
 import ContestSetListManager from "./ContestSetListManager";
 import ContestManager from "../contest/ContestManager";
+import { isAdmin } from "../../policy/predicates";
 const PAGE_OFFSET = 50;
 
 
@@ -85,7 +86,7 @@ class ContestSetManager {
     @ErrorHandlerFactory(ok.okMaker)
     async getContestSetByRequest(req: Request) {
         const page = isNaN(parseInt(req.query.page as string)) ? 0 : parseInt(req.query.page as string);
-        const isAdministrator = req.session!.isadmin;
+        const isAdministrator = isAdmin(req);
         return await this.getContestSetByConditional(this.buildAdminSQL(isAdministrator), page);
     }
 
@@ -161,7 +162,7 @@ title = ?, description = ?, visible = ?, defunct = ? where contestset_id = ?`,
     }
 
     async hasLimitToAccessContestSet(req: Request, contestSetId: string | number) {
-        if (req.session!.isadmin) {
+        if (isAdmin(req)) {
             return true;
         }
         else {

@@ -1,4 +1,4 @@
-import ContestAssistantManager from "../../manager/contest/ContestAssistantManager";
+import { isAdmin, isContestAssistant, isContestMakerStrict, isContestManager } from "../../policy/predicates";
 
 import express from "express";
 const router = express.Router();
@@ -7,8 +7,10 @@ const ContestService = require("../../service/ContestService").default;
 const ProblemInfoManager = require("../../module/problem/ProblemInfoManager");
 
 async function privilegeMiddleware(req: any, res: any, next: any) {
+	// 注意：本中间件挂在挂载层（见文件末尾导出），此时 req.params.contestId 尚未解析，contestId 为 NaN，
+	// 后两项（出题人 / 助教）实际恒为假——现状如此，矩阵测试已锁定，见 docs/permission-matrix.md
 	const contestId = parseInt(req.params.contestId);
-	if (req.session.isadmin || req.session.contest_manager || req.session.contest_maker[`m${contestId}`] || await ContestAssistantManager.userIsContestAssistant(contestId, req.session.user_id)) {
+	if (isAdmin(req) || isContestManager(req) || isContestMakerStrict(req, contestId) || await isContestAssistant(contestId, req.session.user_id)) {
 		next();
 	}
 	else {

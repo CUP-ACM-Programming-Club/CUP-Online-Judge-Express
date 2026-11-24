@@ -17,7 +17,6 @@
  * - *Strict 版本对应原代码里没有可选链的写法：session 缺少对应 map 时抛 TypeError（原行为），不要“顺手”改成安全访问。
  */
 import dayjs from "dayjs";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import HttpError from "../module/util/HttpError";
 
 /** 只要求带 session 的对象（express Request、socket.request、{session} 包装均可） */
@@ -96,6 +95,8 @@ export function isProblemMakerStrict(req: any, pid: number | string): boolean {
 
 /** 比赛助教（含所属专题的助教），沿用 ContestAssistantManager 的 1 小时缓存；userId 必须是字符串 */
 export async function isContestAssistant(cid: number | string, userId: string): Promise<boolean> {
+	// 调用时再取模块：既避免与 manager 层的循环依赖，也让按模块路径替换 ContestAssistantManager 的单元测试照常生效
+	const ContestAssistantManager = require("../manager/contest/ContestAssistantManager").default;
 	return await ContestAssistantManager.userIsContestAssistant(cid, userId);
 }
 

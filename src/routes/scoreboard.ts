@@ -1,16 +1,15 @@
 import ScoreboardService from "../service/ScoreboardService";
 import ContestService from "../service/ContestService";
 import HttpError from "../module/util/HttpError";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 const { error, ok } = require("../module/constants/state");
 import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
-import { isContestSensitivePrivileged } from "../utils/privacy";
+import { canManageContest, canSeeContestSensitive } from "../policy/predicates";
 
 // 可看他人 ip / 指纹：沿用 browserPrivilege（管理员 / contest_manager / 助教），再加上该比赛出题人
 function canSeeSensitive(req: any, cid: number, browserPrivilege: any): boolean {
-	return Boolean(browserPrivilege) || isContestSensitivePrivileged(req.session, cid);
+	return Boolean(browserPrivilege) || canSeeContestSensitive(req, cid);
 }
 
 router.get("/:cid", (req: any, res: any, next: any) => {
@@ -28,7 +27,7 @@ router.get("/:cid", async (req: any, res: any) => {
 	const cid = parseInt(req.params.cid);
 	try {
 		await ContestService.checkContestAccess(req, cid);
-		const browserPrivilege = req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id);
+		const browserPrivilege = await canManageContest(req, cid);
 		const data = await ScoreboardService.getScoreboard(cid, browserPrivilege);
 		res.json(ScoreboardService.redactScoreboard(data, canSeeSensitive(req, cid, browserPrivilege), req.session.user_id));
 	} catch (e: any) {
@@ -64,7 +63,7 @@ router.get("/:cid/line", async (req: any, res: any) => {
 	}
 	// We reuse submitHandlerOptimized but we need to match original logic.
 	// Original logic: submitHandler(cid) is called.
-	const browserPrivilege = req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id);
+	const browserPrivilege = await canManageContest(req, cid);
 
 	// Note: getScoreboard gets *everything* including users, but line route needs raw submit stat? 
 	// Actually original code reused submitHandler(cid) which is exactly what submitHandlerOptimized does (well, optimized).
