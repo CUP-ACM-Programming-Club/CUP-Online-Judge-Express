@@ -4,17 +4,12 @@ const router = express.Router();
 const checkPassword = require("../../../application/auth/check_password");
 import { getLogger } from "../../../application/ports/Logger";
 const log = getLogger("cheese", "info");
-const memcache = require("../../../infrastructure/cache/memcached");
 const [error, ok] = require("../../../domain/constants/const_var");
 const salt = global.config.salt || "thisissalt";
 import login_action = require("../../../application/auth/login_action");
 const { checkCaptcha } = require("../captcha_checker");
 import { checkJSON, generateNewEncryptPassword } from "../../../application/util";
-import { container } from "../../../main/di/container";
-import { TYPES } from "../../../application/ports/types";
-import { AuthService } from "../../../application/auth/AuthService";
-
-const authService = container.get<AuthService>(TYPES.AuthService);
+import authService from "../../../application/auth/AuthService";
 
 const banChecker = require("../middleware/ban_check");
 
@@ -47,7 +42,7 @@ router.post("/token", async function (req: any, res: any) {
 		log.info(receive);
 		const token = JSON.parse(receive);
 		const token_str = token["token"] || "";
-		const data = await memcache.get(token["user_id"]);
+		const data = await authService.getLegacyToken(token["user_id"]);
 		if (token_str === data) {
 			req.session.user_id = token["user_id"];
 			req.session.auth = true;

@@ -10,8 +10,8 @@ describe("AdminUserService Tests", function () {
     let previousLoad: any;
 
     beforeEach(function () {
-        // 1. Setup Stubs
-        queryStub = sinon.stub().resolves([]);
+        // 1. Setup Stubs：SQL 在仓储实现 MySqlAdminUserRepository 里，经 infrastructure/db 的 query 执行
+        queryStub = sinon.stub(require("../../../infrastructure/db"), "query").resolves([]);
 
         utilStub = {
             generateNewEncryptPassword: sinon.stub().resolves()
@@ -20,7 +20,6 @@ describe("AdminUserService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_query")) return queryStub;
             // module/util import
             if (/(^|\/)util$/.test(request)) return utilStub;
 

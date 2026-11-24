@@ -7,6 +7,8 @@ const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
 const fakeDb = require("../mocks/fake-db"); // Import fake-db directly (Fixed path)
+const { bindPort, boundImpl } = require("../../application/ports/registry");
+const { userRepository } = require("../../application/ports/UserRepository");
 
 describe("Profile Route Tests (Full Coverage)", function () {
     let router;
@@ -17,6 +19,7 @@ describe("Profile Route Tests (Full Coverage)", function () {
     let constVarStub;
     let previousLoad;
     let handler;
+    let previousUserRepository;
 
     // Control variables
     let shouldCheckPasswordPass = true;
@@ -80,23 +83,17 @@ describe("Profile Route Tests (Full Coverage)", function () {
         // 3. Setup Global Config
         global.config = mockConfig;
 
-        // 4. Stub UserManager (Must happen after clearing cache if UserManager was loaded)
-        // Ensure UserManager is fresh or we stub the singleton if it's already loaded
-        const UserManager = require("../../infrastructure/persistence/user/UserManager").default;
-
-        // Restore existing stubs if any
-        if (UserManager.getUser.restore) UserManager.getUser.restore();
-        if (UserManager.updateUser.restore) UserManager.updateUser.restore();
-
-        sinon.stub(UserManager, "getUser").callsFake(async (user_id) => {
-            // if (shouldQueryFail) throw new Error("DB Error");
-            return { password: "mock_password_hash", newpassword: "mock_new_password_hash" };
-        });
-
-        sinon.stub(UserManager, "updateUser").callsFake(async (user_id, payload) => {
-            if (shouldQueryFail) throw new Error("DB Error");
-            mockQueryCalls.push({ sql: "update users set ...", params: [payload] }); // Simulate capture
-            return { affectedRows: 1 };
+        // 4. 用户仓储端口绑定假实现（getUser / updateUser）
+        previousUserRepository = boundImpl(userRepository);
+        bindPort(userRepository, {
+            getUser: async (user_id) => {
+                // if (shouldQueryFail) throw new Error("DB Error");
+                return { password: "mock_password_hash", newpassword: "mock_new_password_hash" };
+            },
+            updateUser: async (user_id, payload) => {
+                if (shouldQueryFail) throw new Error("DB Error");
+                mockQueryCalls.push({ sql: "update users set ...", params: [payload] }); // Simulate capture
+            }
         });
 
         // 5. Clear Cache & Load Module
@@ -114,9 +111,7 @@ describe("Profile Route Tests (Full Coverage)", function () {
 
     afterEach(function () {
         if (previousLoad) Module._load = previousLoad;
-        const UserManager = require("../../infrastructure/persistence/user/UserManager").default;
-        if (UserManager.getUser.restore) UserManager.getUser.restore();
-        if (UserManager.updateUser.restore) UserManager.updateUser.restore();
+        if (previousUserRepository) bindPort(userRepository, previousUserRepository);
         sinon.restore();
     });
 

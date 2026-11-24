@@ -1,8 +1,5 @@
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
-import {Request} from "express";
-import UserManager, {ContestUserInfoPayload} from "./UserManager";
-import PasswordManager from "./PasswordManager";
+import UserUseCases, { ContestUserInfoPayload } from "../user/UserUseCases";
+import PasswordManager from "../auth/PasswordManager";
 
 interface GenerateAccountRequestPayload {
     num?: any,
@@ -10,7 +7,8 @@ interface GenerateAccountRequestPayload {
     nickList?: any
 }
 
-class ContestAccountGenerateManager {
+/** 批量生成比赛账号（/admin/account/generate）。 */
+class ContestAccountGenerateUseCases {
 
     private static validatePayload(payload: GenerateAccountRequestPayload) {
         if (!payload.num && !payload.prefix && !payload.nickList) {
@@ -37,7 +35,7 @@ class ContestAccountGenerateManager {
     }
 
     private static async checkAccountRegistrable(userId: string) {
-        const user = await UserManager.getUser(userId);
+        const user = await UserUseCases.getUser(userId);
         if (user !== null) {
             throw new Error("存在已注册的用户名，请更换");
         }
@@ -47,26 +45,26 @@ class ContestAccountGenerateManager {
         return `${prefix}${`${index}`.padStart(len, "0")}`;
     }
 
-    async batchGenerateAccount(req: Request) {
-        const num = req.body.num;
-        const prefix =  req.body.prefix;
+    async batchGenerateAccount(body: any, ip: string) {
+        const num = body.num;
+        const prefix =  body.prefix;
         const len = `${num}`.length;
-        const nickList = req.body.nickList;
-        ContestAccountGenerateManager.validateNickLengthEqualToGenerateCount(nickList, num);
+        const nickList = body.nickList;
+        ContestAccountGenerateUseCases.validateNickLengthEqualToGenerateCount(nickList, num);
         for (let i = 0; i < num; ++i) {
-            const userId = ContestAccountGenerateManager.buildAccount(prefix, i, len);
-            await ContestAccountGenerateManager.checkAccountRegistrable(userId);
+            const userId = ContestAccountGenerateUseCases.buildAccount(prefix, i, len);
+            await ContestAccountGenerateUseCases.checkAccountRegistrable(userId);
         }
         const accountList = [];
         for(let i = 0; i < num; ++i) {
-            const userId = ContestAccountGenerateManager.buildAccount(prefix, i, len);
-            const account = await this.generateAccount(userId, nickList[i], req);
+            const userId = ContestAccountGenerateUseCases.buildAccount(prefix, i, len);
+            const account = await this.generateAccount(userId, nickList[i], ip);
             accountList.push(account);
         }
         return accountList;
     }
 
-    async generateAccount(userId: string, nick: string, req: Request) {
+    async generateAccount(userId: string, nick: string, ip: string) {
         const payload: ContestUserInfoPayload = {
             userId,
             password: PasswordManager.generateRandomPassword(16),
@@ -75,15 +73,14 @@ class ContestAccountGenerateManager {
             confirmQuestion: PasswordManager.generateRandomPassword(8),
             school: "your_own_school"
         };
-        await UserManager.addContestUser(payload, req);
+        await UserUseCases.addContestUser(payload, ip);
         return {userId, password: payload.password, nick};
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async batchGenerateAccountByRequest(req: Request) {
-        ContestAccountGenerateManager.validatePayload(req.body);
-        return { accountList: await this.batchGenerateAccount(req) };
+    async batchGenerate(body: any, ip: string) {
+        ContestAccountGenerateUseCases.validatePayload(body);
+        return { accountList: await this.batchGenerateAccount(body, ip) };
     }
 }
 
-export default new ContestAccountGenerateManager();
+export default new ContestAccountGenerateUseCases();

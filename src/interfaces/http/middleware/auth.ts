@@ -1,11 +1,11 @@
 import const_var from "../../../domain/constants/const_var";
 const [error] = const_var;
-import client from "../../../infrastructure/redis/redis";
 import contest_mode from "./contest_mode";
 import ban_check from "./ban_check";
 import generateToken from "./generate_token";
 import UpdatePool = require("../../../application/user/LazyPrivilegeUpdatePool");
 import login_action from "../../../application/auth/login_action";
+import TokenManager from "../../../application/account/token/TokenManager";
 import { Request, Response, NextFunction } from "express";
 
 export default async (req: Request, res: Response, next: NextFunction) => {
@@ -18,9 +18,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 		//get token and user_id from cookie
 		if (typeof user_id === "string") {//whether user_id is string or not,maybe it is an undefined variable
 			//const original_token = await memcache.get(user_id + "token");
-			const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
-			const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
-			if (original_token.indexOf(token) !== -1 || new_token_list.indexOf(newToken) !== -1) {
+			if (await TokenManager.hasValidToken(user_id, token, newToken)) {
 				// if (token === original_token) {//check token
 				await login_action(req, user_id);
 				generateToken(req, res);

@@ -1,9 +1,9 @@
 import express from "express";
-import ContestAccountGenerateManager from "../../../../../infrastructure/persistence/user/ContestAccountGenerateManager";
+import ContestAccountGenerateController from "../../../controllers/ContestAccountGenerateController";
 const router = express.Router();
 
 router.post("/batch", async (req, res) => {
-    res.json(await ContestAccountGenerateManager.batchGenerateAccountByRequest(req));
+    res.json(await ContestAccountGenerateController.batchGenerateAccount(req));
 });
 
 export = ["/generate", router];

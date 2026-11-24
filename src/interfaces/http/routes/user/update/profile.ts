@@ -7,7 +7,7 @@ const LENGTH_LIMIT = 100;
 import checkPassword = require("../../../../../application/auth/check_password");
 import loginAction from "../../../../../application/auth/login_action";
 import { encryptPassword } from "../../../../../application/util";
-import UserManager from "../../../../../infrastructure/persistence/user/UserManager";
+import UserUseCases from "../../../../../application/user/UserUseCases";
 const salt = global.config.salt || "thisissalt";
 
 function checkLength(str: any, size = LENGTH_LIMIT) {
@@ -39,7 +39,7 @@ function checkRequestBodyProperties(body: any) {
 }
 
 async function checkPasswordAdapter(user_id: any, password: any) {
-	const user = await UserManager.getUser(user_id);
+	const user = await UserUseCases.getUser(user_id);
 	if (!user) return false;
 	const result = checkPassword(user.password, password, user.newpassword);
 	return result;
@@ -87,7 +87,7 @@ router.post("/", async (req: any, res: any) => {
 			}
 		});
 
-		await UserManager.updateUser(user_id, payload);
+		await UserUseCases.updateUser(user_id, payload);
 		await loginAction(req, req.session.user_id);
 		res.json(ok.ok);
 	} catch (e) {

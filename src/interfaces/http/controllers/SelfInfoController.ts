@@ -1,0 +1,63 @@
+import { Request } from "express";
+import _ from "lodash";
+import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
+import { ok } from "../../../domain/constants/state";
+import { ConfigManager } from "../../../application/ports/Config";
+import { IUserList } from "../../websocket/set/BaseUserSet";
+declare global {
+	namespace NodeJS {
+		interface Global {
+			contest_mode: boolean,
+			submissions: IUserList<any>
+		}
+	}
+}
+
+interface SelfInfo {
+	user_id: string
+	nick: string
+	admin: boolean
+	avatar: string
+	avatarUrl: string
+	privilege: any
+	contest_mode: boolean
+	email: string
+}
+
+interface SelfInfoResponse extends SelfInfo {
+	userInfo: SelfInfo,
+	gravatar: string
+}
+
+/** GET /user/self：当前登录用户的 session 信息。 */
+class SelfInfoController {
+	getSelfInfo(req: Request) {
+		const sessionCopy = _.cloneDeep(req.session);
+		if (Object.prototype.hasOwnProperty.call(sessionCopy, "captcha")) {
+			delete sessionCopy!.captcha;
+		}
+		return {
+			user_id: req.session!.user_id,
+			nick: req.session!.nick,
+			admin: req.session!.isadmin,
+			avatar: req.session!.avatar,
+			avatarUrl: req.session!.avatarUrl,
+			privilege: sessionCopy,
+			contest_mode: global.contest_mode,
+			email: req.session!.email
+		};
+	}
+
+	@ErrorHandlerFactory(ok.okMaker)
+	getSelfInfoByRequest(req: Request) {
+		const selfInfo = this.getSelfInfo(req);
+		const baseSystemInfo = {
+			userInfo: selfInfo,
+			gravatar: ConfigManager.getConfig("gravatarCDN", "cn.gravatar.com")
+		};
+		const response: SelfInfoResponse = Object.assign(_.cloneDeep(selfInfo), baseSystemInfo);
+		return response;
+	}
+}
+
+export default new SelfInfoController();

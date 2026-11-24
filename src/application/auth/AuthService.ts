@@ -1,24 +1,17 @@
-import { injectable, inject } from "inversify";
-import { TYPES } from "../ports/types";
 import { ConfigService } from "../services/ConfigService";
-import { UserManager } from "../../infrastructure/persistence/user/UserManager";
+import { userLegacyTokenCache } from "../ports/UserTokenStore";
+import UserUseCases from "../user/UserUseCases";
 const checkPassword = require("./check_password");
 
-@injectable()
 export class AuthService {
     private _configService: ConfigService;
-    private _userManager: UserManager;
 
-    constructor(
-        @inject(TYPES.ConfigService) configService: ConfigService,
-        @inject(TYPES.UserManager) userManager: UserManager
-    ) {
+    constructor(configService: ConfigService = new ConfigService()) {
         this._configService = configService;
-        this._userManager = userManager;
     }
 
     async validateUser(userId: string, password: string): Promise<{ password: string, newpassword: string } | null> {
-        const user = await this._userManager.getUser(userId);
+        const user = await UserUseCases.getUser(userId);
         if (user) {
             const ans = user.password;
             const newpass = user.newpassword;
@@ -28,4 +21,11 @@ export class AuthService {
         }
         return null;
     }
+
+    /** 旧版（memcached）登录 token */
+    async getLegacyToken(userId: string) {
+        return await userLegacyTokenCache.get(userId);
+    }
 }
+
+export default new AuthService();

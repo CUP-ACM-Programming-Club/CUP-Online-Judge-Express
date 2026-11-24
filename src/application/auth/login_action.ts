@@ -1,5 +1,9 @@
-import query = require("../../infrastructure/db/legacy/mysql_query");
-import { Request } from "express";
+import { userRepository } from "../ports/UserRepository";
+
+/** 只用到 session：HTTP 请求或拼出来的 {session} 对象都可以传进来 */
+interface SessionCarrier {
+	session?: any
+}
 
 function isAdmin(str: string): boolean {
 	return str === "administrator";
@@ -37,7 +41,7 @@ const defaultPrivilege = {
 	source_browser: false
 };
 
-async function loginAction(req: Request, user_id: string): Promise<void> {
+async function loginAction(req: SessionCarrier, user_id: string): Promise<void> {
 	if (!req.session) return;
 	Object.assign(req.session, defaultPrivilege);
 	(req.session as any).user_id = user_id;
@@ -45,8 +49,8 @@ async function loginAction(req: Request, user_id: string): Promise<void> {
 	(req.session as any).contest_maker = {};
 	(req.session as any).problem_maker = {};
 	let [val, nick] = await Promise.all([
-		query("select rightstr from privilege where user_id = ?", [user_id]),
-		query("select nick,avatar,avatarUrl,email from users where user_id = ?", [user_id])
+		userRepository.getPrivilegeRows(user_id),
+		userRepository.getSessionProfileRows(user_id)
 	]) as [any[], any[]];
 
 	// for session admin privilege

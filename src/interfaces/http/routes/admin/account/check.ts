@@ -1,22 +1,10 @@
 import express from "express";
 const router = express.Router();
-const query = require("../../../../../infrastructure/db/legacy/mysql_query");
-const checkPassword = require("../../../../../application/auth/check_password");
+import PasswordCheckUseCases from "../../../../../application/account/PasswordCheckUseCases";
 const [error, ok] = require("../../../../../domain/constants/const_var");
 
-async function getPassword(user_id: any) {
-	const data = await query("select password, newpassword from users where user_id = ?", [user_id]);
-	if (data.length === 0) {
-		return false;
-	}
-	return data[0];
-}
-
 async function passwordChecker(user_id: any, inputPassword: any) {
-	const passwordData = await getPassword(user_id);
-	const originalPassword = passwordData.password;
-	const newPassword = passwordData.newpassword;
-	return checkPassword(originalPassword, inputPassword, newPassword);
+	return await PasswordCheckUseCases.passwordMatches(user_id, inputPassword);
 }
 
 async function passwordCheckerHandler(data: any) {

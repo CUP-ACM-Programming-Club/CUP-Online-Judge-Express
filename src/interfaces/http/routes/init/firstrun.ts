@@ -1,15 +1,14 @@
 import express from "express";
-import UserRegisterManager from "../../../../infrastructure/persistence/user/UserRegisterManager";
 import {ok} from "../../../../domain/constants/state";
-import InitManager from "../../../../main/init/manager/InitManager";
+import InitController from "../../controllers/InitController";
 const router = express.Router();
 
 router.post("/admin", async (req, res) => {
-    res.json(await UserRegisterManager.initSystemAdminUserRequest(req));
+    res.json(await InitController.initSystemAdminUser(req));
 });
 
 router.post("/config", async (req, res) => {
-    res.json(await InitManager.initConfigFile(req));
+    res.json(await InitController.initConfigFile(req));
 });
 
 router.get("/", async (req, res) => {

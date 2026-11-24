@@ -1,8 +1,8 @@
 import express from "express";
-import LoginLogManager from "../../../../infrastructure/persistence/user/record/LoginLogManager";
+import LoginLogController from "../../controllers/LoginLogController";
 const router = express.Router();
 router.post("/", async (req, res) => {
-	res.json(await LoginLogManager.setUserIdLoginLogByRequest(req));
+	res.json(await LoginLogController.setUserIdLoginLog(req));
 });
 
 export = ["/client", router];
