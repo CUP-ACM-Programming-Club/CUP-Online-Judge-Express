@@ -1,7 +1,7 @@
 import SolveMapManager from "../../../../../infrastructure/persistence/SolveMap/SolveMapManager";
 import express from "express";
 const router = express.Router();
-const interceptorMiddleware = require("../../../../../application/status/problem/SolveMapInterceptor");
+const interceptorMiddleware = require("../../../interceptor/SolveMapInterceptor");
 
 router.get("/user", async (req: any, res: any) => {
 	res.json(await SolveMapManager.getUserListForRouter());

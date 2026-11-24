@@ -1,4 +1,4 @@
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 
 const query = require("../../db/legacy/mysql_cache");

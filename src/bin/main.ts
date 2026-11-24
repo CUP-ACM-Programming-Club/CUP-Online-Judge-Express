@@ -1,6 +1,7 @@
+import "../main/compose";
 /* eslint-disable no-console */
 /* eslint-disable require-atomic-updates */
-import Logger from "../infrastructure/logging/console/Logger";
+import Logger from "../shared/Logger";
 
 const ENVIRONMENT = process.env.NODE_ENV;
 const config = global.config;

@@ -7,8 +7,8 @@ import client from "../../../../infrastructure/redis/redis";
 import { withCache, clearCacheBatch } from "../../../../infrastructure/cache/cache-helper";
 
 const cache_query = require("../../../../infrastructure/db/legacy/mysql_cache");
-const log4js = require("../../../../infrastructure/logging/logger");
-const logger = log4js.logger("cheese", "info");
+import { getLogger } from "../../../../application/ports/Logger";
+const logger = getLogger("cheese", "info");
 
 // 时间粒度常量
 export const TIME_GRANULARITY = {

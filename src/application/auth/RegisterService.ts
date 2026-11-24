@@ -1,5 +1,5 @@
 import { injectable, inject } from "inversify";
-import { TYPES } from "../../main/di/types";
+import { TYPES } from "../ports/types";
 import { UserManager } from "../../infrastructure/persistence/user/UserManager";
 import { UserRegisterValidator } from "../../infrastructure/persistence/user/UserRegisterManager";
 import InviteManager from "../../infrastructure/persistence/user/InviteManager";

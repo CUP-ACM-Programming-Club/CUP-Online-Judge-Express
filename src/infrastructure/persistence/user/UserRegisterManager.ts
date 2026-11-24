@@ -1,4 +1,4 @@
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {Request} from "express";
 import CaptchaChecker from "../../../interfaces/http/decorators/CaptchaChecker";
 import {error, ok} from "../../../domain/constants/state";

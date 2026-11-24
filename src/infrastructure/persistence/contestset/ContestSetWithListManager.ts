@@ -1,4 +1,4 @@
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import {Request} from "express";
 import ContestSetManager from "./ContestSetManager";

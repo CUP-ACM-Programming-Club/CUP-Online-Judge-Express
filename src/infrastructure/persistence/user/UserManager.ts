@@ -1,8 +1,8 @@
 import { Request } from "express";
-import { ErrorHandlerFactory } from "../../../interfaces/http/decorators/ErrorHandler";
+import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
 import { ok } from "../../../domain/constants/state";
 import { injectable, inject } from "inversify";
-import { TYPES } from "../../../main/di/types";
+import { TYPES } from "../../../application/ports/types";
 import { ConfigService } from "../../../application/services/ConfigService";
 
 const query = require("../../db/legacy/mysql_cache");

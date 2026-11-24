@@ -1,5 +1,5 @@
 import { Container } from "inversify";
-import { TYPES } from "./types";
+import { TYPES } from "../../application/ports/types";
 import { AccountService } from "../../application/account/AccountService";
 import { ConfigService } from "../../application/services/ConfigService";
 import { RedisService } from "../../infrastructure/redis/service/RedisService";

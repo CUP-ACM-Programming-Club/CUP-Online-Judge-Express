@@ -1,10 +1,10 @@
 import express from "express";
-import AwardManager from "../../../../../infrastructure/persistence/award/AwardManager";
+import AwardController from "../../../controllers/AwardController";
 const router = express.Router();
 
 
 router.post("/", async (req, res) => {
-    res.json(await AwardManager.addAwardByRequest(req));
+    res.json(await AwardController.add(req));
 });
 
 export = ["/add", router];

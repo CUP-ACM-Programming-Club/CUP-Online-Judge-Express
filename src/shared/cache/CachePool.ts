@@ -1,6 +1,6 @@
 import {Dayjs} from "dayjs";
-import Lock from "../../shared/decorators/Lock";
-import SegmentLock from "../../shared/SegmentLock";
+import Lock from "../decorators/Lock";
+import SegmentLock from "../SegmentLock";
 import _ from "lodash";
 import dayjs from "dayjs";
 const segLock = new SegmentLock();

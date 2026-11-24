@@ -1,6 +1,6 @@
 import { contest as Contest } from "../../infrastructure/orm/ts-model";
 import { Request } from "express";
-import {ErrorHandlerFactory} from "../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../shared/decorators/ErrorHandler";
 import {ok} from "../../domain/constants/state";
 
 class ContestInfoManager {

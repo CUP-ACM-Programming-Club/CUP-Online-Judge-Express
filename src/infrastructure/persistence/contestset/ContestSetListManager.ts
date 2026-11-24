@@ -1,6 +1,6 @@
 import {MySQLManager} from "../../db/mysql/MySQLManager";
 import {Request} from "express";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {error, ok} from "../../../domain/constants/state";
 import ContestSetManager from "./ContestSetManager";
 

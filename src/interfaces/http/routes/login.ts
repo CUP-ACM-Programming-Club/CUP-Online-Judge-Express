@@ -2,8 +2,8 @@ import express from "express";
 
 const router = express.Router();
 const checkPassword = require("../../../application/auth/check_password");
-const log4js = require("../../../infrastructure/logging/logger");
-const log = log4js.logger("cheese", "info");
+import { getLogger } from "../../../application/ports/Logger";
+const log = getLogger("cheese", "info");
 const memcache = require("../../../infrastructure/cache/memcached");
 const [error, ok] = require("../../../domain/constants/const_var");
 const salt = global.config.salt || "thisissalt";
@@ -11,7 +11,7 @@ import login_action = require("../../../application/auth/login_action");
 const { checkCaptcha } = require("../captcha_checker");
 import { checkJSON, generateNewEncryptPassword } from "../../../application/util";
 import { container } from "../../../main/di/container";
-import { TYPES } from "../../../main/di/types";
+import { TYPES } from "../../../application/ports/types";
 import { AuthService } from "../../../application/auth/AuthService";
 
 const authService = container.get<AuthService>(TYPES.AuthService);

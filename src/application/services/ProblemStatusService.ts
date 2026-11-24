@@ -1,8 +1,8 @@
 import client from "../../infrastructure/redis/redis";
 import { withCache, clearCacheBatch } from "../../infrastructure/cache/cache-helper";
 import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
-const log4js = require("../../infrastructure/logging/logger");
-const logger = log4js.logger("cheese", "info");
+import { getLogger } from "../ports/Logger";
+const logger = getLogger("cheese", "info");
 
 class ProblemStatusService {
 

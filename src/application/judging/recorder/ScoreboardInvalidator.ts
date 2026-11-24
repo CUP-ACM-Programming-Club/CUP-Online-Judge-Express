@@ -1,8 +1,8 @@
 import { MySQLManager } from "../../../infrastructure/db/mysql/MySQLManager";
 import ScoreboardService from "../../services/ScoreboardService";
 
-const log4js = require("../../../infrastructure/logging/logger");
-const logger = log4js.logger("cheese", "info");
+import { getLogger } from "../../ports/Logger";
+const logger = getLogger("cheese", "info");
 
 export interface ScoreboardInvalidatorDeps {
     lookupContestId: (solutionId: number | string) => Promise<number | null>;

@@ -1,6 +1,6 @@
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import Cacheable from "../../cache/Cacheable";
-import CachePool from "../../cache/CachePool";
+import Cacheable from "../../../shared/cache/Cacheable";
+import CachePool from "../../../shared/cache/CachePool";
 
 interface ICompileInfoDAO {
     solution_id: number,

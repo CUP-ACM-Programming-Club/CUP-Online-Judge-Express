@@ -1,9 +1,9 @@
-import Cacheable from "../../cache/Cacheable";
-import CachePool from "../../cache/CachePool";
+import Cacheable from "../../../shared/cache/Cacheable";
+import CachePool from "../../../shared/cache/CachePool";
 import ErrorLogger from "../../../interfaces/http/decorators/ErrorLogger";
 import RetryAsync from "../../../shared/decorators/RetryAsync";
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import {Request} from "express";
 

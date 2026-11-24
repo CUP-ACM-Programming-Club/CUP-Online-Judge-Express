@@ -1,8 +1,8 @@
 import { localJudger } from "../../infrastructure/judger/localJudger";
 import { MySQLManager } from "../../infrastructure/db/mysql/MySQLManager";
-import { ConfigManager } from "../../infrastructure/config/config-manager";
+import { ConfigManager } from "../ports/Config";
 import dayjs from "dayjs";
-import Logger from "../../infrastructure/logging/console/Logger";
+import Logger from "../../shared/Logger";
 import { wait } from "../../shared/decorators/RetryAsync";
 const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;

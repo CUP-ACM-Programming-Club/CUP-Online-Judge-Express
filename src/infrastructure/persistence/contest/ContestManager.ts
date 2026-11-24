@@ -1,13 +1,13 @@
 import AwaitLock from "await-lock";
-import Cacheable from "../../cache/Cacheable";
+import Cacheable from "../../../shared/cache/Cacheable";
 import { Request } from "express";
 import "express-session";
 import Timer from "../../../shared/decorators/Timer";
-import { ErrorHandlerFactory } from "../../../interfaces/http/decorators/ErrorHandler";
+import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
 import { ok } from "../../../domain/constants/state";
 import isNumber from "../../../shared/isNumber";
 import ResponseLogger from "../../../interfaces/http/decorators/ResponseLogger";
-import CachePool from "../../cache/CachePool";
+import CachePool from "../../../shared/cache/CachePool";
 import { MySQLManager } from "../../db/mysql/MySQLManager";
 import PrivilegeManager from "../user/PrivilegeManager";
 import { canSeeHiddenContests, isAdmin } from "../../../domain/policy/predicates";

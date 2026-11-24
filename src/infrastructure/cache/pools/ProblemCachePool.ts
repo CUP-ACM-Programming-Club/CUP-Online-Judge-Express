@@ -1,4 +1,4 @@
-import CachePool from "../CachePool";
+import CachePool from "../../../shared/cache/CachePool";
 
 class ProblemCachePool extends CachePool {
 }

@@ -1,4 +1,4 @@
-import CachePool from "../../../cache/CachePool";
+import CachePool from "../../../../shared/cache/CachePool";
 
 class MySQLCachePool extends CachePool {
 }

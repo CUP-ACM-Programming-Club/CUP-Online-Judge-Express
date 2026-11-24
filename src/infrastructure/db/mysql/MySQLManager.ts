@@ -1,7 +1,7 @@
 // @ts-ignore
 import mysql from "mysql2";
 import { Pool, PoolConnection, Query, queryCallback, QueryOptions } from "mysql";
-import Logger from "../../logging/console/Logger";
+import Logger from "../../../shared/Logger";
 import { MySQLTransaction, openTransaction } from "./transaction";
 
 export type { MySQLTransaction };

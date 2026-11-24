@@ -1,3 +1,4 @@
+import "../main/compose";
 process.on("unhandledRejection", (error) => {
     // without a handler Node terminates the process, dropping every socket and in-flight judge state
     console.log("unhandledRejection", error);

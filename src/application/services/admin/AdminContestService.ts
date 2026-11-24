@@ -2,7 +2,7 @@ import query from "../../../infrastructure/db/legacy/mysql_query";
 import { MySQLManager } from "../../../infrastructure/db/mysql/MySQLManager";
 import ProblemSetCachePool from "../../problemset/ProblemSetCachePool";
 import ContestCachePool from "../../contest/ContestCachePool";
-import { ConfigManager } from "../../../infrastructure/config/config-manager";
+import { ConfigManager } from "../../ports/Config";
 import dayjs from "dayjs";
 import {
     addContestCompetitorWithTransaction,

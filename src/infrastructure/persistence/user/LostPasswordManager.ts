@@ -1,6 +1,6 @@
 import {Request} from "express";
 import UserManager from "./UserManager";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import RuleChecker from "../../../shared/decorators/RuleChecker";
 import isString from "../../../shared/decorators/rule-checker/rule/isString";

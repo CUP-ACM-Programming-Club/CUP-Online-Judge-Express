@@ -1,7 +1,7 @@
 import { isAdmin } from "../../../domain/policy/predicates";
 const { error } = require("../../../domain/constants/state");
 import SubmissionManager from "../../../infrastructure/persistence/submission/SubmissionManager";
-import Cacheable from "../../../infrastructure/cache/Cacheable";
+import Cacheable from "../../../shared/cache/Cacheable";
 import SourcePrivilegeCache from "../../../infrastructure/persistence/submission/SourcePrivilegeCache";
 
 import express from "express";

@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 const readLastLines = require("read-last-lines");
 const pm2 = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "pm2.json"), "utf-8"));

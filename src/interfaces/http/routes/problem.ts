@@ -12,8 +12,8 @@ const { mkdirAsync } = require("../../../infrastructure/storage/file/mkdir");
 const cache = require("../../../infrastructure/cache/nodeCache");
 const router = express.Router();
 const log = console.log;
-const log4js = require("../../../infrastructure/logging/logger");
-const logger = log4js.logger("cheese", "info");
+import { getLogger } from "../../../application/ports/Logger";
+const logger = getLogger("cheese", "info");
 
 import auth from "../middleware/auth";
 import { canEditProblem, isAdmin } from "../../../domain/policy/predicates";

@@ -3,8 +3,8 @@ import { withCache, clearCacheBatch } from "../../infrastructure/cache/cache-hel
 import { MySQLManager } from "../../infrastructure/db/mysql/MySQLManager";
 import cache_query = require("../../infrastructure/db/legacy/mysql_cache");
 import { redactRows, SUBMISSION_SENSITIVE_FIELDS } from "../../domain/policy/privacy";
-const log4js = require("../../infrastructure/logging/logger");
-const logger = log4js.logger("cheese", "info");
+import { getLogger } from "../ports/Logger";
+const logger = getLogger("cheese", "info");
 
 class ScoreboardService {
     /**

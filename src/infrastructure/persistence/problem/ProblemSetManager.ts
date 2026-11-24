@@ -3,10 +3,10 @@ import dayjs from "dayjs";
 import { error, ok } from "../../../domain/constants/state";
 import { canBrowseSource, isEditor } from "../../../domain/policy/predicates";
 import cache_query = require("../../db/legacy/mysql_cache");
-import { ErrorHandlerFactory } from "../../../interfaces/http/decorators/ErrorHandler";
+import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
 import ContestModeChecker from "../../../interfaces/http/decorators/ContestModeChecker";
-import Cacheable from "../../cache/Cacheable";
-import CachePool from "../../cache/CachePool";
+import Cacheable from "../../../shared/cache/Cacheable";
+import CachePool from "../../../shared/cache/CachePool";
 const NONE_PRIVILEGE_AND_SQL = ` and problem_id not in(select problem_id from contest_problem
 			where oj_name is null and contest_id in (select contest_id from contest where (end_time>NOW() or private=1))) `;
 const page_cnt = 50;

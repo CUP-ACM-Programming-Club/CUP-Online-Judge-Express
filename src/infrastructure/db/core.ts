@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import type { ICachePool } from "../cache/CachePool";
+import type { ICachePool } from "../../shared/cache/CachePool";
 import type { MySQLTransaction } from "./mysql/transaction";
 
 /**

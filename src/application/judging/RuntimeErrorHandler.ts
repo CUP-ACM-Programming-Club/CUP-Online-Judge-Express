@@ -1,6 +1,6 @@
 const query = require("../../infrastructure/db/legacy/mysql_query");
-const log4js = require("../../infrastructure/logging/logger");
-const logger = log4js.logger("normal", "info");
+import { getLogger } from "../ports/Logger";
+const logger = getLogger("normal", "info");
 
 class RuntimeErrorHandler {
 

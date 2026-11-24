@@ -1,6 +1,6 @@
 import {Request} from "express";
 import ConfigFileManager from "../../../infrastructure/config/file/ConfigFileManager";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 
 class InitManager {

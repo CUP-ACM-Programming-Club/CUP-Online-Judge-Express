@@ -1,4 +1,4 @@
-import {ICachePool} from "../../CachePool";
+import {ICachePool} from "./CachePool";
 import dayjs, {ManipulateType, OpUnitType} from "dayjs";
 
 interface ICacheContainer {

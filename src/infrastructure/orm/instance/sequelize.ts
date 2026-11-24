@@ -1,6 +1,6 @@
 import {Sequelize} from "sequelize-typescript";
 import * as Models from "../ts-model"
-import Logger from "../../logging/console/Logger";
+import Logger from "../../../shared/Logger";
 const mysqlConfig = global.config.mysql;
 const sequelize = new Sequelize("jol", mysqlConfig.user, mysqlConfig.password, {
 	host: mysqlConfig.host,

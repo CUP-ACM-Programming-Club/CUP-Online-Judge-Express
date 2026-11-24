@@ -7,7 +7,7 @@ const [error, ok] = require("../../../domain/constants/const_var");
 const page_cnt = 20;
 import auth from "../middleware/auth";
 import { canBrowseSource, isAdmin } from "../../../domain/policy/predicates";
-const DiscussInterceptor = require("../../../application/discuss/interceptor");
+const DiscussInterceptor = require("../interceptor/discuss");
 const { checkCaptcha } = require("../captcha_checker");
 
 // contest_mode 下仍可浏览讨论：admin | source_browser

@@ -1,5 +1,5 @@
 import {Request, Response} from "express";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import _ from "lodash";
 import {ConfigManager} from "../../config/config-manager";

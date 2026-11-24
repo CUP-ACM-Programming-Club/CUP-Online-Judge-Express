@@ -1,5 +1,5 @@
 import { injectable, inject } from "inversify";
-import { TYPES } from "../../../main/di/types";
+import { TYPES } from "../../ports/types";
 import { RedisService } from "../../../infrastructure/redis/service/RedisService";
 
 const ListSize = 50;

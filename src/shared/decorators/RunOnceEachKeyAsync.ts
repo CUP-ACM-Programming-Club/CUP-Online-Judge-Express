@@ -1,5 +1,5 @@
 import parameterHash from "../parameterHash";
-import CachePool from "../../infrastructure/cache/CachePool";
+import CachePool from "../cache/CachePool";
 
 export default function RunOnceEachKeyAsync(target: any, propertyName: string, propertyDescriptor: TypedPropertyDescriptor<(...args: any[]) => Promise<any>>) {
     const method = propertyDescriptor.value;

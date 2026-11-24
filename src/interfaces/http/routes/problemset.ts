@@ -2,7 +2,7 @@ import ProblemSetManager from "../../../infrastructure/persistence/problem/Probl
 import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
-const Interceptor = require("../../../application/problemset/interceptor");
+const Interceptor = require("../interceptor/problemset");
 
 
 

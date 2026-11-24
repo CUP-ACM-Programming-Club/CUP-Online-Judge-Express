@@ -1,8 +1,8 @@
-import {error} from "../../../domain/constants/state";
 import isPromise from "is-promise";
 function errorHandle(err: any) {
     console.error(err);
-    return error.errorMaker(err && err.message ? err.message : err);
+    // 与 domain/constants/state 的 error.errorMaker 返回同一结构；shared 层不依赖 domain
+    return {status: "error", statement: err && err.message ? err.message : err};
 }
 
 export function ErrorHandlerFactory(wrapper: (wrapObject: any) => any) {

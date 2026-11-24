@@ -1,9 +1,9 @@
 import express from "express";
-import AwardManager from "../../../../../infrastructure/persistence/award/AwardManager";
+import AwardController from "../../../controllers/AwardController";
 const router = express.Router();
 
 router.post("/:award_id", async (req, res) => {
-    res.json(await AwardManager.deleteAwardByAwardIdRequest(req));
+    res.json(await AwardController.remove(req));
 });
 
 export = ["/remove", router];

@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import {Request} from "express";
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {ErrorHandler, ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandler, ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import { v1 as uuidV1 } from "uuid";
 const query = require("../../db/legacy/mysql_cache");

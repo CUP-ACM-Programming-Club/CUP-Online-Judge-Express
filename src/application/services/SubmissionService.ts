@@ -1,5 +1,5 @@
 import { MySQLManager, MySQLTransaction } from "../../infrastructure/db/mysql/MySQLManager";
-import Logger from "../../infrastructure/logging/console/Logger";
+import Logger from "../../shared/Logger";
 import ContestManager from "../../infrastructure/persistence/contest/ContestManager";
 import { canAccessHiddenProblem, isAdmin, isContestAssistant } from "../../domain/policy/predicates";
 import { SubmissionData, SubmissionResponse } from "../../domain/types/SubmissionType";

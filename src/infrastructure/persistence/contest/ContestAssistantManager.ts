@@ -1,9 +1,9 @@
 import { MySQLManager } from "../../db/mysql/MySQLManager";
-import { ErrorHandlerFactory } from "../../../interfaces/http/decorators/ErrorHandler";
+import { ErrorHandlerFactory } from "../../../shared/decorators/ErrorHandler";
 import { Request } from "express";
 import { ok } from "../../../domain/constants/state";
-import Cacheable from "../../cache/Cacheable";
-import CachePool from "../../cache/CachePool";
+import Cacheable from "../../../shared/cache/Cacheable";
+import CachePool from "../../../shared/cache/CachePool";
 
 const cache_query = require("../../db/legacy/mysql_cache");
 

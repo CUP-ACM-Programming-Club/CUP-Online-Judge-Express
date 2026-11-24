@@ -7,7 +7,7 @@ const TEST_MODE = ENVIRONMENT.toLowerCase().indexOf("test") !== -1;
 const express = require("express");
 const router = express.Router();
 const escape = require("escape-html");
-const log4js = require("../../../infrastructure/logging/logger");
+import { getLogger } from "../../../application/ports/Logger";
 const const_name = require("../../../domain/constants/const_name");
 const timediff = require("timediff");
 import auth from "../middleware/auth";
@@ -16,7 +16,7 @@ const admin_auth = require("../middleware/admin");
 import client from "../../../infrastructure/redis/redis";
 import moment from "moment";
 import SubmissionService from "../../../application/services/SubmissionService";
-const logger = log4js.logger("cheese", "info");
+const logger = getLogger("cheese", "info");
 const query = require("../../../infrastructure/db/legacy/mysql_cache");
 
 const GREATER = "greater"; // Keep constants if used elsewhere? 

@@ -33,10 +33,10 @@ const knownGates = new Map<any, string>([
 	[auth, "auth"],
 	[admin, "admin"],
 	[InitMiddleware, "init-only"],
-	[require(path.join(src, "application/problemset/interceptor")), "switch:enable_problemset(admin bypass)"],
-	[require(path.join(src, "application/tutorial/interceptor")).default, "switch:enable_tutorial(admin bypass)"],
-	[require(path.join(src, "application/discuss/interceptor")), "switch:enable_discuss(admin bypass)"],
-	[require(path.join(src, "application/status/problem/SolveMapInterceptor")), "switch:enable_solvemap(admin bypass)"],
+	[require(path.join(src, "interfaces/http/interceptor/problemset")), "switch:enable_problemset(admin bypass)"],
+	[require(path.join(src, "interfaces/http/interceptor/tutorial")).default, "switch:enable_tutorial(admin bypass)"],
+	[require(path.join(src, "interfaces/http/interceptor/discuss")), "switch:enable_discuss(admin bypass)"],
+	[require(path.join(src, "interfaces/http/interceptor/SolveMapInterceptor")), "switch:enable_solvemap(admin bypass)"],
 ]);
 
 function gateName(fn: any): string {

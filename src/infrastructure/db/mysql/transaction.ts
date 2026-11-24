@@ -1,4 +1,4 @@
-import Logger from "../../logging/console/Logger";
+import Logger from "../../../shared/Logger";
 
 export interface MySQLTransaction {
     query: (sql: string, binding?: any[]) => Promise<any>;

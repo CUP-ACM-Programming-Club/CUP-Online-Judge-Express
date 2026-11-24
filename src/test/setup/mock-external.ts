@@ -199,7 +199,7 @@ registerOverride(path.join(srcRoot, "infrastructure", "cache", "memcached.ts"), 
 registerOverride(path.join(srcRoot, "main", "init", "build_env.ts"), mockBuildEnv);
 registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
 registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
-registerOverride(path.join(srcRoot, "infrastructure", "cache", "manager", "scheduler", "CacheScheduler.ts"), mockCacheScheduler);
+registerOverride(path.join(srcRoot, "shared", "cache", "CacheScheduler.ts"), mockCacheScheduler);
 registerOverride(path.join(srcRoot, "infrastructure", "persistence", "user", "UserRegisterManager.ts"), {
 	UserRegisterValidator: class {
 		async validate(payload: any) { }
@@ -299,3 +299,6 @@ if (typeof process.send !== "function") {
 	process.send = function () {
 	};
 }
+
+// 绑定端口实现（实现模块本身仍走上面的 mock 覆盖）
+require("../../main/compose");

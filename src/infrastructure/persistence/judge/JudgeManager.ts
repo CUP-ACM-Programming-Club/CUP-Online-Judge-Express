@@ -1,7 +1,7 @@
 import SubmissionManager from "../submission/SubmissionManager";
 import localJudger from "../../judger/localJudger";
 import {error} from "../../../domain/constants/state";
-import Logger from "../../logging/console/Logger";
+import Logger from "../../../shared/Logger";
 
 interface ISubmissionInfo {
     solution_id: number,

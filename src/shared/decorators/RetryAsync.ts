@@ -1,4 +1,4 @@
-import Logger from "../../infrastructure/logging/console/Logger";
+import Logger from "../Logger";
 
 export function wait(ms: number) {
     return new Promise(resolve => setTimeout(() => { Logger.log(`failDelay: ${ms}`); resolve(null) }, ms));

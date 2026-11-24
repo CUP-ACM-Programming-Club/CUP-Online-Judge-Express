@@ -1,8 +1,8 @@
-import Cacheable from "../../cache/Cacheable";
+import Cacheable from "../../../shared/cache/Cacheable";
 import {Request} from "express";
 import SubmissionManager from "./SubmissionManager";
 import { canBrowseSource, isContestAssistant } from "../../../domain/policy/predicates";
-import CachePool from "../../cache/CachePool";
+import CachePool from "../../../shared/cache/CachePool";
 
 class SourcePrivilegeCache {
     @Cacheable(new CachePool(), 10, "second")

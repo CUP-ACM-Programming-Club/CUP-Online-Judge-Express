@@ -14,7 +14,7 @@
  * - module/mysql_query、module/mysql_cache 现在只是这里的兼容外壳，旧调用方无需改动。
  */
 import { MySQLManager } from "./mysql/MySQLManager";
-import CacheScheduler from "../cache/manager/scheduler/CacheScheduler";
+import CacheScheduler from "../../shared/cache/CacheScheduler";
 import { createDb } from "./core";
 
 export type { TxContext, CachedQueryOptions, Db } from "./core";

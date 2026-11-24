@@ -1,5 +1,5 @@
 import {Request} from "express";
-import {ErrorHandlerFactory} from "../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../shared/decorators/ErrorHandler";
 import {ok} from "../../domain/constants/state";
 import UserManager from "../../infrastructure/persistence/user/UserManager";
 const query = require("../../infrastructure/db/legacy/mysql_query");

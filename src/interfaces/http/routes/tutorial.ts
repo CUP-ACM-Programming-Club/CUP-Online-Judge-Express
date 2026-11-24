@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import TutorialInterceptor from "../../../application/tutorial/interceptor";
+import TutorialInterceptor from "../interceptor/tutorial";
 
 import express from "express";
 const router = express.Router();

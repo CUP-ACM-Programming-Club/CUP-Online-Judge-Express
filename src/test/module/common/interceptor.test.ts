@@ -3,7 +3,7 @@ const expect = require("chai").expect;
 const {ConfigManager} = require("../../../infrastructure/config/config-manager");
 const sequelize = require("../../../infrastructure/orm/instance/sequelize");
 const {error} = require("../../../domain/constants/state");
-const {isAdministrator} = require("../../../application/account/privilege");
+const {isAdministrator} = require("../../../interfaces/http/privilege");
 
 describe("ConfigManager Interceptor Factory", function () {
     it('should call next() when Switch is on', function (done) {

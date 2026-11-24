@@ -1,6 +1,6 @@
 import {Interceptor} from "./middleware";
 import {Request, Response, NextFunction} from "express";
-const {ConfigManager} = require("../../../infrastructure/config/config-manager");
+const {ConfigManager} = require("../../../application/ports/Config");
 
 export class ConfigInterceptor {
 	private readonly interceptorFactory: Interceptor;

@@ -1,5 +1,5 @@
 import { injectable, inject } from "inversify";
-import { TYPES } from "../../main/di/types";
+import { TYPES } from "../ports/types";
 import { ConfigService } from "../services/ConfigService";
 import { UserManager } from "../../infrastructure/persistence/user/UserManager";
 const checkPassword = require("./check_password");

@@ -1,6 +1,6 @@
 import {Request} from "express";
 import SubmissionManager, {ExportSolutionInfo, RESULT_CHINESE_STRING, SolutionInfoDAO} from "./SubmissionManager";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import CompileInfoManager from "../judge/CompileInfoManager";
 import RuntimeInfoManager from "../judge/RuntimeInfoManager";

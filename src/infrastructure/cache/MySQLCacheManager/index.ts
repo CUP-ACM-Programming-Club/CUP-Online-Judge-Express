@@ -1,5 +1,5 @@
 import MySQLCachePool from "../../db/legacy/mysql/cache";
-import {ErrorHandlerFactory} from "../../../interfaces/http/decorators/ErrorHandler";
+import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
 import {ok} from "../../../domain/constants/state";
 import {Request} from "express";
 class MySQLCacheManager {

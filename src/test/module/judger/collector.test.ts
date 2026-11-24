@@ -2,6 +2,8 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { bindPort, boundImpl } from "../../../application/ports/registry";
+import { ConfigManager as configPort } from "../../../application/ports/Config";
 
 describe("UnjudgedSubmissionCollector", function () {
     let Collector: any;
@@ -9,6 +11,7 @@ describe("UnjudgedSubmissionCollector", function () {
     let judgerStub: any;
     let configStub: any;
     let previousLoad: any;
+    let previousConfig: any;
 
     beforeEach(function () {
         // 1. Stubs
@@ -24,10 +27,12 @@ describe("UnjudgedSubmissionCollector", function () {
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
             if (request.includes("mysql/MySQLManager")) return { MySQLManager: { execQuery: queryStub, transaction: sinon.stub() } };
             if (request.includes("judger") && !request.includes("UnjudgedSubmissionCollector")) return { localJudger: {}, default: judgerStub };
-            if (request.includes("config/config-manager")) return { ConfigManager: configStub };
             if (request.includes("decorators/RetryAsync")) return { wait: sinon.stub().resolves() };
             return previousLoad.apply(this, arguments);
         };
+
+        previousConfig = boundImpl(configPort);
+        bindPort(configPort, configStub);
 
         // 3. Load
         delete require.cache[require.resolve("../../../application/judging/UnjudgedSubmissionCollector")];
@@ -43,6 +48,7 @@ describe("UnjudgedSubmissionCollector", function () {
     });
 
     afterEach(function () {
+        if (previousConfig) bindPort(configPort, previousConfig);
         if (previousLoad) (Module as any)._load = previousLoad;
         sinon.restore();
     });
