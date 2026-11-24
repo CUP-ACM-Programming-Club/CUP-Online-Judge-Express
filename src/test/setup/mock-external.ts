@@ -100,6 +100,25 @@ const mockMySQLManager = {
 	transaction: fakeDb.transaction
 };
 
+// src/db 在测试里同样落到 fake-db，且与 mysql_cache 的 mock 一样不做缓存（避免用例之间读到旧数据）
+const noCache = {
+	async get() { return null; },
+	getAllKey() { return []; },
+	async setWithTimestamp() { },
+	async set() { },
+	remove() { },
+	removeAll() { }
+};
+const mockDb = (() => {
+	const { createDb } = require("../../db/core");
+	const db = createDb({
+		execQuery: (sql, params) => fakeDb.query(sql, params, undefined),
+		transaction: () => fakeDb.transaction(),
+		cache: noCache
+	});
+	return Object.assign({ default: db, LEGACY_CACHE_TTL_MS: 2000 }, db);
+})();
+
 const mockSequelize = {
 	close() {
 		return Promise.resolve();
@@ -173,6 +192,7 @@ function registerOverride(filePath: string, mockValue: any) {
 registerOverride(path.join(srcRoot, "module", "mysql_query.ts"), mockMysqlQuery);
 registerOverride(path.join(srcRoot, "module", "mysql_cache.ts"), mockMysqlCache);
 registerOverride(path.join(srcRoot, "manager", "mysql", "MySQLManager.ts"), { MySQLManager: mockMySQLManager });
+registerOverride(path.join(srcRoot, "db", "index.ts"), mockDb);
 registerOverride(path.join(srcRoot, "orm", "instance", "sequelize.ts"), mockSequelize);
 registerOverride(path.join(srcRoot, "orm", "ts-model", "index.ts"), modelProxy);
 registerOverride(path.join(srcRoot, "module", "memcached.ts"), mockMemcachedModule);
