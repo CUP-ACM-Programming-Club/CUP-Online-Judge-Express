@@ -1,4 +1,4 @@
-const cache_query = require("../../../infrastructure/db/legacy/mysql_cache");
+const BanModel = require("../../../application/user/ban");
 const [error] = require("../../../domain/constants/const_var");
 import dayjs from "dayjs";
 import { Request, Response, NextFunction } from "express";
@@ -16,7 +16,7 @@ export = async (req: Request, res: Response, next: NextFunction) => {
 			res.json(error.nologin);
 			return false;
 		}
-		const data = await cache_query("select bantime from ban_user where user_id = ?", [req.session!.user_id]);
+		const data = await BanModel.getBanTimeRows(req.session!.user_id);
 		if (!data || data.length === 0) {
 			if (typeof next === "function") {
 				next();

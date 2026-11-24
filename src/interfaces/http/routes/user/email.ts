@@ -1,9 +1,9 @@
 import express from "express";
-import UserManager from "../../../../infrastructure/persistence/user/UserManager";
+import UserController from "../../controllers/UserController";
 const router = express.Router();
 
 router.get("/:user_id", async (req, res) => {
-    res.json(await UserManager.getUserEmailByRequest(req));
+    res.json(await UserController.getUserEmail(req));
 });
 
 export default router;

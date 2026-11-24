@@ -1,10 +1,8 @@
-import "reflect-metadata";
 import { expect } from "chai";
 import { TokenManagerService } from "../../../../application/account/token/TokenManagerService";
-import { RedisService } from "../../../../infrastructure/redis/service/RedisService";
+import { UserTokenStore } from "../../../../application/ports/UserTokenStore";
 
 describe("TokenManagerService", function () {
-    let mockRedisService: RedisService;
     let service: TokenManagerService;
     let mockClient: any;
 
@@ -12,12 +10,17 @@ describe("TokenManagerService", function () {
         mockClient = {
             llenAsync: async () => 0,
             lpopAsync: async () => { },
-            rpushAsync: async () => { }
+            rpushAsync: async () => { },
+            lrangeAsync: async () => [] as string[]
         };
-        mockRedisService = {
-            client: mockClient
-        } as any;
-        service = new TokenManagerService(mockRedisService);
+        // 端口的假实现：转发到上面可随用例替换的 mockClient
+        const store: UserTokenStore = {
+            llen: (key) => mockClient.llenAsync(key),
+            lpop: (key) => mockClient.lpopAsync(key),
+            rpush: (key, value) => mockClient.rpushAsync(key, value),
+            lrangeAll: (key) => mockClient.lrangeAsync(key, 0, -1)
+        };
+        service = new TokenManagerService(store);
     });
 
     it("should remove tokens", async function () {
@@ -52,6 +55,13 @@ describe("TokenManagerService", function () {
 
         await service.storeToken("u1", "hash");
         expect(lpopCalls).to.equal(0);
+    });
+
+    it("should accept token or newToken found in the lists", async function () {
+        mockClient.lrangeAsync = async (key: string) => key.endsWith("newToken") ? ["n1"] : ["t1"];
+        expect(await service.hasValidToken("u1", "t1", "x")).to.equal(true);
+        expect(await service.hasValidToken("u1", "x", "n1")).to.equal(true);
+        expect(await service.hasValidToken("u1", "x", "t1")).to.equal(false);
     });
 
     it("should handle empty token lists", async function () {

@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import {decryptPassword} from "../../../application/util";
+import {decryptPassword} from "../util";
 
 const AESSalt = global.config.salt || "thisissalt";
 

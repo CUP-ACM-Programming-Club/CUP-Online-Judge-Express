@@ -1,7 +1,7 @@
 import cookie from "cookie";
 import SocketIO, {Socket} from "socket.io"
 import {UserSocket} from "./Socket";
-const client = require("../../infrastructure/redis/redis").default;
+import TokenManager from "../../application/account/token/TokenManager";
 
 async function doValidate(socket: UserSocket, next: (err?: any) => void) {
     if (typeof socket.handshake.headers.cookie !== "string") {
@@ -25,9 +25,7 @@ async function doValidate(socket: UserSocket, next: (err?: any) => void) {
         next(new Error("Auth failed"));
         return;
     }
-    const new_token_list = await client.lrangeAsync(`${user_id}newToken`, 0, -1);
-    const original_token = await client.lrangeAsync(`${user_id}token`, 0, -1);
-    if (new_token_list.indexOf(newToken) !== -1 || original_token.indexOf(token) !== -1) {
+    if (await TokenManager.hasValidToken(user_id, token, newToken)) {
         Object.assign(socket, {auth: true});
         next();
     } else {

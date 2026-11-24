@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const PasswordManager = require("../../../infrastructure/persistence/user/PasswordManager").default || require("../../../infrastructure/persistence/user/PasswordManager");
+const PasswordManager = require("../../../application/auth/PasswordManager").default || require("../../../application/auth/PasswordManager");
 const util = require("../../../application/util");
 const crypto = require("crypto");
 

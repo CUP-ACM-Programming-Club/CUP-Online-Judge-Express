@@ -1,5 +1,6 @@
 import * as crypto from "../shared/encrypt";
-import query = require("../infrastructure/db/legacy/mysql_query");
+import { userRepository } from "./ports/UserRepository";
+import { legacyUtilRepository } from "./ports/LegacyUtilRepository";
 import isNumber from "../shared/isNumber";
 
 export function reverse(val: any): string {
@@ -20,8 +21,7 @@ export function decryptPassword(encryptedPassword: string, salt: string): string
 
 export function generateNewEncryptPassword(user_id: string, rawPassword: string, salt: string): Promise<any> {
 	return new Promise((resolve, reject) => {
-		query("update users set newpassword=? where user_id=?",
-			[encryptPassword(rawPassword, salt), user_id])
+		userRepository.updateNewPassword(user_id, encryptPassword(rawPassword, salt))
 			.then(resolve)
 			.catch(reject);
 	});
@@ -55,69 +55,37 @@ export function assertInt(num: any): number {
 }
 
 export async function removeAllContestProblem(contest_id: number | string): Promise<void> {
-	await query("delete from contest_problem where contest_id = ?", [contest_id]);
+	await legacyUtilRepository.removeAllContestProblem(contest_id);
 }
 
 export async function removeAllContestProblemWithTransaction(connection: any, contest_id: number | string): Promise<void> {
-	await connection.query("delete from contest_problem where contest_id = ?", [contest_id]);
+	await legacyUtilRepository.removeAllContestProblemWithTransaction(connection, contest_id);
 }
 
 export async function removeAllCompetitorPrivilege(contest_id: number | string): Promise<void> {
-	await query("delete from privilege where rightstr = ?", [`c${contest_id}`]);
+	await legacyUtilRepository.removeAllCompetitorPrivilege(contest_id);
 }
 
 export async function removeAllCompetitorPrivilegeWithTransaction(connection: any, contest_id: number | string): Promise<void> {
-	await connection.query("delete from privilege where rightstr = ?", [`c${contest_id}`]);
+	await legacyUtilRepository.removeAllCompetitorPrivilegeWithTransaction(connection, contest_id);
 }
 
 export async function addContestProblem(contest_id: number | string, problemList: any[]): Promise<void> {
-	let baseSql = "insert into contest_problem(contest_id, problem_id, num) values";
-	let sqlArray: string[] = [];
-	let valueArray: any[] = [];
-	for (let num = 0, len = problemList.length; num < len; ++num) {
-		sqlArray.push("(?,?,?)");
-		valueArray.push(contest_id, problemList[num], num);
-	}
-	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+	await legacyUtilRepository.addContestProblem(contest_id, problemList);
 }
 
 export async function addContestProblemWithTransaction(connection: any, contest_id: number | string, problemList: any[]): Promise<void> {
-	let baseSql = "insert into contest_problem(contest_id, problem_id, num) values";
-	let sqlArray: string[] = [];
-	let valueArray: any[] = [];
-	for (let num = 0, len = problemList.length; num < len; ++num) {
-		sqlArray.push("(?,?,?)");
-		valueArray.push(contest_id, problemList[num], num);
-	}
-	await connection.query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+	await legacyUtilRepository.addContestProblemWithTransaction(connection, contest_id, problemList);
 }
 
 export async function addContestCompetitor(contest_id: number | string, userList: any[]): Promise<void> {
-	if (userList.length === 0) {
-		return;
-	}
-	let baseSql = "insert into privilege (user_id, rightstr) values";
-	let sqlArray: string[] = [], valueArray: any[] = [];
-	userList.forEach(el => {
-		sqlArray.push("(?,?)");
-		valueArray.push(el, `c${contest_id}`);
-	});
-	await query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+	await legacyUtilRepository.addContestCompetitor(contest_id, userList);
 }
 
 export async function addContestCompetitorWithTransaction(connection: any, contest_id: number | string, userList: any[]): Promise<void> {
-	if (userList.length === 0) {
-		return;
-	}
-	let baseSql = "insert into privilege (user_id, rightstr) values";
-	let sqlArray: string[] = [], valueArray: any[] = [];
-	userList.forEach(el => {
-		sqlArray.push("(?,?)");
-		valueArray.push(el, `c${contest_id}`);
-	});
-	await connection.query(`${baseSql} ${sqlArray.join(",")}`, valueArray);
+	await legacyUtilRepository.addContestCompetitorWithTransaction(connection, contest_id, userList);
 }
 
 export function startupInit(): Promise<any> {
-	return query("UPDATE solution SET result = 1 WHERE result > 0 and result < 4");
+	return legacyUtilRepository.startupInit();
 }

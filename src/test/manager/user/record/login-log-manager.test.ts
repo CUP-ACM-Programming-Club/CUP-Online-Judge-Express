@@ -1,5 +1,6 @@
 const expect = require("chai").expect;
 const LoginLogManager = require("../../../../infrastructure/persistence/user/record/LoginLogManager").default || require("../../../../infrastructure/persistence/user/record/LoginLogManager");
+const LoginLogController = require("../../../../interfaces/http/controllers/LoginLogController").default;
 const fakeDb = require("../../../mocks/fake-db");
 
 describe("LoginLogManager", function () {
@@ -20,13 +21,13 @@ describe("LoginLogManager", function () {
 
 	it("should return logs by request", async function () {
 		const req = {params: {userId: "u1"}, query: {page: "0"}};
-		const result = await LoginLogManager.getUserLoginLogByRequest(req);
+		const result = await LoginLogController.getUserLoginLog(req);
 		expect(result).to.have.property("status").that.equal("OK");
 	});
 
 	it("should return latest logs by request", async function () {
 		const req = {};
-		const result = await LoginLogManager.getLatestLoginLogByRequest(req);
+		const result = await LoginLogController.getLatestLoginLog(req);
 		expect(result).to.have.property("status").that.equal("OK");
 	});
 
@@ -41,7 +42,7 @@ describe("LoginLogManager", function () {
 			},
 			clientIp: "10.0.0.1"
 		};
-		const result = await LoginLogManager.setUserIdLoginLogByRequest(req);
+		const result = await LoginLogController.setUserIdLoginLog(req);
 		expect(result).to.have.property("status").that.equal("OK");
 	});
 });

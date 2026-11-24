@@ -1,29 +1,12 @@
 import {MySQLManager} from "../../../db/mysql/MySQLManager";
-import {Request} from "express";
-import {ErrorHandlerFactory} from "../../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../../domain/constants/state";
 import dayjs from "dayjs";
+import {ILoginLogDAO, ILoginLogDTO, UserLoginLogRepository} from "../../../../application/ports/UserLoginLogRepository";
 const PAGE_LIMIT = 50;
 
-export interface ILoginLogDAO {
-    user_id: string,
-    password: string,
-    ip: string,
-    time: string,
-    browser_name?: string,
-    browser_version?: string,
-    os_name?: string,
-    os_version?: string
-}
+export type {ILoginLogDAO, ILoginLogDTO};
 
-export interface ILoginLogDTO {
-    os_name: string,
-    os_version: string,
-    browser_name: string,
-    browser_version: string
-}
-
-class LoginLogManager {
+/** 登录日志的数据访问（HTTP 部分在 interfaces/http/controllers/LoginLogController）。 */
+class LoginLogManager implements UserLoginLogRepository {
     async getLatestLoginLog (): Promise<ILoginLogDAO[]> {
         return await MySQLManager.execQuery(`select loginlog.*, users.nick from loginlog left join users on users.user_id = loginlog.user_id order by time desc limit ?`, [PAGE_LIMIT]);
     }
@@ -36,26 +19,6 @@ class LoginLogManager {
         const {browser_name, browser_version, os_name, os_version} = loginLogDTO;
         await MySQLManager.execQuery("insert into loginlog (user_id, password, ip, time, browser_name, browser_version, os_name, os_version) values(?,?,?,?,?,?,?,?)",
             [userId, "No Saved", ip, dayjs().format("YYYY-MM-DD HH:mm:ss"), browser_name, browser_version, os_name, os_version]);
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async setUserIdLoginLogByRequest(req: Request) {
-        const userId = req.session!.user_id;
-        // @ts-ignore
-        const ip = req.clientIp;
-        await  this.setUserIdLoginLog(userId, req.body, ip);
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getLatestLoginLogByRequest(req: Request) {
-        return await this.getLatestLoginLog();
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async getUserLoginLogByRequest(req: Request) {
-        const userId = req.params.userId;
-        const page = isNaN(parseInt(req.query.page as string)) ? 0 : parseInt(req.query.page as string);
-        return await this.getUserIdLoginLog(userId, page);
     }
 }
 

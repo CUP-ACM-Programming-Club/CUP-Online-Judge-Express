@@ -1,24 +1,13 @@
-import query from "../../../infrastructure/db/legacy/mysql_query";
+import { adminUserRepository } from "../../ports/AdminUserRepository";
 import { generateNewEncryptPassword } from "../../util";
 
 class AdminUserService {
 
     // Adapted from module/admin/list.ts
     async getUserList(page: number, limit: number = 50, opts: any = {}) {
-        let where = "where school = 'your_own_school'", orderBy = "order by reg_time desc";
-        // Default values from src/routes/admin/account/list.ts
-
-        if (opts.where && typeof opts.where === "string") {
-            where = opts.where;
-        }
-        if (opts.order && typeof opts.order === "string") {
-            orderBy = opts.order;
-        }
+        // 默认条件（只列比赛账号、按注册时间倒序）在仓储实现里
         const offset = page * limit;
-        const [data, count] = await Promise.all([
-            query(`select * from users ${[where, orderBy].join(" ")} limit ?,?`, [offset, limit]),
-            query(`select count(1) as cnt from users ${[where, orderBy].join(" ")}`)
-        ]);
+        const [data, count] = await adminUserRepository.getUserList(offset, limit, opts.where, opts.order);
 
         return {
             data,
@@ -28,11 +17,11 @@ class AdminUserService {
 
     // Adapted from module/admin/defunct.ts
     async toggleUserDefunct(userId: string) {
-        const res = await query("select defunct from users where user_id = ?", [userId]);
+        const res = await adminUserRepository.getDefunctRows(userId);
         if (res.length > 0) {
             const current = res[0].defunct;
             const next = current === "Y" ? "N" : "Y";
-            await query("update users set defunct = ? where user_id = ?", [next, userId]);
+            await adminUserRepository.setDefunct(userId, next);
             return next;
         }
     }
@@ -43,24 +32,19 @@ class AdminUserService {
     }
 
     async getTeamList() {
-        return await query("select user_id, reg_time, accesstime,defunct from users where school = 'your_own_school' order by reg_time desc");
+        return await adminUserRepository.getTeamList();
     }
 
     async getPrivilegeList(privilegeList: string[]) {
-        return await query(`select superuser.*, users.nick
-            from (select user_id, rightstr, defunct
-            from privilege
-            where rightstr in
-            ('${privilegeList.join("','")}')) superuser
-            inner join users on users.user_id = superuser.user_id`);
+        return await adminUserRepository.getPrivilegeList(privilegeList);
     }
 
     async addPrivilege(userId: string, rightstr: string) {
-        await query("insert into privilege values(?,?,'N')", [userId, rightstr]);
+        await adminUserRepository.addPrivilege(userId, rightstr);
     }
 
     async removePrivilege(userId: string, rightstr: string) {
-        await query("delete from privilege where user_id = ? and rightstr = ?", [userId, rightstr]);
+        await adminUserRepository.removePrivilege(userId, rightstr);
     }
 }
 

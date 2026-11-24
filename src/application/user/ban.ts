@@ -1,13 +1,7 @@
-import {Request} from "express";
 import {ErrorHandlerFactory} from "../../shared/decorators/ErrorHandler";
 import {ok} from "../../domain/constants/state";
-import UserManager from "../../infrastructure/persistence/user/UserManager";
-const query = require("../../infrastructure/db/legacy/mysql_query");
-
-interface BanDAO {
-	user_id: string,
-	bantime: string
-}
+import {BanDAO, userBanRepository} from "../ports/UserBanRepository";
+import UserUseCases from "./UserUseCases";
 
 interface BanDTO extends BanDAO{
 	nick: string
@@ -15,29 +9,33 @@ interface BanDTO extends BanDAO{
 
 class Ban {
 	async getAll() {
-		return await query("select bantime, user_id from ban_user") as BanDAO[];
+		return await userBanRepository.getAll();
 	}
 
 	@ErrorHandlerFactory(ok.okMaker)
-	async getAllByRequest(req: Request) {
+	async getAllByRequest(_req?: unknown) {
 		const result = await this.getAll();
 		return await Promise.all(result.map(async e => {
-			const nick = await UserManager.getUserNick(e.user_id);
+			const nick = await UserUseCases.getUserNick(e.user_id);
 			return Object.assign({nick}, e) as BanDTO;
 		}));
 	}
 
 	async get(userId: string) {
-		return await query("select * from ban_user where user_id = ?", [userId]);
+		return await userBanRepository.get(userId);
 	}
 
 	async set(userId: string, datetime: string) {
-		await query("INSERT INTO ban_user (user_id, bantime) VALUES(?,?) ON DUPLICATE KEY UPDATE user_id = ?, bantime = ?",
-			[userId, datetime, userId, datetime]);
+		await userBanRepository.set(userId, datetime);
 	}
 
 	async remove(userId: string) {
-		await query("delete from ban_user where user_id = ?", [userId]);
+		await userBanRepository.remove(userId);
+	}
+
+	/** 封禁检查（带 2s 读缓存）：返回 bantime 行 */
+	async getBanTimeRows(userId: string) {
+		return await userBanRepository.getBanTimeRows(userId);
 	}
 }
 

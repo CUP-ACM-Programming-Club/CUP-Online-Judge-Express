@@ -1,35 +1,32 @@
-import { injectable, inject } from "inversify";
-import { TYPES } from "../ports/types";
-import { UserManager } from "../../infrastructure/persistence/user/UserManager";
-import { UserRegisterValidator } from "../../infrastructure/persistence/user/UserRegisterManager";
-import InviteManager from "../../infrastructure/persistence/user/InviteManager";
-import PrivilegeManager from "../../infrastructure/persistence/user/PrivilegeManager";
-import InitManager from "../../main/init/manager/InitManager";
-import { Request } from "express";
+import { ConfigService } from "../services/ConfigService";
+import { UserRegisterValidator } from "./UserRegisterValidator";
+import { userInviteRepository } from "../ports/UserInviteRepository";
+import UserUseCases from "../user/UserUseCases";
 
-@injectable()
+/** 邀请码注册（POST /register）。 */
 export class RegisterService {
-    private _userManager: UserManager;
+    private _configService: ConfigService;
     private _validator: UserRegisterValidator;
 
-    constructor(@inject(TYPES.UserManager) userManager: UserManager) {
-        this._userManager = userManager;
+    constructor(configService: ConfigService = new ConfigService()) {
+        this._configService = configService;
         this._validator = new UserRegisterValidator();
     }
 
-    async registerUser(req: Request) {
-        const payload = req.body;
+    async registerUser(payload: any, ip: string) {
         // Validate with Invite Code
         await this._validator.validate(payload);
 
         const { inviteCode, userId } = payload;
-        await InviteManager.consumeInviteCode(inviteCode);
-        const inviteInfo = await InviteManager.getInviteInfoByInviteCode(inviteCode);
+        await userInviteRepository.consumeInviteCode(inviteCode);
+        const inviteInfo = await userInviteRepository.getInviteInfoByInviteCode(inviteCode);
         if (inviteInfo) {
-            await InviteManager.deleteInviteRecord(inviteCode, inviteInfo.user_id, userId);
-            await InviteManager.addInviteRecord(inviteCode, inviteInfo.user_id, userId);
+            await userInviteRepository.deleteInviteRecord(inviteCode, inviteInfo.user_id, userId);
+            await userInviteRepository.addInviteRecord(inviteCode, inviteInfo.user_id, userId);
         }
 
-        return await this._userManager.addUser(payload, req);
+        return await UserUseCases.addUser(payload, ip, this._configService.config.salt);
     }
 }
+
+export default new RegisterService();

@@ -1,46 +1,18 @@
 import dayjs from "dayjs";
-import {Request} from "express";
 import {MySQLManager} from "../../db/mysql/MySQLManager";
-import {ErrorHandler, ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
+import {ErrorHandler} from "../../../shared/decorators/ErrorHandler";
+import {IInviteInfo, UserInviteRepository} from "../../../application/ports/UserInviteRepository";
 import { v1 as uuidV1 } from "uuid";
 const query = require("../../db/legacy/mysql_cache");
 
-const PAGE_OFFSET = 50;
-
-export interface IInviteInfo {
-    invite_id: number,
-    user_id: string,
-    invite_code: string,
-    valid_date: number | string,
-    valid_time: number
-}
+export type {IInviteInfo};
 
 function timeToString(time: any) {
     return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
 }
 
-class InviteValidator {
-    expireDateValidator(expireDate: string) {
-        const formattedExpireDate = dayjs(expireDate);
-        if (formattedExpireDate.isBefore(dayjs())) {
-            throw new Error("Expire date should after now");
-        }
-    }
-
-    validUserNumberValidator(validUserNumber: string | number) {
-        if (typeof validUserNumber === "string") {
-            validUserNumber = parseInt(validUserNumber);
-        }
-        if (validUserNumber <= 0) {
-            throw new Error("Valid user number should larger than 0");
-        }
-    }
-}
-
-export class InviteManager {
-
-    private inviteValidator = new InviteValidator();
+/** 邀请码的数据访问（HTTP 部分在 interfaces/http/controllers/InviteController）。 */
+export class InviteManager implements UserInviteRepository {
 
     async getInviteInfoByInviteCode (inviteCode: string) {
         const result = await query(`select * from invite where invite_code = ?`, [inviteCode]);
@@ -131,17 +103,6 @@ export class InviteManager {
         return inviteCode;
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async addInviteCodeByRequest(req: Request) {
-        const userId = req.session!.user_id;
-        const expireDate = timeToString(req.body.expireDate);
-        const validUserNumber = parseInt(req.body.validUserNumber as string);
-        this.inviteValidator.expireDateValidator(expireDate);
-        this.inviteValidator.validUserNumberValidator(validUserNumber);
-        return await this.addInviteCode(userId, expireDate, validUserNumber);
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
     async getAllInviteCode(): Promise<IInviteInfo[]> {
         return await query(`select * from invite order by valid_date desc`);
     }
@@ -150,25 +111,6 @@ export class InviteManager {
         return await query(`select * from invite order by valid_date limit ?, ?`, [page, offset]);
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async getInviteCodeByRequest(req: Request) {
-        const page = req.params.page;
-        let formattedPage: number;
-        if (isNaN(parseInt(page))) {
-            formattedPage = 0;
-        }
-        else {
-            formattedPage = parseInt(page);
-        }
-        return this.getInviteCodeByConditional(formattedPage * PAGE_OFFSET, PAGE_OFFSET);
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async expireInviteCodeByRequest(req: Request) {
-        const inviteCode = req.body.inviteCode;
-        const result = await this.expireInviteCode(inviteCode);
-        return;
-    }
 }
 
 export default new InviteManager();

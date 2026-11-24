@@ -1,31 +1,22 @@
 
 import { expect } from "chai";
 import sinon from "sinon";
-import Module from "module";
 
 describe("UserService Tests", function () {
     let UserService: any;
     let queryStub: sinon.SinonStub;
     let cacheQueryStub: sinon.SinonStub;
-    let previousLoad: any;
 
     beforeEach(function () {
-        queryStub = sinon.stub().resolves([]);
-        cacheQueryStub = sinon.stub().resolves([]);
+        // SQL 在仓储实现 MySqlUserQueryRepository 里，经 infrastructure/db 的 query / cachedQuery 执行
+        const db = require("../../infrastructure/db");
+        queryStub = sinon.stub(db, "query").resolves([]);
+        cacheQueryStub = sinon.stub(db, "cachedQuery").resolves([]);
 
-        previousLoad = (Module as any)._load;
-        (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_query")) return queryStub;
-            if (request.includes("mysql_cache")) return cacheQueryStub;
-            return previousLoad.apply(this, arguments);
-        };
-
-        delete require.cache[require.resolve("../../application/services/UserService")];
         UserService = require("../../application/services/UserService").default;
     });
 
     afterEach(function () {
-        if (previousLoad) (Module as any)._load = previousLoad;
         sinon.restore();
     });
 

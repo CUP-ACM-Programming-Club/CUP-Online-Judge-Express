@@ -1,3 +1,3 @@
-import PasswordManager from "../../infrastructure/persistence/user/PasswordManager";
+import PasswordManager from "./PasswordManager";
 
 export = PasswordManager.checkPassword;

@@ -1,17 +1,10 @@
-import { injectable, inject } from "inversify";
-import { TYPES } from "../ports/types";
 import { ConfigService } from "../services/ConfigService";
 import dayjs from "dayjs";
-const sequelize = require("../../infrastructure/orm/instance/sequelize");
-// sequelize v6 移除了 sequelize.import()；它对 (name, defineFn) 的调用等价于 defineFn(sequelize, DataTypes)
-const { DataTypes } = require("sequelize");
-const User = require("../../infrastructure/orm/models/users")(sequelize, DataTypes);
+import { userAccountRepository } from "../ports/UserAccountRepository";
 const { encryptPassword } = require("../util");
 
-User.sync();
-
 async function validateUserId(user_id: string) {
-    const result = await User.findOne({ where: { user_id } });
+    const result = await userAccountRepository.findByUserId(user_id);
     if (result.get()) {
         throw new Error("user is existed");
     }
@@ -56,11 +49,10 @@ async function validateNick(nick: string) {
     }
 }
 
-@injectable()
 export class AccountService {
     private _configService: ConfigService;
 
-    constructor(@inject(TYPES.ConfigService) configService: ConfigService) {
+    constructor(configService: ConfigService = new ConfigService()) {
         this._configService = configService;
     }
 
@@ -75,7 +67,7 @@ export class AccountService {
             await validateNick(nick);
             await validateIp();
             const now = dayjs().format("YYYY-MM-DD HH:mm:ss");
-            await User.create(Object.assign({
+            await userAccountRepository.create(Object.assign({
                 user_id: "", email: "", ip: "", accesstime: now, password: "", reg_time: now, nick: "", school: "",
                 confirmquestion: "", confirmanswer: ""
             }, {

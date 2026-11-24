@@ -1,13 +1,10 @@
 import express, { Router } from "express";
-import { container } from "../../../main/di/container";
-import { TYPES } from "../../../application/ports/types";
-import { RegisterService } from "../../../application/auth/RegisterService";
+import RegisterController from "../controllers/RegisterController";
 
-const registerService = container.get<RegisterService>(TYPES.RegisterService);
 const router: Router = express.Router();
 
 router.post("/", async (req, res) => {
-    res.json(await registerService.registerUser(req));
+    res.json(await RegisterController.register(req));
 });
 
 export = ["/register", router];
