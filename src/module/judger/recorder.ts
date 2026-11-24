@@ -1,6 +1,7 @@
 import {getUserIdBySolutionId} from "../user/user";
 import SubmissionManager from "../../manager/submission/SubmissionManager";
 import Maintainer from "./recorder/Maintainer";
+import ScoreboardInvalidator from "./recorder/ScoreboardInvalidator";
 import isNumber from "../util/isNumber";
 const query = require("../mysql_query");
 const cache_query = require("../mysql_cache");
@@ -120,6 +121,8 @@ export async function storeSubmission(payload: SubmissionPayload) {
 	} else {
 		await storeNormalSubmission(payload);
 	}
+	// 判题结果已落库：异步清除所属比赛的榜单缓存（不 await，失败只记日志）
+	ScoreboardInvalidator.invalidateBySolution(payload.solution_id);
 	if (payload.state >= 4) {
 		await Maintainer.maintainUserInfo(payload.user_id);
 		await Maintainer.maintainProblem((await SubmissionManager.getSolutionInfo(<number>payload.solution_id))!.problem_id);
