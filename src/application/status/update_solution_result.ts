@@ -3,15 +3,6 @@ import { judgeQueueRepository } from "../ports/JudgeQueueRepository";
 import ScoreboardService from "../services/ScoreboardService";
 const { error, ok } = require("../../domain/constants/state");
 
-/** 路由处理函数的最小形状（express 的 req/res 满足它），application 不依赖 express */
-interface RejudgeRequest {
-	body: any;
-}
-
-interface RejudgeResponse {
-	json(body: any): any;
-}
-
 async function resetSolutionStatus(idName: string, id: number | string) {
 	// Reset result to 1 (Pending/Rejudging) and clear performance metrics
 	await judgeQueueRepository.resetSolutionStatus(idName, id);
@@ -76,21 +67,3 @@ export const rejudgeByProblem = async (problemId: number | string, result: numbe
 	return rejudgeProblem(Number(problemId));
 };
 
-export async function router(req: RejudgeRequest, res: RejudgeResponse, result: number | string) {
-	if (isNaN(<number>result)) {
-		res.json(error.invalidParams);
-		return;
-	}
-	try {
-		const solution_id = req.body.solution_id;
-		if (typeof solution_id === "undefined" || isNaN(solution_id)) {
-			res.json(error.solutionIdNotValid);
-		} else {
-			await rejudgeSolution(solution_id);
-			res.json(ok.ok);
-		}
-	} catch (e) {
-		console.log(e);
-		res.json(error.database);
-	}
-}
