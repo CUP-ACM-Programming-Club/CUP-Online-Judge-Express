@@ -342,7 +342,7 @@ module.exports = async function (req: any, data: any, cookie: any) {
 		dataErrorChecker(data);
 		const submissionType = classifySubmissionType(data);
 		if (submissionType === NORMAL_SUBMISSION) {
-			return normalSubmissionTransaction(connection, req, data);
+			return await normalSubmissionTransaction(connection, req, data);
 		}
 		const language = parseInt(data.language);
 		const source_code_user = deepCopy(data.source);
@@ -396,7 +396,12 @@ module.exports = async function (req: any, data: any, cookie: any) {
 	}
 	catch (err) {
 		Logger.log("failed submitControl", err);
-		await connection.query("ROLLBACK");
+		try {
+			await connection.query("ROLLBACK");
+		} catch (rollbackErr) {
+			// 回滚失败不覆盖原始错误；release() 会兜底回滚/销毁连接
+			Logger.log("submit transaction rollback failed", rollbackErr);
+		}
 		throw err;
 	}
 	finally {

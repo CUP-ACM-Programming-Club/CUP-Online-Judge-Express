@@ -2,14 +2,13 @@
 import mysql from "mysql2";
 import { Pool, PoolConnection, Query, queryCallback, QueryOptions } from "mysql";
 import Logger from "../../module/console/Logger";
+import { MySQLTransaction, openTransaction } from "./transaction";
+
+export type { MySQLTransaction };
 // @ts-ignore
 const config: any = global.config || {};
 const pool = mysql.createPool(config["mysql"]) as any as Pool;
 
-export interface MySQLTransaction {
-    query: (sql: string, binding?: any[]) => Promise<any>;
-    release: () => Promise<void>;
-}
 
 export class MySQLManager {
     static mysqlPool = pool;
@@ -47,28 +46,11 @@ export class MySQLManager {
         })
     }
 
+    /**
+     * 从连接池取一条专用连接并开启事务（START TRANSACTION）。
+     * 调用方必须在所有路径上 query("COMMIT") 或 query("ROLLBACK")，并在 finally 中 release() 一次。
+     */
     static transaction(): Promise<MySQLTransaction> {
-        return new Promise((resolve, reject) => {
-            pool.getConnection((err, connection) => {
-                if (err) reject(err);
-                Logger.log("MySQL pool connected: threadId " + connection.threadId);
-                const query = (sql: string, binding: any[]) => {
-                    return new Promise((resolve, reject) => {
-                        connection.query(sql, binding, (err, result) => {
-                            if (err) reject(err);
-                            resolve(result);
-                        });
-                    });
-                };
-                const release = () => {
-                    return new Promise((resolve, reject) => {
-                        if (err) reject(err);
-                        Logger.log("MySQL pool released: threadId " + connection.threadId);
-                        resolve(connection.release());
-                    });
-                };
-                resolve({ query, release } as unknown as MySQLTransaction);
-            });
-        });
+        return openTransaction(MySQLManager.mysqlPool);
     }
 }

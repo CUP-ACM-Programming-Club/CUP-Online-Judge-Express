@@ -330,7 +330,7 @@ export class SubmissionService {
             this.dataErrorChecker(data);
             const submissionType = this.classifySubmissionType(data);
             if (submissionType === SubmissionType.PROBLEM) {
-                return this.normalSubmissionTransaction(connection, req, data);
+                return await this.normalSubmissionTransaction(connection, req, data);
             }
             const language = parseInt(data.language as string);
             const source_code_user = this.deepCopy(data.source);
@@ -385,7 +385,12 @@ export class SubmissionService {
         }
         catch (err: any) {
             Logger.log("failed submitControl", err);
-            await connection.query("ROLLBACK");
+            try {
+                await connection.query("ROLLBACK");
+            } catch (rollbackErr) {
+                // 回滚失败不覆盖原始错误；release() 会兜底回滚/销毁连接
+                Logger.log("submit transaction rollback failed", rollbackErr);
+            }
             throw err;
         }
         finally {
