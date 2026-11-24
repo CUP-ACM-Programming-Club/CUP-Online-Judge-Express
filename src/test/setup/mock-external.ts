@@ -300,5 +300,20 @@ if (typeof process.send !== "function") {
 	};
 }
 
+// ==== 区域 user：该领域需要的额外 registerOverride 写在这里 ====
+// ==== 区域 user 结束 ====
+
+// ==== 区域 contest：该领域需要的额外 registerOverride 写在这里 ====
+// ==== 区域 contest 结束 ====
+
+// ==== 区域 problem：该领域需要的额外 registerOverride 写在这里 ====
+// ==== 区域 problem 结束 ====
+
+// ==== 区域 submission：该领域需要的额外 registerOverride 写在这里 ====
+// ==== 区域 submission 结束 ====
+
+// ==== 区域 system：该领域需要的额外 registerOverride 写在这里 ====
+// ==== 区域 system 结束 ====
+
 // 绑定端口实现（实现模块本身仍走上面的 mock 覆盖）
 require("../../main/compose");

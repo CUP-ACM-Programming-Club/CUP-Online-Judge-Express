@@ -8,18 +8,16 @@
 import { bindPort } from "../application/ports/registry";
 import { loggerFactory } from "../application/ports/Logger";
 import { ConfigManager as configPort } from "../application/ports/Config";
+import { lazy } from "./compose/lazy";
+export { lazy };
 
-export function lazy<T extends object>(load: () => T): T {
-	let impl: T | undefined;
-	const get = () => (impl = impl || load());
-	return new Proxy({} as T, {
-		get: (_t, prop) => {
-			const value = (get() as any)[prop];
-			return typeof value === "function" ? value.bind(get()) : value;
-		},
-		has: (_t, prop) => prop in get()
-	});
-}
 
 bindPort(loggerFactory, lazy(() => require("../infrastructure/logging/logger")));
 bindPort(configPort, lazy(() => require("../infrastructure/config/config-manager").ConfigManager));
+
+// ---- 各领域的端口绑定 ----
+import "./compose/user";
+import "./compose/contest";
+import "./compose/problem";
+import "./compose/submission";
+import "./compose/system";
