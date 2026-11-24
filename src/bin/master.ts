@@ -1,7 +1,7 @@
 import cluster from "cluster";
-import os from "os";
+import { resolveHttpWorkers } from "../module/init/http_workers";
 
-const num_processes = Math.min(os.cpus().length, 32);
+let num_processes = 0;
 
 // Node 16 renamed isMaster->isPrimary and setupMaster->setupPrimary; the old
 // names were removed in Node 24. Resolve whichever the running runtime exposes
@@ -38,6 +38,9 @@ async function bootStrap() {
         }
         require("../module/config/cluster/hot-reload");
         // await require("../module/init/init-mysql").default();
+        const workerDecision = resolveHttpWorkers(process.env, global.config);
+        num_processes = workerDecision.count;
+        console.log(`HTTP workers: ${num_processes} (source: ${workerDecision.source}, cpus: ${require("os").cpus().length})`);
         const config = global.config;
         const port = config.ws.http_client_port;
         let destroying = false;
