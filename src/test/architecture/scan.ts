@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import { SRC_ROOT, layerOf, isAllowedEdge } from "./layers";
+import { SRC_ROOT, layerOf, isAllowedEdge, FORBIDDEN_PACKAGES } from "./layers";
 
 const IMPORT_RE = /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*|\brequire\.resolve\s*\(\s*)["'](\.{1,2}(?:\/[^"']*)?)["']/g;
+const PKG_RE = /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*|^\s*import\s+)["']([^."'][^"']*)["']/gm;
 
 function walk(dir: string, out: string[]) {
 	for (const name of fs.readdirSync(dir)) {
@@ -34,6 +35,15 @@ export function findViolations(): string[] {
 		const content = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 		let m: RegExpExecArray | null;
 		IMPORT_RE.lastIndex = 0;
+		const forbidden = FORBIDDEN_PACKAGES[from] || [];
+		PKG_RE.lastIndex = 0;
+		while ((m = PKG_RE.exec(content))) {
+			const pkg = m[1].startsWith("node:") ? m[1].slice(5) : m[1];
+			if (forbidden.includes(pkg)) {
+				out.add(`${path.relative(SRC_ROOT, f).replace(/\\/g, "/")} -> pkg:${pkg}`);
+			}
+		}
+		IMPORT_RE.lastIndex = 0;
 		while ((m = IMPORT_RE.exec(content))) {
 			const target = resolveTarget(f, m[1]);
 			if (!target) continue;
@@ -56,7 +66,7 @@ if (require.main === module) {
 	const byKind: Record<string, number> = {};
 	for (const e of v) {
 		const [a, b] = e.split(" -> ");
-		const k = `${layerOf(path.join(SRC_ROOT, a))} -> ${layerOf(path.join(SRC_ROOT, b))}`;
+		const k = `${layerOf(path.join(SRC_ROOT, a))} -> ${b.startsWith("pkg:") ? b : layerOf(path.join(SRC_ROOT, b))}`;
 		byKind[k] = (byKind[k] || 0) + 1;
 	}
 	console.log(JSON.stringify({ total: v.length, byKind }, null, 1));

@@ -1,10 +1,10 @@
-import { Request } from "express";
+import { Viewer } from "../../domain/policy/Viewer";
 import ContestService from "../services/ContestService";
 import { contestProblemInfoLookup } from "../ports/ContestProblemInfoLookup";
 
 /** 比赛内各题目的基本信息（/contest/problem_info）。 */
 export class ContestProblemInfoUseCases {
-	async getProblemInfoList(req: Request, contestId: number) {
+	async getProblemInfoList(req: Viewer, contestId: number) {
 		// 先走 ContestService.getContestProblemList：含比赛访问检查，并按比赛是否 vjudge 取题目列表
 		const result = await ContestService.getContestProblemList(req, contestId);
 		const contestProblemInfo = result.data;

@@ -1,5 +1,5 @@
 
-import { Request } from "express";
+import { Viewer, ViewerWithQuery } from "../../domain/policy/Viewer";
 import dayjs from "dayjs";
 import { error, ok } from "../../domain/constants/state";
 import { ContestListCriteria, contestRepository } from "../ports/ContestRepository";
@@ -19,7 +19,7 @@ function safeArrayParse(array: any[] | any) {
  * 从请求推导比赛列表的筛选条件（顺序与原 ContestManager 一致：权限 → 我的比赛 → 搜索 → 页码）。
  * 「我的比赛」= session.contest_maker 与 session.contest 的键去掉首字母（m / c）。
  */
-export function buildContestListCriteria(req: Request): ContestListCriteria {
+export function buildContestListCriteria(req: ViewerWithQuery): ContestListCriteria {
     const canSeeHidden = canSeeHiddenContests(req);
     // @ts-ignore
     const contestMode = !!global.contest_mode;
@@ -35,12 +35,12 @@ export function buildContestListCriteria(req: Request): ContestListCriteria {
 class ContestService {
 
     @ErrorHandlerFactory(ok.okMaker)
-    async getContestList(req: Request) {
+    async getContestList(req: ViewerWithQuery) {
         return await contestRepository.listContests(buildContestListCriteria(req));
     }
 
     @ErrorHandlerFactory(ok.okMaker)
-    async getContestListAsObject(req: Request) {
+    async getContestListAsObject(req: ViewerWithQuery) {
         let resultList: any;
         let resultCount: any;
         // contestInfoList 是 getContestList 包装后的 {status, data}（原样保留）
@@ -56,7 +56,7 @@ class ContestService {
         return await contestRepository.findAllContests();
     }
 
-    async getAllContestList(req: Request) {
+    async getAllContestList(req: Viewer) {
         // 包装成 { status: "OK", data: [...] }（ErrorHandlerFactory(ok.okMaker)）
         const result: any = await this.findAllContests();
         if (canSeeHiddenContests(req)) {
@@ -70,7 +70,7 @@ class ContestService {
     }
 
     @ErrorHandlerFactory(ok.okMaker)
-    async getTotalNumber(req: Request) {
+    async getTotalNumber(req: ViewerWithQuery) {
         return await contestRepository.countAllMatching(buildContestListCriteria(req));
     }
 
@@ -79,7 +79,7 @@ class ContestService {
      * Returns the contest detail if accessible.
      * Throws HttpError if not accessible or invalid.
      */
-    async checkContestAccess(req: Request, cid: number) {
+    async checkContestAccess(req: Viewer, cid: number) {
         if (isNaN(cid) || cid < 1000) {
             throw new HttpError("Invalid Contest ID", 400);
         }
@@ -112,7 +112,7 @@ class ContestService {
         return contest_general_detail[0];
     }
 
-    async getContestProblemList(req: Request, cid: number) {
+    async getContestProblemList(req: Viewer, cid: number) {
         const contestDetail = await this.checkContestAccess(req, cid);
 
         const contest_is_end = dayjs(contestDetail.end_time).isBefore(dayjs());
@@ -169,7 +169,7 @@ class ContestService {
         };
     }
 
-    async getContestStatistics(req: Request, cid: number) {
+    async getContestStatistics(req: Viewer, cid: number) {
         if (isNaN(cid) || cid < 1000) {
             throw new HttpError("Invalid Contest ID", 400, error.invalidParams);
         }
@@ -206,7 +206,7 @@ class ContestService {
         };
     }
 
-    async checkPassword(req: Request, cid: number, password: string) {
+    async checkPassword(req: Viewer, cid: number, password: string) {
         if (isNaN(cid) || cid < 1000) {
             throw new HttpError("Invalid Contest ID", 400, error.invalidParams);
         }
@@ -228,7 +228,7 @@ class ContestService {
             throw new HttpError("Wrong password", 200, error.errorMaker("Wrong password"));
         }
     }
-    async getContestProblemDetails(req: Request, cid: number, pid: number, sid?: number) {
+    async getContestProblemDetails(req: Viewer, cid: number, pid: number, sid?: number) {
         const [contest, result] = await Promise.all([
             contestRepository.findContestById(cid),
             contestRepository.findContestProblem(cid, pid)

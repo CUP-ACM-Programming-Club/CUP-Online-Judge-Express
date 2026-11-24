@@ -1,5 +1,5 @@
 
-import { Request } from "express";
+import { Viewer } from "../../domain/policy/Viewer";
 import dayjs from "dayjs";
 import { error, ok } from "../../domain/constants/state";
 import const_variable = require("../../domain/constants/const_name");
@@ -72,7 +72,7 @@ class ProblemService {
         }
     }
 
-    checkPrivilege(req: Request) {
+    checkPrivilege(req: Viewer) {
         return canBrowseSource(req);
     }
 
@@ -110,7 +110,7 @@ class ProblemService {
 
     // --- Core Methods ---
 
-    async getProblem(req: Request, opt: ProblemQueryOptions) {
+    async getProblem(req: Viewer, opt: ProblemQueryOptions) {
         const copyVal: any = {};
         this.prependAppendHandler(await problemRepository.findPrefiles(opt.id), opt);
         let rows;
@@ -132,7 +132,7 @@ class ProblemService {
         return await this.problemCallback(rows, req, opt, copyVal);
     }
 
-    private async problemCallback(rows: any, req: Request, opt: ProblemQueryOptions, copyVal: any = {}) {
+    private async problemCallback(rows: any, req: Viewer, opt: ProblemQueryOptions, copyVal: any = {}) {
         let packed_problem: any = {};
         if (rows.length !== 0) {
             packed_problem = Object.assign({}, rows[0]);
@@ -239,7 +239,7 @@ class ProblemService {
         return (_end_time.length > 0 && dayjs().isBefore(dayjs(_end_time[0].t * 1000)));
     }
 
-    async getSourceCode(req: Request, id: number, sid: number, source: string, vjudge: boolean = false) {
+    async getSourceCode(req: Viewer, id: number, sid: number, source: string, vjudge: boolean = false) {
         const prefix = vjudge ? "vjudge_" : "";
         const rows2 = await problemRepository.findSourceCodeWithOwner(sid, prefix);
         if (!rows2 || rows2.length === 0) {

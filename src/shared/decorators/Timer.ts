@@ -1,4 +1,3 @@
-import http from "http";
 import isPromise from "is-promise";
 export default function Timer(target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
     const method = propertyDescriptor.value;

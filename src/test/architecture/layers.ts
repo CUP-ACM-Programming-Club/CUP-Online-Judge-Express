@@ -46,3 +46,14 @@ export function isAllowedEdge(fromLayer: Layer, toLayer: Layer, toRel: string): 
 	if (fromLayer === "infrastructure" && toLayer === "application") return toRel.startsWith("application/ports/");
 	return true;
 }
+
+/**
+ * domain / application 不允许直接使用的框架与 I/O 包：这些只能出现在 infrastructure / interfaces / main。
+ * （express 的 req 由 interfaces 以 domain/policy/Viewer 的结构传给用例。）
+ */
+export const FORBIDDEN_PACKAGES: Partial<Record<Layer, string[]>> = (() => {
+	const io = ["express", "express-session", "connect-redis", "socket.io", "socket.io-client", "mysql", "mysql2",
+		"redis", "sequelize", "sequelize-typescript", "fs", "fs/promises", "log4js", "axios", "memcached",
+		"node-cache", "rimraf", "child_process", "http", "https", "inversify"];
+	return { domain: io, application: io, shared: io };
+})();

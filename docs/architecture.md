@@ -60,6 +60,8 @@ bindPort(awardRepository, lazy(() => new MySqlAwardRepository()));
 | `interfaces/http/routes/admin/award/*.ts` | 只做路由绑定 |
 
 规则：
+- **domain / application / shared 不直接用框架和 I/O 包**（express、socket.io、mysql、redis、sequelize、fs、log4js、axios 等），依赖规则测试同样会检查。
+- 用例需要知道「谁在操作」时，参数类型用 `domain/policy/Viewer`（只含 session）；HTTP 层把 express 的 `req` 原样传入即可。
 - **SQL 只出现在 infrastructure。** application 里不出现 `query(` / `MySQLManager` / ORM 模型。
 - **express 的 `Request` / `Response` 只出现在 interfaces。** 用例的参数是普通值。
 - 返回给前端的数据结构和报错文案保持不变（前端依赖它们）。

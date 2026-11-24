@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { Viewer } from "../../domain/policy/Viewer";
 import HttpError from "../../domain/errors/HttpError";
 import { error, ok } from "../../domain/constants/state";
 import { canBrowseSource } from "../../domain/policy/predicates";
@@ -96,7 +96,7 @@ class TopicService {
         const val = `%${searchVal}%`;
         return await topicRepository.searchTopics(val, offset, limit);
     }
-    async getTopicProblemDetails(req: Request, tid: number, pid: number) {
+    async getTopicProblemDetails(req: Viewer, tid: number, pid: number) {
         const isPrivileged = canBrowseSource(req);
         // @ts-ignore
         if (!isPrivileged && global.contest_mode) {

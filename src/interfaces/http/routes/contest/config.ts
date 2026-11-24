@@ -1,5 +1,5 @@
 import express from "express";
-import ContestInfoManager from "../../../../application/contest/ContestInfoManager";
+import ContestInfoManager from "../../controllers/ContestConfigController";
 const router = express.Router();
 
 router.get("/:contestId", async (req, res) => {
