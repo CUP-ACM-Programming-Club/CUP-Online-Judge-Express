@@ -7,6 +7,7 @@ import RuntimeInfoManager from "../judge/RuntimeInfoManager";
 import {ConfigManager} from "../../module/config/config-manager";
 import Mustache from "mustache";
 import dayjs from "dayjs";
+import { isAdmin } from "../../policy/predicates";
 
 const COMPILE_ERROR = 11;
 const TEST_RUN = 13;
@@ -21,8 +22,7 @@ interface SolutionInfoDTO {
 
 class SolutionManagerPrivilegeValidator {
     async validate (req: Request, solutionId: number) {
-        const isadmin = req.session!.isadmin;
-        if (isadmin) {
+        if (isAdmin(req)) {
             return;
         }
         const userId =  req.session!.user_id;

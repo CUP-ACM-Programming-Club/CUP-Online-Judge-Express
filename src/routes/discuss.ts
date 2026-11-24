@@ -6,11 +6,13 @@ const router = express.Router();
 const [error, ok] = require("../module/const_var");
 const page_cnt = 20;
 import auth from "../middleware/auth";
+import { canBrowseSource, isAdmin } from "../policy/predicates";
 const DiscussInterceptor = require("../module/discuss/interceptor");
 const { checkCaptcha } = require("../module/captcha_checker");
 
+// contest_mode 下仍可浏览讨论：admin | source_browser
 const checkPrivilege = (req: any) => {
-	return req.session.isadmin || req.session.source_browser;
+	return canBrowseSource(req);
 };
 
 const checkValidation = (number: any) => {
@@ -26,7 +28,7 @@ router.get("/my", async (req: any, res: any) => {
 	let page = checkValidation(req.query.page);
 	const user_id = req.session.user_id;
 	try {
-		const data = await TopicService.getTopicList(page, page_cnt, req.session.isadmin, user_id);
+		const data = await TopicService.getTopicList(page, page_cnt, isAdmin(req), user_id);
 		res.json(data);
 	} catch (e: any) {
 		res.json(error.invalidParams);
@@ -72,7 +74,7 @@ router.get("/", async (req: any, res: any) => {
 	}
 
 	try {
-		const data = await TopicService.getTopicList(page, page_cnt, req.session.isadmin);
+		const data = await TopicService.getTopicList(page, page_cnt, isAdmin(req));
 		res.json(data);
 	} catch (e) {
 		console.log(e);

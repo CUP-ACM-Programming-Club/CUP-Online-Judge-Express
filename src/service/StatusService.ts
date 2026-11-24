@@ -1,7 +1,7 @@
 import { JudgeResult } from "../enums/JudgeResult";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import { getGraphDataWithCache, getGraphLabel, TIME_GRANULARITY } from "../routes/status/graph_data_optimizer";
-import { redactRows, isContestSensitivePrivileged, SUBMISSION_SENSITIVE_FIELDS } from "../utils/privacy";
+import { redactRows, SUBMISSION_SENSITIVE_FIELDS } from "../utils/privacy";
+import { canBrowseSource, canSeeContestSensitive, isContestAssistant } from "../policy/predicates";
 
 import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../db";
 
@@ -174,8 +174,9 @@ export class StatusService {
         }
 
         let _end: any = false;
-        const browser_privilege = req.session.isadmin || req.session.source_browser ||
-            (request_query.contest_id && await ContestAssistantManager.userIsContestAssistant(request_query.contest_id, req.session.user_id));
+        // 原样保留取值：非特权且无 contest_id 时为 undefined（响应里 browse_code 键缺失）
+        const browser_privilege: any = canBrowseSource(req) ||
+            (request_query.contest_id && await isContestAssistant(request_query.contest_id, req.session.user_id));
 
         let _res;
         let where_clause = "";
@@ -240,7 +241,7 @@ export class StatusService {
 
         // ip / fingerprint / fingerprintRaw / email 仅对特权用户及本人可见；email 另提供 email_hash 供 gravatar 使用
         const sensitivePrivileged = Boolean(browser_privilege) ||
-            (!!request_query.contest_id && isContestSensitivePrivileged(req.session, request_query.contest_id));
+            (!!request_query.contest_id && canSeeContestSensitive(req, request_query.contest_id));
         result = redactRows(result, {
             privileged: sensitivePrivileged,
             viewerId: req.session && req.session.user_id,

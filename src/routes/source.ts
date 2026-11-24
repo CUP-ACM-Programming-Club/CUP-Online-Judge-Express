@@ -1,4 +1,4 @@
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import { isAdmin } from "../policy/predicates";
 const { error } = require("../module/constants/state");
 import SubmissionManager from "../manager/submission/SubmissionManager";
 import Cacheable from "../decorator/Cacheable";
@@ -86,7 +86,7 @@ where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or 
 				icon: icon_list[data[0].result],
 				from: data[0].oj_name,
 			},
-			privilege: Boolean(req.session.isadmin)
+			privilege: isAdmin(req)
 		});
 	}
 });

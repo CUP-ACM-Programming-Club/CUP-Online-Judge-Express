@@ -5,6 +5,7 @@ import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
 import TutorialService from "../service/TutorialService";
+import { isAdmin } from "../policy/predicates";
 const { checkCaptcha } = require("../module/captcha_checker");
 const { error, ok } = require("../module/constants/state");
 const const_variable = require("../module/const_name");
@@ -115,7 +116,7 @@ router.post("/edit/:tutorial_id", async (req: any, res: any) => {
 
 		if (!validSolution || !isOwner) {
 			res.json(error.solutionIdNotValid);
-		} else if (!isTutorialOwner && !req.session.isadmin) {
+		} else if (!isTutorialOwner && !isAdmin(req)) {
 			res.json(error.noprivilege);
 		} else {
 			await TutorialService.updateTutorial(content, solution_id, tid);

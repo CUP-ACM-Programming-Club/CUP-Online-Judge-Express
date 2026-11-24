@@ -4,6 +4,7 @@ const [error] = require("../module/const_var");
 const router = express.Router();
 import auth from "../middleware/auth";
 import RanklistService from "../service/RanklistService";
+import { isAdmin } from "../policy/predicates";
 
 
 function parseQuery(req: any) {
@@ -19,7 +20,7 @@ const get_ranklist = async (req: any, res: any, opt: any = {}) => {
 	try {
 		const session = req && req.session ? req.session : {};
 		const result = await RanklistService.getRanklist(opt, {
-			privileged: !!session.isadmin,
+			privileged: isAdmin(req),
 			viewerId: session.user_id
 		});
 		res.json(result);

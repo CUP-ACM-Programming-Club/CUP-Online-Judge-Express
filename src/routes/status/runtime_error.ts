@@ -1,23 +1,18 @@
 import express from "express";
 const router = express.Router();
 const [error] = require("../../module/const_var");
+import { canBrowseSource } from "../../policy/predicates";
+import { requireAny } from "../../policy/middleware";
 
 
-router.get("/", (req: any, res: any, next: any) => {
-	const browse_privilege = req.session.isadmin || req.session.source_browser;
-	if (!browse_privilege) {
-		res.json(error.noprivilege);
-	} else {
-		next();
-	}
-});
+router.get("/", requireAny(canBrowseSource));
 
 import SubmissionService from "../../service/SubmissionService";
 
 router.get("/", async (req: any, res: any) => {
 	try {
 		const solution_id = parseInt(req.query.sid) || "";
-		const browse_privilege = req.session.isadmin || req.session.source_browser;
+		const browse_privilege = canBrowseSource(req);
 		if (!solution_id || isNaN(solution_id as number)) {
 			res.json(error.invalidParams);
 		} else if (!browse_privilege) {

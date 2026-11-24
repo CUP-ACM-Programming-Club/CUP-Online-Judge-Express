@@ -38,13 +38,6 @@ function info(content: any) {
 	logger.info(content);
 }
 
-function authPrivilege(req: any) {
-	if (req.session.isadmin || req.session.source_browser) {
-		return true;
-	}
-	return false;
-}
-
 function validateProblemId(req: any) {
 	let pid = req.params.problem_id;
 	if (pid === "null" || pid === undefined) {

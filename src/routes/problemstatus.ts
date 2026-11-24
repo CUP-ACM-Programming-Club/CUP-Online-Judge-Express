@@ -3,6 +3,7 @@ const router = express.Router();
 const dayjs = require("dayjs");
 const [error] = require("../module/const_var");
 import auth from "../middleware/auth";
+import { canBrowseSource } from "../policy/predicates";
 const const_variable = require("../module/const_name");
 import ProblemStatusService from "../service/ProblemStatusService";
 
@@ -32,7 +33,7 @@ const getProblemStatus = async (req: any, res: any, opt: any = { source: true, i
 			);
 
 
-		let browse_privilege = req.session.isadmin || req.session.source_browser;
+		let browse_privilege = canBrowseSource(req);
 		let after_contest = true;
 		if (_end_contest.length > 0) {
 			const contest_end_time = dayjs(_end_contest[0].end_time);

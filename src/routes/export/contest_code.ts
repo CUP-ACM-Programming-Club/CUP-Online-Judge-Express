@@ -4,9 +4,7 @@ const [error] = require("../../module/const_var");
 
 const language = require("../../module/const_name").language_name.local;
 
-function checkAdmin(req: any) {
-	return req.session.isadmin;
-}
+import { isAdmin } from "../../policy/predicates";
 
 import ExportService from "../../service/ExportService";
 
@@ -38,7 +36,7 @@ router.get("/:contest_id", async (req: any, res: any) => {
 	const contest_id = req.params.contest_id;
 	if (isNaN(contest_id)) {
 		res.json(error.invalidParams);
-	} else if (!checkAdmin(req)) {
+	} else if (!isAdmin(req)) {
 		res.json(error.noprivilege);
 	} else {
 		const dataSet = await getCodeSet(contest_id);
