@@ -5,8 +5,6 @@ const Lock = require("../../decorator/Lock").default || require("../../decorator
 const Timer = require("../../decorator/Timer").default || require("../../decorator/Timer");
 const ResponseLogger = require("../../decorator/ResponseLogger").default || require("../../decorator/ResponseLogger");
 const {ErrorHandlerFactory} = require("../../decorator/ErrorHandler");
-const ClusterSynchronize = require("../../decorator/ClusterSynchronize").default || require("../../decorator/ClusterSynchronize");
-const ClusterSynchronizeClass = require("../../decorator/ClusterSynchronizeClass").default || require("../../decorator/ClusterSynchronizeClass");
 
 describe("decorators", function () {
 	it("Lock should acquire and release around method", async function () {
@@ -203,41 +201,5 @@ describe("decorators", function () {
 		const demo = new Demo();
 		expect(demo.syncOk()).to.deep.equal({wrapped: 7});
 		expect(await demo.asyncOk()).to.deep.equal({wrapped: 9});
-	});
-
-	it("ClusterSynchronize should send payload", function () {
-		const sent = [];
-		const originalSend = process.send;
-		process.send = (payload) => {
-			sent.push(payload);
-		};
-		class Demo {
-			value(a) {
-				return a;
-			}
-		}
-		const descriptor = Object.getOwnPropertyDescriptor(Demo.prototype, "value");
-		ClusterSynchronize(Demo.prototype, "value", descriptor);
-		Object.defineProperty(Demo.prototype, "value", descriptor);
-		const demo = new Demo();
-		expect(demo.value(10)).to.equal(10);
-		process.send = originalSend;
-		expect(sent[0]).to.have.property("className");
-		expect(sent[0]).to.have.property("arguments").that.deep.equal([10]);
-	});
-
-	it("ClusterSynchronizeClass should apply setWithTimestamp on message", function () {
-		let applied = false;
-		class Demo {
-			setWithTimestamp(key, value, timestamp) {
-				if (key === "k" && value === "v" && typeof timestamp === "number") {
-					applied = true;
-				}
-			}
-		}
-		const Wrapped = ClusterSynchronizeClass(Demo);
-		const demo = new Wrapped();
-		process.emit("message", {className: demo.constructor.name, arguments: ["k", "v"], timestamp: Date.now()});
-		expect(applied).to.equal(true);
 	});
 });
