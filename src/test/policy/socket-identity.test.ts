@@ -20,10 +20,11 @@ describe("WebSocket 身份（UserValidatorMiddleware）", function () {
 		expect(socket.auth).to.equal(true);
 	});
 
-	it("有登录 session 时 user_id cookie 覆盖 session（现状：可冒充）", async function () {
-		const { socket, err } = await run("user_id=pm_admin", { user_id: "pm_student" });
+	it("有登录 session 时以 session 为准，user_id cookie 不能覆盖（phase5 fix c，之前可冒充）", async function () {
+		const { socket, err } = await run("user_id=pm_admin; token=test", { user_id: "pm_student" });
 		expect(err).to.equal(undefined);
-		expect(socket.user_id).to.equal("pm_admin");
+		expect(socket.user_id).to.equal("pm_student");
+		expect(socket.auth).to.equal(true);
 	});
 
 	it("无 session：cookie user_id + 有效 token 通过", async function () {

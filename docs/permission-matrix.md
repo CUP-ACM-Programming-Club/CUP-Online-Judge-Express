@@ -252,7 +252,7 @@
 
 ## 横切问题（不属于单个路由）
 
-- **WebSocket 身份可被 cookie 覆盖**：src/module/websocket/UserValidatorMiddleware.ts：`socket.user_id = cookie.user_id || session.user_id`，且只要 session 有 user_id 就直接放行——登录用户改 user_id cookie 即可在 socket 上冒充他人（privilege 仍取自自己的 session）。
+- **WebSocket 身份可被 cookie 覆盖**（已修复：phase5 fix(c)：有登录 session 时以 session.user_id 为准；无 session 时仍按 cookie user_id + token 校验）：src/module/websocket/UserValidatorMiddleware.ts：`socket.user_id = cookie.user_id || session.user_id`，且只要 session 有 user_id 就直接放行——登录用户改 user_id cookie 即可在 socket 上冒充他人（privilege 仍取自自己的 session）。
 - **contest_manager 是全局权限**：不按比赛区分：可编辑任意比赛（/admin/contest/edit）、可进入任意 private/defunct 比赛、看所有比赛的未打码题号与 ip；但 checkContestAccess 里不豁免 cmod_visible 与开始时间（admin / maker 才豁免）。
 - **global.contest_mode 是进程级全局变量**：由非 admin 请求经 auth→contest_mode 中间件刷新，admin 请求不刷新；所有请求共享同一个值。
 - **router_loader 子目录双挂载**：router_loader(router, dir) 对子目录把同一个 [path, ...middleware, router] 挂两次（_dir 分支的 else）。无副作用的门禁中间件会执行两次；若某 handler 调 next() 会被第二次挂载再次处理。
