@@ -8,8 +8,6 @@ import ProblemManageService from "../../../application/services/ProblemManageSer
 const express = require("express");
 const website_dir = global.config.website.dir;
 const bluebird = require("bluebird");
-const { mkdirAsync } = require("../../../infrastructure/storage/file/mkdir");
-const cache = require("../../../infrastructure/cache/nodeCache");
 const router = express.Router();
 const log = console.log;
 import { getLogger } from "../../../application/ports/Logger";
@@ -19,7 +17,6 @@ import auth from "../middleware/auth";
 import { canEditProblem, isAdmin } from "../../../domain/policy/predicates";
 const { error, ok } = require("../../../domain/constants/state");
 const path = require("path");
-const ProblemInfoManager = require("../../../infrastructure/persistence/problem/ProblemInfoManager");
 const ProblemSetCachePool = require("../../../application/problemset/ProblemSetCachePool");
 const cheerio = require("cheerio");
 const ENVIRONMENT = process.env.NODE_ENV;
@@ -244,7 +241,7 @@ router.get("/:source/:id/:sid", async function (req: any, res: any) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
 	const sid = parseInt(req.params.sid);
-	const _res = cache.get("source/id/" + source + id + "/" + sid);
+	const _res = ProblemService.getCachedSourceCode(source, id, sid);
 	if (_res === undefined) {
 		try {
 			const data = await ProblemService.getSourceCode(req, id, sid, source, source.length > 0);

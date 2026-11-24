@@ -1,4 +1,4 @@
-import ProblemSetManager from "../../../infrastructure/persistence/problem/ProblemSetManager";
+import ProblemSetController from "../controllers/ProblemSetController";
 import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
@@ -7,27 +7,27 @@ const Interceptor = require("../interceptor/problemset");
 
 
 router.get("/", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 router.get("/search/:search", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 router.get("/:start", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 router.get("/:start/:search", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 router.get("/:start/:search/:order", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 router.get("/:start/:search/:order/:order_rule", async function (req, res) {
-	res.json(await ProblemSetManager.getProblem(req, res));
+	res.json(await ProblemSetController.getProblem(req, res));
 });
 
 export = ["/problemset", auth, Interceptor, router];

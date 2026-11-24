@@ -1,6 +1,11 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { PortHarness } from "../helpers/problem-port-harness";
+import { problemManageRepository } from "../../application/ports/ProblemManageRepository";
+import { problemImportStorage } from "../../application/ports/ProblemImportStorage";
+import { problemImageStorage } from "../../application/ports/ProblemImageStorage";
+import { problemInfoStore } from "../../application/ports/ProblemInfoStore";
 
 describe("ProblemManageService Tests", function () {
     let ProblemManageService: any;
@@ -8,6 +13,7 @@ describe("ProblemManageService Tests", function () {
     let fsStub: any;
     let dataUriToImageFileStub: sinon.SinonStub;
     let previousLoad: any;
+    const ports = new PortHarness();
 
     const mockReq = {
         session: {
@@ -52,20 +58,26 @@ describe("ProblemManageService Tests", function () {
             }
             if (request === "bluebird") return bluebirdStub;
             if (request === "rimraf") return () => { }; // mock rimraf function
-            if (request.endsWith("storage/base64Image")) return { dataUriToImageFile: dataUriToImageFileStub };
+            if (request.endsWith("base64Image")) return { dataUriToImageFile: dataUriToImageFileStub };
             if (request === "jschardet") return { detect: () => ({ encoding: "utf8" }) };
             if (request === "iconv-lite") return { decode: (buf: any) => buf.toString() };
             if (request === "strip-bom") return (str: any) => str;
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Re-require Service
+        // 3. 端口绑定到重新加载的真实实现（它们会拿到上面拦截的 mysql_query / fs / bluebird / base64Image）
+        ports.bindFresh(problemManageRepository, "infrastructure/persistence/problem/MySqlProblemManageRepository", "MySqlProblemManageRepository");
+        ports.bindFresh(problemImportStorage, "infrastructure/storage/FsProblemImportStorage", "FsProblemImportStorage");
+        ports.bindFresh(problemImageStorage, "infrastructure/storage/FsProblemImageStorage", "FsProblemImageStorage");
+
+        // 4. Re-require Service
         delete require.cache[require.resolve("../../application/services/ProblemManageService")];
         ProblemManageService = require("../../application/services/ProblemManageService").default;
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        ports.restore();
         sinon.restore();
     });
 
@@ -182,6 +194,7 @@ describe("ProblemManageService Tests", function () {
                 if (request.includes("ProblemSetCachePool")) return problemSetCachePoolStub;
                 return oldLoad.apply(this, arguments);
             };
+            ports.bindFresh(problemInfoStore, "infrastructure/persistence/problem/OrmProblemInfoStore", "OrmProblemInfoStore");
         });
 
         it("should update local problem with all fields", async () => {

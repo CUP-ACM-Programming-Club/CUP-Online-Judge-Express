@@ -1,12 +1,15 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { PortHarness } from "../helpers/problem-port-harness";
+import { topicRepository } from "../../application/ports/TopicRepository";
 
 describe("TopicService Tests", function () {
     let TopicService: any;
     let cacheQueryStub: sinon.SinonStub;
     let queryStub: sinon.SinonStub;
     let previousLoad: any;
+    const ports = new PortHarness();
 
     const mockReq = {
         session: {
@@ -28,13 +31,17 @@ describe("TopicService Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Re-require Service
+        // 3. 端口绑定到重新加载的真实仓储（它会拿到上面拦截的 mysql_cache / mysql_query）
+        ports.bindFresh(topicRepository, "infrastructure/persistence/problem/MySqlTopicRepository", "MySqlTopicRepository");
+
+        // 4. Re-require Service
         delete require.cache[require.resolve("../../application/services/TopicService")];
         TopicService = require("../../application/services/TopicService").default;
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        ports.restore();
         sinon.restore();
     });
 

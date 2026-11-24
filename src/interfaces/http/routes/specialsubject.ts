@@ -1,14 +1,13 @@
 import express, { Request, Response } from "express";
 
 const router = express.Router();
-const cache_query = require("../../../infrastructure/db/legacy/mysql_cache");
+import SpecialSubjectUseCases from "../../../application/problem/SpecialSubjectUseCases";
 const [error] = require("../../../domain/constants/const_var");
 import auth from "../middleware/auth";
 
 router.get("/", async (req: Request, res: Response) => {
 	try {
-		const sql = "SELECT * FROM `special_subject` WHERE defunct='N' ORDER BY `topic_id` ASC limit 1000";
-		const data = await cache_query(sql);
+		const data = await SpecialSubjectUseCases.listActive();
 		res.json({
 			status: "OK",
 			data

@@ -1,16 +1,8 @@
 import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
-// @ts-ignore
-const website_dir = global.config.website.dir;
-const path = require("path");
-const image_dir = path.join(website_dir, "images");
 const [error] = require("../../../domain/constants/const_var");
-const bluebird = require("bluebird");
-import { imageFileToDataUri } from "../../../infrastructure/storage/base64Image";
-const fs = bluebird.promisifyAll(require("fs"));
-const isImage = require("is-image");
-const { mkdirAsync } = require("../../../infrastructure/storage/file/mkdir");
+import ProblemImageUseCases from "../../../application/problem/ProblemImageUseCases";
 
 function validateProblemId(req: any) {
 	const problem_id = req.params.problem_id;
@@ -21,27 +13,6 @@ function validateProblemId(req: any) {
 	}
 }
 
-function getPhotoDir(problem_id: any, key: any) {
-	return path.join(image_dir, problem_id.toString(), key);
-}
-
-async function readPhoto(problem_id: any, key: any) {
-	const dirPath = getPhotoDir(problem_id, key);
-	await mkdirAsync(dirPath);
-	const photoList = await readPhotoDir(problem_id, key);
-	return await Promise.all(photoList.map(async (el: any) => {
-		return {
-			name: path.basename(el).substring(0, el.lastIndexOf(".")),
-			data: await imageFileToDataUri(path.join(dirPath, el))
-		};
-	}));
-}
-
-async function readPhotoDir(problem_id: any, key: any) {
-	const dirPath = getPhotoDir(problem_id, key);
-	return (await fs.readdirAsync(dirPath)).filter((el: any) => isImage(el));
-}
-
 async function photoHandler(req: any, res: any, key: any) {
 	let problem_id: any;
 	if ((problem_id = validateProblemId(req)) === false) {
@@ -50,7 +21,7 @@ async function photoHandler(req: any, res: any, key: any) {
 	}
 	res.json({
 		status: "OK",
-		data: await readPhoto(problem_id, key)
+		data: await ProblemImageUseCases.listImages(problem_id, key)
 	});
 }
 

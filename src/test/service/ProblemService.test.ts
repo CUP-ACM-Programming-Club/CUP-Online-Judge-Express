@@ -2,6 +2,11 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
+import { PortHarness } from "../helpers/problem-port-harness";
+import { problemRepository } from "../../application/ports/ProblemRepository";
+import { problemInfoStore } from "../../application/ports/ProblemInfoStore";
+import { problemSourcePrivilege } from "../../application/ports/ProblemSourcePrivilege";
+import { problemResultCache } from "../../application/ports/ProblemResultCache";
 
 describe("ProblemService Tests", function () {
     let ProblemService: any;
@@ -12,6 +17,7 @@ describe("ProblemService Tests", function () {
     let sourcePrivilegeCacheStub: any;
     let cachePoolStub: any;
     let previousLoad: any;
+    const ports = new PortHarness();
 
     const mockReq = {
         session: {
@@ -65,13 +71,20 @@ describe("ProblemService Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        // 3. Re-require Service
+        // 3. 端口绑定到重新加载的真实实现（它们会拿到上面拦截的 mysql_cache / ProblemInfoManager 等）
+        ports.bindFresh(problemRepository, "infrastructure/persistence/problem/MySqlProblemRepository", "MySqlProblemRepository");
+        ports.bindFresh(problemInfoStore, "infrastructure/persistence/problem/OrmProblemInfoStore", "OrmProblemInfoStore");
+        ports.bindFresh(problemSourcePrivilege, "infrastructure/persistence/problem/SubmissionSourcePrivilegeAdapter", "SubmissionSourcePrivilegeAdapter");
+        ports.bindFresh(problemResultCache, "infrastructure/cache/NodeProblemResultCache", "NodeProblemResultCache");
+
+        // 4. Re-require Service
         delete require.cache[require.resolve("../../application/services/ProblemService")];
         ProblemService = require("../../application/services/ProblemService").default;
     });
 
     afterEach(function () {
         if (previousLoad) (Module as any)._load = previousLoad;
+        ports.restore();
         sinon.restore();
     });
 
