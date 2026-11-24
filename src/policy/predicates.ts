@@ -96,7 +96,9 @@ export function isProblemMakerStrict(req: any, pid: number | string): boolean {
 /** 比赛助教（含所属专题的助教），沿用 ContestAssistantManager 的 1 小时缓存；userId 必须是字符串 */
 export async function isContestAssistant(cid: number | string, userId: string): Promise<boolean> {
 	// 调用时再取模块：既避免与 manager 层的循环依赖，也让按模块路径替换 ContestAssistantManager 的单元测试照常生效
-	const ContestAssistantManager = require("../manager/contest/ContestAssistantManager").default;
+	// 取 default 的方式与 TS esModuleInterop 的 `import X from` 相同（__importDefault）
+	const mod = require("../manager/contest/ContestAssistantManager");
+	const ContestAssistantManager = mod && mod.__esModule ? mod.default : mod;
 	return await ContestAssistantManager.userIsContestAssistant(cid, userId);
 }
 

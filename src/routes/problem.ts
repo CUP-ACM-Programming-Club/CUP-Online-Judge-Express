@@ -16,6 +16,7 @@ const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 
 import auth from "../middleware/auth";
+import { canEditProblem, isAdmin } from "../policy/predicates";
 const { error, ok } = require("../module/constants/state");
 const path = require("path");
 const ProblemInfoManager = require("../module/problem/ProblemInfoManager");
@@ -46,7 +47,7 @@ async function labelHandler(httpInstance: any) {
 router.get("/module/search/:val", async function (req: any, res: any) {
 	try {
 		const val = req.params.val;
-		const result = await ProblemService.searchProblems(val, req.session.isadmin, false);
+		const result = await ProblemService.searchProblems(val, isAdmin(req), false);
 		res.json(result);
 	}
 	catch (e) {
@@ -58,7 +59,7 @@ router.get("/module/search/:val", async function (req: any, res: any) {
 router.get("/module/search/dropdown/:val", async (req: any, res: any) => {
 	try {
 		const val = req.params.val;
-		const data: any = await ProblemService.searchProblems(val, req.session.isadmin, true);
+		const data: any = await ProblemService.searchProblems(val, isAdmin(req), true);
 		const sendData = [];
 		for (let i in data) {
 			if (Object.prototype.hasOwnProperty.call(data, i)) {
@@ -226,7 +227,7 @@ router.post("/add", async (req: any, res: any) => {
 router.post("/:source/:id", async function (req: any, res: any) {
 	const problem_id = parseInt(req.params.id);
 	const from = req.params.source || "";
-	if (req.session.isadmin || req.session.editor) {
+	if (canEditProblem(req)) {
 		try {
 			await ProblemManageService.updateProblem(req, problem_id, from, req.body.json);
 			res.json(ok.ok);

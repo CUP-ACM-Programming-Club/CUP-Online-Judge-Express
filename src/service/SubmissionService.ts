@@ -1,7 +1,7 @@
 import { MySQLManager, MySQLTransaction } from "../manager/mysql/MySQLManager";
 import Logger from "../module/console/Logger";
 import ContestManager from "../manager/contest/ContestManager";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import { canAccessHiddenProblem, isAdmin, isContestAssistant } from "../policy/predicates";
 import { SubmissionData, SubmissionResponse } from "../types/SubmissionType";
 import { SubmissionType, ProblemPublicStatus } from "../enums/SubmissionEnums";
 import { Request } from "express";
@@ -66,7 +66,7 @@ export class SubmissionService {
         if (await ContestManager.isContestSubmittable(contest_id, req.session!.user_id)) {
             return true;
         }
-        if (await ContestAssistantManager.userIsContestAssistant(contest_id, req.session!.user_id)) {
+        if (await isContestAssistant(contest_id, req.session!.user_id)) {
             return true;
         }
         await login_action(req, req.session!.user_id);
@@ -125,7 +125,7 @@ export class SubmissionService {
     }
 
     private async checkTopicPrivilege(req: Request, topic_id: number) {
-        if (req.session!.isadmin) {
+        if (isAdmin(req)) {
             return;
         }
         const data = await cache_query("select private,defunct from special_subject where topic_id = ?", [topic_id]);
@@ -302,13 +302,13 @@ export class SubmissionService {
             case ProblemPublicStatus.PUBLIC:
                 break;
             case ProblemPublicStatus.PRIVATE:
-                if (req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`]) {
+                if (canAccessHiddenProblem(req, positiveProblemId)) {
                     break;
                 } else {
                     throw error.errorMaker("You don't have privilege to access this problem");
                 }
         }
-        if (await this.problemInFutureOrCurrentContest(positiveProblemId) && !(req.session.isadmin || req.session.editor || req.session.problem_maker[`p${positiveProblemId}`])) {
+        if (await this.problemInFutureOrCurrentContest(positiveProblemId) && !canAccessHiddenProblem(req, positiveProblemId)) {
             throw error.errorMaker("problem is in current or future contest.");
         }
 

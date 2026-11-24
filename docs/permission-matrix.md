@@ -234,9 +234,9 @@
 | POST | `/tutorial/edit/:tutorial_id` | auth → switch:enable_tutorial(admin bypass) | solution owner 且 (tutorial owner \| admin) |  | checkCaptcha 返回值被忽略 |  |
 | GET | `/update_log` | auth | login |  |  |  |
 | GET | `/update_log/latest` | - | anonymous |  |  |  |
-| POST | `/upload` | auth → uploadPrivilege | admin \| editor（403 JSON） |  |  |  |
-| POST | `/upload/user` | auth → uploadPrivilege | admin \| editor（403 JSON） |  |  |  |
-| GET | `/upload` | auth → uploadPrivilege | admin \| editor（403 JSON） |  |  |  |
+| POST | `/upload` | auth → requireAny | admin \| editor（403 JSON） |  |  |  |
+| POST | `/upload/user` | auth → requireAny | admin \| editor（403 JSON） |  |  |  |
+| GET | `/upload` | auth → requireAny | admin \| editor（403 JSON） |  |  |  |
 | GET | `/user/recent_register` | auth | login |  |  |  |
 | GET | `/user/register_timeline` | auth | login |  |  |  |
 | GET | `/user/submit_stat/:user_id/:start_time/:end_time` | auth | login |  |  |  |

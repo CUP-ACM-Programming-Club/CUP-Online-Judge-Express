@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import dayjs from "dayjs";
 import { error, ok } from "../../module/constants/state";
+import { canBrowseSource, isEditor } from "../../policy/predicates";
 import cache_query = require("../../module/mysql_cache");
 import { ErrorHandlerFactory } from "../../decorator/ErrorHandler";
 import ContestModeChecker from "../../decorator/common/ContestModeChecker";
@@ -95,7 +96,7 @@ class ProblemSetManager {
         }
         let result, total_num, _total, recent_one_month, one_month_add_problem = undefined;
         const one_month_ago = dayjs().subtract(1, "month").format("YYYY-MM-DD");
-        const browse_privilege = req.session!.isadmin || req.session!.source_browser || req.session!.editor;
+        const browse_privilege = canBrowseSource(req) || isEditor(req);
         console.time("get info");
         if (browse_privilege) {
             if (search) {

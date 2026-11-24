@@ -137,9 +137,6 @@ function autoRequirement(gates: string[]) {
 	if (gates.includes("admin")) {
 		return "admin";
 	}
-	if (gates.includes("uploadPrivilege")) {
-		return "admin | editor";
-	}
 	if (gates.includes("privilegeMiddleware")) {
 		return "contest-privileged";
 	}

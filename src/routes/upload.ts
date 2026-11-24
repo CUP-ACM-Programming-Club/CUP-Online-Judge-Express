@@ -10,6 +10,8 @@ import auth from "../middleware/auth";
 const { checkCaptcha } = require("../module/captcha_checker");
 const [error] = require("../module/const_var");
 import ProblemManageService from "../service/ProblemManageService";
+import { canEditProblem } from "../policy/predicates";
+import { requireAnyOr } from "../policy/middleware";
 
 let upload: any = false;
 try {
@@ -85,11 +87,8 @@ router.get("/", async (req: any, res: any) => {
 
 // Importing problems creates problems, writes test data to disk and inserts solutions;
 // it was reachable by any logged-in user. Limit it to admins and problem editors.
-const uploadPrivilege = (req: any, res: any, next: any) => {
-	if (req.session && (req.session.isadmin || req.session.editor)) {
-		return next();
-	}
+const uploadPrivilege = requireAnyOr((req, res) => {
 	res.status(403).json({ status: "error", statement: "Permission denied" });
-};
+}, canEditProblem);
 
 export = ["/upload", auth, uploadPrivilege, router];

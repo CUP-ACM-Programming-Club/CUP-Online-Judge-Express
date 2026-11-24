@@ -22,7 +22,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 /** 任一谓词为真即放行，否则 onDeny（缺省 res.json(error.noprivilege)） */
 export function requireAnyOr(onDeny: (req: Request, res: Response) => void, ...predicates: Predicate[]) {
-	return async function (req: Request, res: Response, next: NextFunction) {
+	return async function requireAny(req: Request, res: Response, next: NextFunction) {
 		for (const predicate of predicates) {
 			if (await predicate(req)) {
 				return next();

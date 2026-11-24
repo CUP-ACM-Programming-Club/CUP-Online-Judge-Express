@@ -312,7 +312,8 @@ describe("ProblemService Tests", function () {
             const r2: any = { session: { source_browser: true } };
             expect(ProblemService.checkPrivilege(r2)).to.be.true;
             const r3: any = { session: {} };
-            expect(ProblemService.checkPrivilege(r3)).to.be.undefined; // or check falsy
+            // phase5：改由 policy.canBrowseSource 实现，返回 boolean（调用方只做真值判断）
+            expect(ProblemService.checkPrivilege(r3)).to.equal(false);
         });
     });
 });

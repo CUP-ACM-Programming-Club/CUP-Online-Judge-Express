@@ -3,6 +3,7 @@ import query from "../module/mysql_query";
 import { Request } from "express";
 import HttpError from "../module/util/HttpError";
 import { error, ok } from "../module/constants/state";
+import { canBrowseSource } from "../policy/predicates";
 
 class TopicService {
     async getTopicList(page: number, limit: number, isAdmin: boolean, userId?: string) {
@@ -134,7 +135,7 @@ class TopicService {
         return await query(sql, sqlArr);
     }
     async getTopicProblemDetails(req: Request, tid: number, pid: number) {
-        const isPrivileged = req.session!.isadmin || req.session!.source_browser;
+        const isPrivileged = canBrowseSource(req);
         // @ts-ignore
         if (!isPrivileged && global.contest_mode) {
             throw error.contestMode;

@@ -7,7 +7,7 @@ import query = require("../module/mysql_query");
 import const_variable = require("../module/const_name");
 import ProblemInfoManager = require("../module/problem/ProblemInfoManager");
 import SourcePrivilegeCache from "../manager/submission/SourcePrivilegeCache";
-import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
+import { canBrowseSource, isAdmin, isContestAssistant } from "../policy/predicates";
 const cache = require("../module/cachePool");
 const cheerio = require("cheerio");
 
@@ -74,7 +74,7 @@ class ProblemService {
     }
 
     checkPrivilege(req: Request) {
-        return req.session!.isadmin || req.session!.source_browser;
+        return canBrowseSource(req);
     }
 
     async checkProblemAvailable(problem_id: any) {
@@ -116,7 +116,7 @@ class ProblemService {
         this.prependAppendHandler(await cache_query("SELECT * FROM prefile WHERE problem_id = ?", [opt.id]), opt);
         let rows;
 
-        if (req.session!.isadmin) {
+        if (isAdmin(req)) {
             if (opt.source.length === 0) {
                 rows = await cache_query(`select a.*,privilege.user_id as creator
 from (SELECT * FROM problem WHERE problem_id = ?)a
@@ -172,7 +172,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
                 return Object.assign({
                     problem: packed_problem,
                     source: source,
-                    isadmin: req.session!.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid!, req.session!.user_id)),
+                    isadmin: isAdmin(req) || !!(opt.cid && await isContestAssistant(opt.cid!, req.session!.user_id)),
                     browse_code: req.session!.source_browser,
                     editor: req.session!.editor || false
                 }, copyVal);
@@ -180,7 +180,7 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
                 return Object.assign({
                     problem: packed_problem,
                     source: "",
-                    isadmin: req.session!.isadmin || !!(opt.cid && await ContestAssistantManager.userIsContestAssistant(opt.cid!, req.session!.user_id)),
+                    isadmin: isAdmin(req) || !!(opt.cid && await isContestAssistant(opt.cid!, req.session!.user_id)),
                     browse_code: req.session!.source_browser,
                     editor: req.session!.editor || false
                 }, copyVal);
@@ -264,7 +264,7 @@ WHERE NOT EXISTS (
             throw error.errorMaker("Solution not found");
         }
         const user_id = rows2[0].user_id;
-        if (!req.session!.isadmin && user_id !== req.session!.user_id) {
+        if (!isAdmin(req) && user_id !== req.session!.user_id) {
             throw error.noprivilege;
         } else {
             // Need to fetch problem info for `code` property???
