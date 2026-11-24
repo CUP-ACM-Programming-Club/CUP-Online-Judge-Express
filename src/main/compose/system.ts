@@ -26,3 +26,6 @@ bindPort(versionInfo, lazy(() => require("../../infrastructure/persistence/syste
 
 import { helloRpc } from "../../application/ports/HelloRpc";
 bindPort(helloRpc, lazy(() => require("../../infrastructure/integration/hello/HelloService").default));
+
+import { awardRepository } from "../../application/ports/AwardRepository";
+bindPort(awardRepository, lazy(() => new (require("../../infrastructure/persistence/award/MySqlAwardRepository").MySqlAwardRepository)()));
