@@ -1,5 +1,5 @@
 import express from "express";
-import LogManager from "../../../../../infrastructure/persistence/system/LogManager";
+import LogManager from "../../../controllers/SystemLogController";
 const router = express.Router();
 
 router.get("/out", async (req, res) => {

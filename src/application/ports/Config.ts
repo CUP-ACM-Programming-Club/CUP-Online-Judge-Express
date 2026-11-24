@@ -17,6 +17,8 @@ export interface ConfigPort {
 	isSwitchedOn(configKey: string, defaultValue?: number): boolean;
 	setSwitch(configKey: string, switchValue: number | string, comment?: string): any;
 	removeSwitch(configKey: string): any;
+	getConfigMap(): any;
+	getSwitchMap(): any;
 }
 
 export const ConfigManager = definePort<ConfigPort>("ConfigManager");

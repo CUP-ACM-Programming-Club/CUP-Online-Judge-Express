@@ -1,21 +1,10 @@
 import MySQLCachePool from "../../db/legacy/mysql/cache";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
-import {Request} from "express";
-class MySQLCacheManager {
+import { QueryCache } from "../../../application/ports/QueryCache";
+
+class MySQLCacheManager implements QueryCache {
 	removeCache(key: string) {
 		MySQLCachePool.remove(key);
 		return this;
-	}
-
-	@ErrorHandlerFactory(ok.okMaker)
-	async removeCacheByRequest(req: Request) {
-		this.removeCache(req.params.key);
-	}
-
-	@ErrorHandlerFactory(ok.okMaker)
-	async removeAllCacheByRequest(req: Request) {
-		this.removeAllCache();
 	}
 
 	removeAllCache() {
@@ -25,11 +14,6 @@ class MySQLCacheManager {
 
 	getCacheKey() {
 		return MySQLCachePool.getAllKey();
-	}
-
-	@ErrorHandlerFactory(ok.okMaker)
-	async getCacheKeyByRequest(req: Request) {
-		return this.getCacheKey();
 	}
 }
 

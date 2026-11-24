@@ -13,7 +13,7 @@ async function privilegeMiddleware(req: any, res: any, next: any) {
 		res.json(error.noprivilege);
 	}
 }
-const router = require("../../../../../application/admin/baseGetter")("contest", "contest_id", [privilegeMiddleware]);
+const router = require("../../../admin/baseGetter")("contest", "contest_id", [privilegeMiddleware]);
 
 router.post("/", privilegeMiddleware, async (req: any, res: any) => {
 	try {

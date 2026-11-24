@@ -1,5 +1,5 @@
 import axios, {AxiosRequestConfig} from "axios";
-import {RPCClient} from "../../../infrastructure/integration/rpc/RPCClient";
+import {RPCClient} from "./RPCClient";
 
 const rpcConfig = global.config.rpc || {};
 

@@ -1,5 +1,5 @@
 import {Server} from "socket.io";
-import {server} from "../../../main/init/http-server";
+import {server} from "./http-server";
 
 // socket.io v4 server. allowEIO3 keeps existing socket.io-client 2.x browsers
 // (Engine.IO v3 protocol) working, so the frontend can migrate independently.

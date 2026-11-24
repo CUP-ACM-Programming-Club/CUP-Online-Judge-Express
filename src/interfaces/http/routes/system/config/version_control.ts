@@ -1,6 +1,6 @@
 import express, {Router, Request, Response} from "express";
 import {error, ok} from "../../../../../domain/constants/state";
-import VersionManager from "../../../../../infrastructure/persistence/system/VersionManager";
+import { versionInfo as VersionManager } from "../../../../../application/ports/SystemInfo";
 import { requireAdmin } from "../../../middleware/policy";
 const router: Router = express. Router();
 

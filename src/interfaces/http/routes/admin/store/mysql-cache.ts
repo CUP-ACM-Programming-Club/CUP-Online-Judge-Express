@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import MySQLCacheManager from "../../../../../infrastructure/cache/MySQLCacheManager";
+import MySQLCacheManager from "../../../controllers/QueryCacheController";
 
 router.get("/remove/:key", async (req, res) => {
 	res.json(await MySQLCacheManager.removeCacheByRequest(req));

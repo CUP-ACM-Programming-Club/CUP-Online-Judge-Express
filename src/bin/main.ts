@@ -50,10 +50,12 @@ import ProblemFromContest from "../interfaces/websocket/set/ProblemFromContest";
 import SolutionContext from "../interfaces/websocket/set/SolutionContext";
 import JudgeManager from "../infrastructure/persistence/judge/JudgeManager";
 import whiteboard from "../interfaces/websocket/whiteboard/SocketSet";
-import io from "../interfaces/websocket/server/SocketServer";
+import io from "../main/init/socket-server";
 import { UserSocket } from "../interfaces/websocket/Socket";
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
+// 原先由 admin/system/hot-reload 路由在加载时顺带注册（worker 退出时的 safe-exit 钩子）；路由改走端口后在这里显式加载
+require("../main/cluster/hot-reload");
 require("../main/init/express_loader")(app, io);
 
 /**

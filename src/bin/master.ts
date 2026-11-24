@@ -34,9 +34,9 @@ async function bootStrap() {
         require("../main/init/preinstall")();
         require("../main/init/build_env")();
         if (!!global.config.enable_cluster_transfer) {
-            require("../infrastructure/config/transfer/ClusterTransfer")();
+            require("../main/cluster/transfer/ClusterTransfer")();
         }
-        require("../infrastructure/config/cluster/hot-reload");
+        require("../main/cluster/hot-reload");
         // await require("../main/init/init-mysql").default();
         const workerDecision = resolveHttpWorkers(process.env, global.config);
         num_processes = workerDecision.count;

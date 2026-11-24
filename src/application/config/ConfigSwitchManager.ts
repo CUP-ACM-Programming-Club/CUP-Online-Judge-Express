@@ -1,4 +1,4 @@
-import {ConfigManager} from "../config-manager";
+import {ConfigManager} from "../ports/Config";
 
 class ConfigSwitchManager {
     getAllConfig() {

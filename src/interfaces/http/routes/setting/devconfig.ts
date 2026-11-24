@@ -1,6 +1,6 @@
 import express from "express";
 import { error, ok } from "../../../../domain/constants/state";
-import ConfigManager from "../../../../infrastructure/config/ConfigManager";
+import ConfigManager from "../../../../application/config/ConfigSwitchManager";
 const router = express.Router();
 
 function validator(key: any, value?: any, comment?: any) {

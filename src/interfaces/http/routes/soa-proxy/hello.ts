@@ -1,5 +1,5 @@
 import express from "express";
-import HelloService from "../../../../infrastructure/integration/hello/HelloService";
+import { helloRpc as HelloService } from "../../../../application/ports/HelloRpc";
 const router = express.Router();
 
 router.get("/:name", async (req, res) => {

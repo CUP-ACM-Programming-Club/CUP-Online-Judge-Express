@@ -7,7 +7,7 @@ import * as switchStoreCollection from "./store/switch";
 import * as OPERATION_CONSTANTS from "./constants/operation";
 import ConfigLoggerFactory from "./log/config";
 import SwitchLoggerFactory from "./log/switch";
-import ErrorCollector from "../../application/error/collector";
+import ErrorCollector from "../../shared/ErrorCollector";
 
 const random = require("random");
 

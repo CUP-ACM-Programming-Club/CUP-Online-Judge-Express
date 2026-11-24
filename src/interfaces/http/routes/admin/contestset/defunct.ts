@@ -1,1 +1,1 @@
-export = require("../../../../../application/admin/defunct")("contest_set", "contestset_id");
+export = require("../../../admin/defunct")("contest_set", "contestset_id");
