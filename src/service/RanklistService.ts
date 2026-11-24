@@ -3,6 +3,13 @@ import cache_query from "../module/mysql_cache";
 import dayjs from "dayjs";
 import const_variable from "../module/const_name";
 import { error } from "../module/constants/state";
+import { redactRows } from "../utils/privacy";
+
+export interface RanklistViewer {
+    /** 管理员可见原始 email */
+    privileged: boolean;
+    viewerId?: string | null;
+}
 
 interface RanklistOptions {
     page: number;
@@ -31,7 +38,7 @@ class RanklistService {
         }
     }
 
-    async getRanklist(opt: RanklistOptions) {
+    async getRanklist(opt: RanklistOptions, viewer: RanklistViewer = { privileged: false }) {
         let page = opt.page * this.PAGE_CNT;
         let result;
 
@@ -162,8 +169,14 @@ class RanklistService {
             throw error.invalidParams;
         }
 
+        // 排行榜只把 email 用于 gravatar：非管理员（且非本人）去掉 email，统一附带 email_hash
         return {
-            ranklist: result,
+            ranklist: redactRows(result, {
+                privileged: !!viewer.privileged,
+                viewerId: viewer.viewerId,
+                fields: [],
+                hashEmail: true
+            }),
             _name: const_variable.language.cn.ranklist
         };
     }

@@ -2,6 +2,7 @@ import client from "../module/redis";
 import { withCache, clearCacheBatch } from "../utils/cache-helper";
 import { MySQLManager } from "../manager/mysql/MySQLManager";
 import cache_query = require("../module/mysql_cache");
+import { redactRows, SUBMISSION_SENSITIVE_FIELDS } from "../utils/privacy";
 const log4js = require("../module/logger");
 const logger = log4js.logger("cheese", "info");
 
@@ -176,6 +177,19 @@ from (select solution_id,
          (select user_id, solution_id, problem_id from solution where contest_id = ?) user
          on user.solution_id = code_stat.solution_id`;
         return await cache_query(sql, [cid, cid]);
+    }
+
+    /**
+     * 按请求者去敏：非特权用户看不到他人提交的 ip / fingerprint / fingerprintRaw（本人的行保留）。
+     * 返回新对象，不修改（可能来自缓存的）入参。
+     */
+    redactScoreboard<T extends { data?: any[] }>(scoreboard: T, privileged: boolean, viewerId?: string | null): T {
+        if (!scoreboard || !Array.isArray(scoreboard.data)) {
+            return scoreboard;
+        }
+        return Object.assign({}, scoreboard, {
+            data: redactRows(scoreboard.data, { privileged, viewerId, fields: SUBMISSION_SENSITIVE_FIELDS })
+        });
     }
 
     async clearScoreboardCache(cid: number) {

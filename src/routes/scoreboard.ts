@@ -6,6 +6,12 @@ const { error, ok } = require("../module/constants/state");
 import express from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
+import { isContestSensitivePrivileged } from "../utils/privacy";
+
+// 可看他人 ip / 指纹：沿用 browserPrivilege（管理员 / contest_manager / 助教），再加上该比赛出题人
+function canSeeSensitive(req: any, cid: number, browserPrivilege: any): boolean {
+	return Boolean(browserPrivilege) || isContestSensitivePrivileged(req.session, cid);
+}
 
 router.get("/:cid", (req: any, res: any, next: any) => {
 	const cid = isNaN(Number(req.params.cid)) ? -1 : parseInt(req.params.cid);
@@ -24,7 +30,7 @@ router.get("/:cid", async (req: any, res: any) => {
 		await ContestService.checkContestAccess(req, cid);
 		const browserPrivilege = req.session.isadmin || req.session.contest_manager || await ContestAssistantManager.userIsContestAssistant(cid, req.session.user_id);
 		const data = await ScoreboardService.getScoreboard(cid, browserPrivilege);
-		res.json(data);
+		res.json(ScoreboardService.redactScoreboard(data, canSeeSensitive(req, cid, browserPrivilege), req.session.user_id));
 	} catch (e: any) {
 		if (e instanceof HttpError) {
 			res.status(e.statusCode).json({
@@ -83,7 +89,11 @@ router.get("/:cid/line", async (req: any, res: any) => {
 	// getScoreboard returns { data: ... }. `data` IS the result of submitHandlerOptimized.
 
 	try {
-		const scoreboardData = await ScoreboardService.getScoreboard(cid, browserPrivilege);
+		const scoreboardData = ScoreboardService.redactScoreboard(
+			await ScoreboardService.getScoreboard(cid, browserPrivilege),
+			canSeeSensitive(req, cid, browserPrivilege),
+			req.session.user_id
+		);
 		const lineBreak = await ScoreboardService.getLineBreakInfo(cid);
 		// And contest user?
 		// getScoreboard returns `users` which is result[3] -> contestUserHandler.

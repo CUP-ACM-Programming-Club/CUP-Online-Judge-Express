@@ -17,7 +17,11 @@ function parseQuery(req: any) {
 
 const get_ranklist = async (req: any, res: any, opt: any = {}) => {
 	try {
-		const result = await RanklistService.getRanklist(opt);
+		const session = req && req.session ? req.session : {};
+		const result = await RanklistService.getRanklist(opt, {
+			privileged: !!session.isadmin,
+			viewerId: session.user_id
+		});
 		res.json(result);
 	} catch (e) {
 		if ((e as any) === error.invalidParams) {

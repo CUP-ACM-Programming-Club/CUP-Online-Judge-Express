@@ -1,6 +1,7 @@
 import { JudgeResult } from "../enums/JudgeResult";
 import ContestAssistantManager from "../manager/contest/ContestAssistantManager";
 import { getGraphDataWithCache, getGraphLabel, TIME_GRANULARITY } from "../routes/status/graph_data_optimizer";
+import { redactRows, isContestSensitivePrivileged, SUBMISSION_SENSITIVE_FIELDS } from "../utils/privacy";
 
 const cache_query = require("../module/mysql_cache");
 const const_name = require("../module/const_name");
@@ -202,6 +203,16 @@ export class StatusService {
         }
 
         let result = await Promise.all(_res.map((e: any) => this.buildResponse(req, e, request_query, browser_privilege, Boolean(_end))));
+
+        // ip / fingerprint / fingerprintRaw / email 仅对特权用户及本人可见；email 另提供 email_hash 供 gravatar 使用
+        const sensitivePrivileged = Boolean(browser_privilege) ||
+            (!!request_query.contest_id && isContestSensitivePrivileged(req.session, request_query.contest_id));
+        result = redactRows(result, {
+            privileged: sensitivePrivileged,
+            viewerId: req.session && req.session.user_id,
+            fields: SUBMISSION_SENSITIVE_FIELDS,
+            hashEmail: true
+        });
 
         return {
             result: result,
