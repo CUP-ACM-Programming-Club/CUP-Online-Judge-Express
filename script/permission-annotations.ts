@@ -13,7 +13,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 	"GET /admin/contest/edit/:id": { req: "admin | contest_manager(全局) | assistant(params.id)", flag: "出题人 m<cid> 不能编辑自己的比赛，而 contest_manager 可编辑任意比赛" },
 	"POST /admin/contest/edit": { req: "admin | contest_manager(全局) | assistant(body.contest_id)" },
 	"GET /admin/contest/edit/user/:id": { req: "admin | contest_manager(全局) | assistant(params.id)" },
-	"POST /admin/contest/assistant/remove": { flag: "被前面注册的 POST /:topicId 遮蔽，实际执行 setContestAssistantByTopic（topicId=\"remove\"）" },
+	"POST /admin/contest/assistant/remove": { flag: "被前面注册的 POST /:topicId 遮蔽，实际执行 setContestAssistantByTopic（topicId=\"remove\"）", fixed: "phase5 fix(a)：/remove 注册到 /:topicId 之前，移除助教可达" },
 	"POST /admin/contest/assistant/:topicId": { note: "admin/contest.ts 挂载层没有 admin，各子文件自带 admin（edit 例外）" },
 
 	"GET /contest/assistant/:contest_id": { note: "只返回“我”是否为该比赛助教" },

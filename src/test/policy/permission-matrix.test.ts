@@ -436,16 +436,20 @@ describe("权限矩阵（角色 × 接口）", function () {
 			}
 		});
 
-		it("POST /admin/contest/assistant/remove：当前被 /:topicId 遮蔽（锁定现状）", async function () {
+		it("POST /admin/contest/assistant/remove：走移除助教（phase5 fix a，之前被 /:topicId 遮蔽）", async function () {
 			const ContestAssistantManager = require("../../manager/contest/ContestAssistantManager").default;
 			const removeStub = sinon.stub(ContestAssistantManager, "removeContestAssistantByRequest").resolves({ status: "OK", data: "remove" });
 			const topicStub = sinon.stub(ContestAssistantManager, "setContestAssistantByTopicByRequest").resolves({ status: "OK", data: "topic" });
 			try {
 				const res = await client("admin").post("/admin/contest/assistant/remove").send({ contestId: C_PRIVATE, userId: USER.assistant });
-				expect(res.body).to.deep.equal({ status: "OK", data: "topic" });
-				expect(removeStub.called).to.equal(false);
-				expect(topicStub.calledOnce).to.equal(true);
-				expect(topicStub.firstCall.args[0].params.topicId).to.equal("remove");
+				expect(res.body).to.deep.equal({ status: "OK", data: "remove" });
+				expect(removeStub.calledOnce).to.equal(true);
+				expect(removeStub.firstCall.args[0].body).to.deep.equal({ contestId: C_PRIVATE, userId: USER.assistant });
+				expect(topicStub.called).to.equal(false);
+				// /:topicId 仍然可用
+				const topic = await client("admin").post("/admin/contest/assistant/42").send({ userId: USER.assistant });
+				expect(topic.body).to.deep.equal({ status: "OK", data: "topic" });
+				expect(topicStub.firstCall.args[0].params.topicId).to.equal("42");
 			} finally {
 				removeStub.restore();
 				topicStub.restore();

@@ -14,7 +14,7 @@
   - init-only: 3
   - login: 93
   - owner / source-privilege: 9
-- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 0 条，见“已修复”列）
+- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 1 条，见“已修复”列）
 
 术语：
 - `login` = 经 `auth` 中间件（含 ban_check、contest_mode 刷新）；`admin` = `session.isadmin`；`editor` / `source_browser` / `contest_manager` 为全局权限位。
@@ -49,9 +49,9 @@
 | GET | `/admin/award/list/:page` | auth → admin | admin |  |  |  |
 | POST | `/admin/award/remove/:award_id` | auth → admin | admin |  |  |  |
 | POST | `/admin/contest/add` | auth → admin | admin |  |  |  |
+| POST | `/admin/contest/assistant/remove` | auth → admin | admin |  | 被前面注册的 POST /:topicId 遮蔽，实际执行 setContestAssistantByTopic（topicId="remove"） | phase5 fix(a)：/remove 注册到 /:topicId 之前，移除助教可达 |
 | POST | `/admin/contest/assistant/:topicId` | auth → admin | admin | admin/contest.ts 挂载层没有 admin，各子文件自带 admin（edit 例外） |  |  |
 | POST | `/admin/contest/assistant` | auth → admin | admin |  |  |  |
-| POST | `/admin/contest/assistant/remove` | auth → admin | admin |  | 被 POST /admin/contest/assistant/:topicId 遮蔽；被前面注册的 POST /:topicId 遮蔽，实际执行 setContestAssistantByTopic（topicId="remove"） |  |
 | GET | `/admin/contest/assistant/all` | auth → admin | admin |  |  |  |
 | GET | `/admin/contest/assistant/:contestId` | auth → admin | admin |  |  |  |
 | GET | `/admin/contest/defunct` | auth → admin | admin |  |  |  |
