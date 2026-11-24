@@ -4,6 +4,7 @@ const sinon = require("sinon");
 const Module = require("module");
 import { SubmissionService } from "../../application/services/SubmissionService";
 import { SubmissionType } from "../../domain/enums/SubmissionEnums";
+import { rebindSubmissionServicePorts } from "../setup/submission-ports";
 
 describe("Submission Service Tests", function () {
     let service: SubmissionService;
@@ -14,6 +15,7 @@ describe("Submission Service Tests", function () {
     let connectionStub: any;
     let redisStub: any;
     let previousLoad: any;
+    let restorePorts: () => void;
 
     const mockReq = {
         session: {
@@ -65,12 +67,16 @@ describe("Submission Service Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
+        // 提交的 SQL / 事务在仓储里：拦截生效期间重新加载并绑定到端口
+        restorePorts = rebindSubmissionServicePorts();
+
         delete require.cache[require.resolve("../../application/services/SubmissionService")];
         const ServiceModule = require("../../application/services/SubmissionService");
         service = new ServiceModule.SubmissionService();
     });
 
     afterEach(function () {
+        restorePorts();
         if (previousLoad) Module._load = previousLoad;
         sinon.restore();
     });

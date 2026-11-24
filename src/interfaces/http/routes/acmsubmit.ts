@@ -3,37 +3,10 @@ import express, { Request, Response } from "express";
 const router = express.Router();
 import auth from "../middleware/auth";
 const const_variable = require("../../../domain/constants/const_name");
-const cache_query = require("../../../infrastructure/db/legacy/mysql_cache");
+import SubmissionViewUseCases from "../../../application/submission/SubmissionViewUseCases";
 
 router.get("/", async (req: Request, res: Response) => {
-	let wheresql = "";
-	let andsql = "";
-	let sqlArr: string[] = [];
-	if (req.query.name) {
-		wheresql = " where user_id = ? ";
-		andsql = " and user_id = ? ";
-		for (let i = 0; i < 3; ++i) {
-			sqlArr.push(req.query.name as string);
-		}
-	}
-
-	let sql = `select t.*,users.nick from(select user_id,oj_name,problem_id,time,result,time_running,
-	memory,code_length,language
-	 from vjudge_record 
-	 ${wheresql}
-union all
-    select user_id,oj_name,problem_id,in_date as time,result,time as time_running
-    ,memory,code_length,language
-    from vjudge_solution 
-      where user_id in (select user_id from users_account) ${andsql}
-  union all
-  select user_id,"LOCAL" as oj_name,problem_id,in_date as time,result,time as time_running
-    ,memory,code_length,language from solution
-  where user_id in (select user_id from users_account) and problem_id > 1909 ${andsql}
-order by time desc limit 500)t
-left join users
-  on users.user_id = t.user_id`;
-	const data = await cache_query(sql, sqlArr);
+	const data = await SubmissionViewUseCases.getRecentAcmSubmissions(req.query.name ? req.query.name as string : undefined);
 	res.json({
 		status: "OK",
 		admin: (req.session as any)?.isadmin,

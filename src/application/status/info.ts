@@ -1,15 +1,15 @@
-import SourcePrivilegeCache from "../../infrastructure/persistence/submission/SourcePrivilegeCache";
 import { isAdmin } from "../../domain/policy/predicates";
+import { submissionQueryRepository } from "../ports/SubmissionQueryRepository";
+import { submissionSourcePrivilege } from "../ports/SubmissionSourcePrivilege";
 
-const query = require("../../infrastructure/db/legacy/mysql_cache");
 const { error, ok } = require("../../domain/constants/state");
 export = async function (req: any, database: string, solution_id: any, own_watch: boolean = false) {
 	const user_id = req.session.user_id;
-	const infoPromise = query(`select error from ${database} where solution_id = ?`, [solution_id]);
-	const solutionPromise = query("select user_id from solution where solution_id = ?", [solution_id]);
+	const infoPromise = submissionQueryRepository.findInfoError(database, solution_id);
+	const solutionPromise = submissionQueryRepository.findSolutionUser(solution_id);
 	const [infoRes, solutionRes] = await Promise.all([infoPromise, solutionPromise]);
 	if (solutionRes.length > 0) {
-		if (!(isAdmin(req) || await SourcePrivilegeCache.checkPrivilege(req.session, solution_id)) && (!own_watch || user_id !== solutionRes[0].user_id)) {
+		if (!(isAdmin(req) || await submissionSourcePrivilege.checkPrivilege(req.session, solution_id)) && (!own_watch || user_id !== solutionRes[0].user_id)) {
 			return error.noprivilege;
 		} else {
 			return ok.okMaker({

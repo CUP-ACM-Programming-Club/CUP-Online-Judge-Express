@@ -2,6 +2,8 @@ const expect = require("chai").expect;
 const fs = require("fs");
 const path = require("path");
 const CompilerManager = require("../../../infrastructure/persistence/judge/CompilerManager").default || require("../../../infrastructure/persistence/judge/CompilerManager");
+// 请求包装（校验 + {status, data}）已移到 interfaces 的 CompilerController，经端口落到同一个 CompilerManager
+const CompilerController = require("../../../interfaces/http/controllers/CompilerController").default;
 
 describe("CompilerManager", function () {
 	const compilePath = path.join(__dirname, "..", "..", "fixtures", "compile.json");
@@ -25,13 +27,13 @@ describe("CompilerManager", function () {
 
 	it("should validate payload and return ok via request wrapper", async function () {
 		const req = {body: {payload: {2: ["-g"]}}};
-		const res = await CompilerManager.updateCompileArgumentsByRequest(req);
+		const res = await CompilerController.updateCompileArgumentsByRequest(req);
 		expect(res).to.have.property("status").that.equal("OK");
 	});
 
 	it("should return error for invalid payload", async function () {
 		const req = {body: {payload: {"bad": "value"}}};
-		const res = await CompilerManager.updateCompileArgumentsByRequest(req);
+		const res = await CompilerController.updateCompileArgumentsByRequest(req);
 		expect(res).to.have.property("status").that.equal("error");
 	});
 

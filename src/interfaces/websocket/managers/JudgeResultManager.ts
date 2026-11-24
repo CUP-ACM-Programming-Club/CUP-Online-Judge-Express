@@ -8,11 +8,13 @@ import {IKey} from "../set/BaseUserSet";
 import BroadcastManager from "./BroadcastManager";
 import StatusSet from "../singleton/StatusSet";
 import ContestPagePushSet from "../set/ContestPagePushSet";
-import {storeSubmission} from "../../../application/judging/recorder";
-import BanUserManager from "../../../infrastructure/persistence/contest/BanUserManager";
-import log4j from "../../../main/init/log4j";
+import {JudgeResultNotifier} from "../../../application/ports/JudgeResultNotifier";
 
-export class JudgeResultManager {
+/**
+ * 判题结果推送，实现 application 的 JudgeResultNotifier 端口。
+ * 判题结果的处理流程（封禁、回写）在 application/judging/JudgeEventUseCases。
+ */
+export class JudgeResultManager implements JudgeResultNotifier {
     setCollector = [ProblemFromContest
         , ProblemFromSpecialSubject
         , SubmissionOriginSet
@@ -24,23 +26,11 @@ export class JudgeResultManager {
         this.setCollector.forEach(e => e.remove(key));
     }
 
-    async messageHandle(message: any) {
-        const solutionPack = message;
-        const finished = parseInt(solutionPack.finish);
-        const solutionId = parseInt(solutionPack.solution_id);
-        if (parseInt(solutionPack.state) >= 32) {
-            log4j.log(`got state error: ${solutionPack}`)
-            if (finished) {
-                this.clearBinding(solutionId);
-            }
-            return;
-        }
+    attachSubmissionContext(solutionId: number, solutionPack: any) {
         Object.assign(solutionPack, SubmitUserInfo.get(solutionId), ProblemFromContest.get(solutionId), ProblemFromSpecialSubject.get(solutionId), SolutionContext.get(solutionId));
-        if (finished) {
-            await BanUserManager.banUser(solutionPack);
-            await storeSubmission(solutionPack);
-        }
+    }
 
+    pushResult(solutionId: number, solutionPack: any) {
         if (SubmissionSet.has(solutionId)) {
             SubmissionSet.get(solutionId)!.emit("result", solutionPack);
             BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId));
@@ -48,9 +38,14 @@ export class JudgeResultManager {
                 BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
             }
         }
+    }
 
-        if (finished) {
-            this.clearBinding(solutionId);
+    notifyRemoteJudge(solutionId: number | string) {
+        const userSocket = SubmissionSet.get(solutionId);
+        if (userSocket) {
+            userSocket.emit("remoteJudge", {
+                solutionId
+            });
         }
     }
 }

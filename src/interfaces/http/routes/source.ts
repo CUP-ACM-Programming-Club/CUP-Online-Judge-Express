@@ -1,8 +1,6 @@
 import { isAdmin } from "../../../domain/policy/predicates";
 const { error } = require("../../../domain/constants/state");
-import SubmissionManager from "../../../infrastructure/persistence/submission/SubmissionManager";
-import Cacheable from "../../../shared/cache/Cacheable";
-import SourcePrivilegeCache from "../../../infrastructure/persistence/submission/SourcePrivilegeCache";
+import SubmissionViewUseCases from "../../../application/submission/SubmissionViewUseCases";
 
 import express from "express";
 const md = require("markdown-it")({
@@ -12,7 +10,6 @@ const md = require("markdown-it")({
 const mh = require("markdown-it-highlightjs");
 md.use(mh);
 const router = express.Router();
-const query = require("../../../infrastructure/db/legacy/mysql_cache");
 import auth from "../middleware/auth";
 const cnameList = require("../../../domain/constants/const_name");
 const const_name = cnameList.markdown_language;
@@ -31,7 +28,7 @@ const make_code = (data: any, source: any = "local") => {
 
 router.get("/:source/:id", async (req: any, res: any, next: any) => {
 	const id = isNaN(Number(req.params.id)) ? -1 : parseInt(req.params.id);
-	if (!await SourcePrivilegeCache.checkPrivilege(req.session, id)) {
+	if (!await SubmissionViewUseCases.checkSourcePrivilege(req.session, id)) {
 		if (global.contest_mode) {
 			res.json(error.contestMode);
 			return;
@@ -48,24 +45,11 @@ router.get("/:source/:id", async (req: any, res: any, next: any) => {
 });
 
 router.get("/:source/:id", async (req: any, res: any) => {
-	let local;
-	const source = (local = req.params.source === "local") ? "source_code_user" : "vjudge_source_code";
-	const solution = req.params.source === "local" ? "solution" : "vjudge_solution";
+	const local = req.params.source === "local";
 	const id = parseInt(req.params.id);
 	const raw = !!req.query.raw;
-	const browse_code = await SourcePrivilegeCache.checkPrivilege(req.session as any, id);
-	const sql = `select * from (select ${solution}.*,${source}.source from ${source} left join
-  ${solution} on ${solution}.solution_id = ${source}.solution_id)tmp
-where solution_id = ? ${browse_code ? "" : `and (user_id = ? or share = true or solution_id in 
-(select solution_id from tutorial))`}`;
-	// noinspection JSAnnotator
-	const sqlArr = browse_code ? [id] : [id, req.session.user_id];
-	let promiseArray = [];
-	promiseArray.push(query(sql, sqlArr));
-	if (!local) {
-		promiseArray.push(query("select oj_name from vjudge_solution where solution_id = ?", [id]));
-	}
-	const [data, _source] = await Promise.all(promiseArray);
+	const browse_code = await SubmissionViewUseCases.checkSourcePrivilege(req.session as any, id);
+	const [data, _source] = await SubmissionViewUseCases.getSourceView(local, id, browse_code, browse_code ? undefined : req.session.user_id);
 	if (data.length === 0) {
 		res.json({
 			status: "error",

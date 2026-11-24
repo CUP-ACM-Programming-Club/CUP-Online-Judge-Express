@@ -1,23 +1,12 @@
 import path from "path";
 import fs from "fs";
-import {Request} from "express";
-import {ErrorHandlerFactory} from "../../../shared/decorators/ErrorHandler";
-import {ok} from "../../../domain/constants/state";
-import _ from "lodash";
 const config = global.config;
 
-class CompileArgumentValidator {
-    validate(payload: any) {
-        _.forEach(payload, (value, key) => {
-            if (isNaN(parseInt(key)) || !Array.isArray(value)) {
-                throw new Error("Invalid compile arguments data.")
-            }
-        });
-    }
-}
-
+/**
+ * 判题机编译参数文件的读写，实现 application 的 CompileArgumentsStore 端口。
+ * 参数校验在 application/submission/CompileArgumentsUseCases，HTTP 包装在 interfaces/http/controllers/CompilerController。
+ */
 class CompilerManager {
-    validator = new CompileArgumentValidator();
     async getCompileArguments () {
         return await new Promise((resolve, reject) => {
             fs.readFile(config.etc.compile_arguments, "utf-8", (err, data) => {
@@ -31,11 +20,6 @@ class CompilerManager {
         })
     }
 
-    @ErrorHandlerFactory(ok.okMaker)
-    async getCompileArgumentsByRequest (req: Request) {
-        return await this.getCompileArguments();
-    }
-
     async updateCompileArguments (payload: any) {
         return await new Promise((resolve, reject) => {
             fs.writeFile(config.etc.compile_arguments, JSON.stringify(payload), (err) => {
@@ -47,13 +31,6 @@ class CompilerManager {
                 }
             })
         })
-    }
-
-    @ErrorHandlerFactory(ok.okMaker)
-    async updateCompileArgumentsByRequest (req: Request) {
-        const payload = req.body.payload;
-        this.validator.validate(payload);
-        return await this.updateCompileArguments(payload);
     }
 }
 

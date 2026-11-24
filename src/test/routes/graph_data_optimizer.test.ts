@@ -59,7 +59,7 @@ describe("Graph Data Optimizer Tests (Full Coverage)", function () {
         });
 
         // 4. 加载被测模块
-        optimizer = require("../../interfaces/http/routes/status/graph_data_optimizer");
+        optimizer = require("../../infrastructure/persistence/submission/graph_data_optimizer");
     });
 
     afterEach(function () {
@@ -209,7 +209,7 @@ describe("Graph Data Optimizer Tests (Full Coverage)", function () {
     });
 
     describe("indexToGranularity", function () {
-        const { indexToGranularity } = require("../../interfaces/http/routes/status/graph_data_optimizer");
+        const { indexToGranularity } = require("../../infrastructure/persistence/submission/graph_data_optimizer");
 
         it("should handle all valid indices", function () {
             expect(optimizer.indexToGranularity(0)).to.equal(TIME_GRANULARITY.MONTH);

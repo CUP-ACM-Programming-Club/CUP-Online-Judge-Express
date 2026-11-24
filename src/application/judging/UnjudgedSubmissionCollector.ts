@@ -1,5 +1,5 @@
-import { localJudger } from "../../infrastructure/judger/localJudger";
-import { MySQLManager } from "../../infrastructure/db/mysql/MySQLManager";
+import { SubmissionJudger } from "../ports/SubmissionJudger";
+import { judgeQueueRepository } from "../ports/JudgeQueueRepository";
 import { ConfigManager } from "../ports/Config";
 import dayjs from "dayjs";
 import Logger from "../../shared/Logger";
@@ -8,12 +8,12 @@ const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;
 
 class UnjudgedSubmissionCollector {
-    private judger?: localJudger;
+    private judger?: SubmissionJudger;
     private interval?: NodeJS.Timeout;
     private collectFinished?: boolean;
     private noDataProblemIdSet = new Set();
 
-    setJudger(judger: localJudger) {
+    setJudger(judger: SubmissionJudger) {
         this.judger = judger;
         return this;
     }
@@ -39,8 +39,8 @@ class UnjudgedSubmissionCollector {
         try {
             this.collectFinished = false;
             const noDataProblemIdList = Array.from(this.noDataProblemIdSet);
-            const waitingResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=0 and language not in (15,22) and problem_id != 0 and problem_id not in (?) order by solution_id limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
-            const rejudgeResult = await MySQLManager.execQuery("SELECT solution_id,user_id FROM solution WHERE result=1 and language not in (15,22) and problem_id != 0 and problem_id not in (?) order by solution_id desc limit ?", [noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT)]);
+            const waitingResult = await judgeQueueRepository.findWaitingSubmissions(noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT));
+            const rejudgeResult = await judgeQueueRepository.findRejudgeSubmissions(noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT));
             const result = [...waitingResult, ...rejudgeResult];
             await wait(2000);
             for (let i in result) {
@@ -49,8 +49,7 @@ class UnjudgedSubmissionCollector {
                 }
                 const solutionId = parseInt(result[i].solution_id);
                 try {
-                    const _data = await MySQLManager.execQuery("SELECT count(1) as cnt from privilege where user_id = ? and rightstr = 'administrator'",
-                        [result[i].user_id]);
+                    const _data = await judgeQueueRepository.countAdministrator(result[i].user_id);
                     const admin = !!(_data && _data.length && _data[0].cnt);
                     const priority = parseInt(String(!!result[i].result));
                     console.log(`Current Time: ${dayjs().format("YYYY-MM-DD HH:mm:ss")}, solutionId: ${solutionId}`);
@@ -63,7 +62,7 @@ class UnjudgedSubmissionCollector {
                     ]);
                 } catch (e) {
                     console.error("Collector task error:", e);
-                    await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [solutionId]);
+                    await judgeQueueRepository.markSubmitFailed(solutionId);
                 }
             }
         }
@@ -71,7 +70,7 @@ class UnjudgedSubmissionCollector {
             const exception = e as unknown as any;
             if (exception && exception.noRetry && exception.solutionId) {
                 Logger.log(`e, e.noRetry, e.solutionId: ${exception.solutionId}`);
-                await MySQLManager.execQuery("update solution set result=15 where solution_id = ?", [exception.solutionId]);
+                await judgeQueueRepository.markSubmitFailed(exception.solutionId);
             }
             Logger.log(`e:${exception}, e.noRetry:${exception.noRetry}, e.solutionId:${exception.solutionId}`);
             Logger.log("unjudgedSubmissionCollector exception: ", exception);

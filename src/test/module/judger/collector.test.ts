@@ -4,6 +4,8 @@ import sinon from "sinon";
 import Module from "module";
 import { bindPort, boundImpl } from "../../../application/ports/registry";
 import { ConfigManager as configPort } from "../../../application/ports/Config";
+import { judgeQueueRepository } from "../../../application/ports/JudgeQueueRepository";
+import { rebindFresh } from "../../setup/rebind-port";
 
 describe("UnjudgedSubmissionCollector", function () {
     let Collector: any;
@@ -12,6 +14,7 @@ describe("UnjudgedSubmissionCollector", function () {
     let configStub: any;
     let previousLoad: any;
     let previousConfig: any;
+    let restoreRepository: () => void;
 
     beforeEach(function () {
         // 1. Stubs
@@ -33,6 +36,8 @@ describe("UnjudgedSubmissionCollector", function () {
 
         previousConfig = boundImpl(configPort);
         bindPort(configPort, configStub);
+        // SQL 在 MySqlJudgeQueueRepository 里：拦截生效期间重新加载并绑定，MySQLManager 仍是上面的 stub
+        restoreRepository = rebindFresh(judgeQueueRepository, require.resolve("../../../infrastructure/persistence/submission/MySqlJudgeQueueRepository"), m => new m.MySqlJudgeQueueRepository());
 
         // 3. Load
         delete require.cache[require.resolve("../../../application/judging/UnjudgedSubmissionCollector")];
@@ -48,6 +53,7 @@ describe("UnjudgedSubmissionCollector", function () {
     });
 
     afterEach(function () {
+        restoreRepository();
         if (previousConfig) bindPort(configPort, previousConfig);
         if (previousLoad) (Module as any)._load = previousLoad;
         sinon.restore();

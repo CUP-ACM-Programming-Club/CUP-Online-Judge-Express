@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
 import express from "express";
-import SubmissionManager from "../../../../infrastructure/persistence/submission/SubmissionManager";
+import SubmissionStatsController from "../../controllers/SubmissionStatsController";
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-	res.json(await SubmissionManager.getSubmissionHourInfo(req));
+	res.json(await SubmissionStatsController.getSubmissionHourInfo(req));
 });
 
 

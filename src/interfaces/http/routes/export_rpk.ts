@@ -3,7 +3,7 @@ const promise = require("bluebird");
 const fs = promise.promisifyAll(require("fs"));
 const router = require("express").Router();
 const path = require("path");
-const query = require("../../../infrastructure/db/legacy/mysql_cache");
+import SubmissionViewUseCases from "../../../application/submission/SubmissionViewUseCases";
 const suffix = require("../../../domain/constants/const_name").language_suffix.local;
 const zlib = require("zlib");
 const home_dir = path.join(global.config.judger.oj_home, "data");
@@ -56,7 +56,7 @@ const readFile = async (file_list: any) => {
 };
 
 async function prependAppendCodePacker(prefix: any, problem_id: any) {
-	return (await query("select * from prefile where problem_id = ?", [problem_id]))
+	return (await SubmissionViewUseCases.getPrefilesForExport(problem_id))
 		.map((i: any) => {
 			return { name: `${prefix}.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64") };
 		});
@@ -124,20 +124,18 @@ const pack_file = async (req: any, res: any, opt: any = {}) => {
 		if (typeof opt.problem_id !== "undefined" && !isNaN(opt.problem_id)) {
 			const problem_id = parseInt(opt.problem_id);
 			const problem_dir = path.join(home_dir, problem_id.toString());
-			let _problem_detail = await query("SELECT * FROM problem WHERE problem_id = ?", [problem_id]);
+			let _problem_detail = await SubmissionViewUseCases.getProblemForExport(problem_id);
 			if (_problem_detail.length === 0) {
 				res.json(error_cb);
 				return;
 			}
-			let _solution = await query(`select * from (
-select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
-sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
+			let _solution = await SubmissionViewUseCases.getFastestSolutionForExport(problem_id);
 			const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
 			packProblemObject(_solution, problem_details);
 			send_file(req, res, [problem_details], opt.problem_id);
 		} else if (typeof opt.contest_id !== "undefined" && !isNaN(opt.contest_id)) {
 			const contest_id = parseInt(opt.contest_id);
-			const contest_detail = await query("SELECT * FROM contest_problem WHERE contest_id = ?", [contest_id]);
+			const contest_detail = await SubmissionViewUseCases.getContestProblemsForExport(contest_id);
 			if (contest_detail.length === 0) {
 				res.json(error_cb);
 				return;
@@ -153,14 +151,12 @@ async function packHandler(httpInstance: any, val: any = {}) {
 	let { res } = httpInstance, { i, result } = val;
 	const problem_id = i.problem_id;
 	const problem_dir = path.join(home_dir, problem_id.toString());
-	let _problem_detail = await query("SELECT * FROM problem WHERE problem_id = ?", [problem_id]);
+	let _problem_detail = await SubmissionViewUseCases.getProblemForExport(problem_id);
 	if (_problem_detail.length === 0) {
 		res.json(error_cb);
 		return;
 	}
-	let _solution = await query(`select * from (
-select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
-sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
+	let _solution = await SubmissionViewUseCases.getFastestSolutionForExport(problem_id);
 
 	const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
 	packProblemObject(_solution, problem_details);

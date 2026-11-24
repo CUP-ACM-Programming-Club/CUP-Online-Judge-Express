@@ -5,6 +5,8 @@
  */
 import { expect } from "chai";
 import { ciEqual, Engine, freshRequire, interceptQueryLayer, loadOrWriteSnapshot, normalizeSql, project, QueryLog, settle } from "./harness";
+import { rebindFresh } from "../setup/rebind-port";
+import { submissionStatusRepository } from "../../application/ports/SubmissionStatusRepository";
 
 const BASE_DATE = new Date("2026-03-01T08:00:00.000Z");
 
@@ -130,11 +132,14 @@ async function runScenario(sc: Scenario, log: QueryLog[]) {
         ContestAssistantManager: { userIsContestAssistant: async () => !!sc.assistant },
         graph_data_optimizer: { getGraphDataWithCache: async () => [], getGraphLabel: () => [], TIME_GRANULARITY: {} }
     });
+    // SQL 在仓储实现里：拦截生效期间重新加载仓储并绑定到端口，让它的数据库访问同样落到 engine
+    const restorePort = rebindFresh(submissionStatusRepository, require.resolve("../../infrastructure/persistence/submission/MySqlSubmissionStatusRepository"), m => new m.MySqlSubmissionStatusRepository());
     try {
         const { StatusService } = freshRequire("../../application/services/StatusService");
         const service = new StatusService();
         return await settle(() => service.getStatusList({ session: Object.assign({}, sc.session) }, Object.assign({}, sc.query)));
     } finally {
+        restorePort();
         restore();
     }
 }
