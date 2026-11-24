@@ -167,6 +167,18 @@ describe("characterization: StatusService.getStatusList", function () {
         const carol = parsed.result.find((r: any) => r.user_id === "carol");
         expect(carol.nick).to.equal("carol");
     });
+
+    it("用户信息每页只批量查一次，仅精确匹配不上的 user_id 才逐个兜底", function () {
+        const log = logs["global/user"];
+        const batch = log.filter(q => / from users where user_id in \(\?\)$/i.test(q.sql));
+        const single = log.filter(q => / from users where user_id = \?$/i.test(q.sql));
+        expect(batch.length).to.equal(1);
+        expect(batch[0].params[0]).to.deep.equal(["alice", "ghost", "carol", "test_user", "bob", "2019010101"]);
+        expect(single.map(q => q.params[0])).to.deep.equal(["ghost", "carol"]);
+        // 重构前：1 条主查询 + 每行 1 条用户查询 = 9 条；重构后：1 + 1 + 2 = 4 条
+        expect(log.length).to.equal(4);
+        expect(logs["global/empty-page"].length).to.equal(1);
+    });
 });
 
 export { SCENARIOS, runScenario };

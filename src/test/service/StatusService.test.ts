@@ -51,6 +51,8 @@ describe("Status Service Tests", function () {
         previousLoad = Module._load;
         Module._load = function (request: any, parent: any, isMain: any) {
             if (request.includes("mysql_cache")) return queryStub;
+            // StatusService 现在通过 src/db 的 cachedQuery 访问数据库
+            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return contestAssistantStub;
             if (request.includes("const_name")) return {}; // mock const_name
             if (request.includes("graph_data_optimizer")) return optimizerStub;
@@ -132,7 +134,9 @@ describe("Status Service Tests", function () {
 
     it("should enrich response with user info", async function () {
         // Mock user info query
-        queryStub.withArgs(sinon.match(/SELECT nick,avatar.*FROM users/)).resolves([{
+        // 用户信息按页批量查询（SELECT user_id,nick,avatar,... WHERE user_id IN (?)）
+        queryStub.withArgs(sinon.match(/nick,avatar.*FROM users/)).resolves([{
+            user_id: "test_user",
             nick: "TestNick",
             avatar: 1,
             avatarUrl: "http://avatar",

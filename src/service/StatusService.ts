@@ -3,8 +3,17 @@ import ContestAssistantManager from "../manager/contest/ContestAssistantManager"
 import { getGraphDataWithCache, getGraphLabel, TIME_GRANULARITY } from "../routes/status/graph_data_optimizer";
 import { redactRows, isContestSensitivePrivileged, SUBMISSION_SENSITIVE_FIELDS } from "../utils/privacy";
 
-const cache_query = require("../module/mysql_cache");
+import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../db";
+
 const const_name = require("../module/const_name");
+
+/** 与原 mysql_cache 相同的 2s 读缓存 */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any[]>(sql, params, CACHE);
+
+/** 原逐行查询（user_id = ?，按 MySQL 排序规则比较），批量结果对不上时用它兜底 */
+const USER_INFO_SQL = "SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?";
+const USER_INFO_BATCH_SQL = "SELECT user_id,nick,avatar,avatarUrl,email FROM users WHERE user_id IN (?)";
 
 interface StatusQueryOptions {
     problem_id?: number | { type: number, value: number }[];
@@ -83,8 +92,32 @@ export class StatusService {
         delete element[oldProperty];
     }
 
-    private async buildResponse(req: any, val: any, request_query: any, browser_privilege: boolean, _end: boolean) {
-        const _user_info = await cache_query("SELECT nick,avatar,avatarUrl,email FROM users WHERE user_id = ?", [val.user_id]);
+    /**
+     * 为一页提交批量取用户信息：user_id -> 与原逐行查询 `WHERE user_id = ?` 完全相同的结果数组。
+     *
+     * 一次 IN 查询取回本页全部用户；IN 结果按 user_id 精确匹配（users.user_id 是主键，精确相等的那一行
+     * 必然就是原 `= ?` 查询返回的唯一一行）。精确匹配不上的（users 中不存在，或只在排序规则意义下相等，
+     * 如大小写/尾随空格不同）退回原逐行查询，保证结果逐字节一致。
+     */
+    private async loadUserInfo(rows: any[]): Promise<Map<any, any[]>> {
+        const userIds = [...new Set(rows.map((row: any) => row.user_id))];
+        const infoById = new Map<any, any[]>();
+        if (userIds.length === 0) {
+            return infoById;
+        }
+        const users = await cache_query(USER_INFO_BATCH_SQL, [userIds]);
+        for (const user of users) {
+            if (userIds.includes(user.user_id) && !infoById.has(user.user_id)) {
+                infoById.set(user.user_id, [{ nick: user.nick, avatar: user.avatar, avatarUrl: user.avatarUrl, email: user.email }]);
+            }
+        }
+        const unmatched = userIds.filter(id => !infoById.has(id));
+        const fallback = await Promise.all(unmatched.map(id => cache_query(USER_INFO_SQL, [id])));
+        unmatched.forEach((id, i) => infoById.set(id, fallback[i]));
+        return infoById;
+    }
+
+    private buildResponse(req: any, val: any, _user_info: any[], request_query: any, browser_privilege: boolean, _end: boolean) {
         if (_user_info.length > 0) {
             const nick = _user_info[0].nick.trim();
             const avatar = Boolean(_user_info[0].avatar);
@@ -202,7 +235,8 @@ export class StatusService {
                                 order by sol.in_date desc,sol.solution_id desc${end_sim} limit ?,20`, sql_arr);
         }
 
-        let result = await Promise.all(_res.map((e: any) => this.buildResponse(req, e, request_query, browser_privilege, Boolean(_end))));
+        const userInfo = await this.loadUserInfo(_res);
+        let result = _res.map((e: any) => this.buildResponse(req, e, userInfo.get(e.user_id)!, request_query, browser_privilege, Boolean(_end)));
 
         // ip / fingerprint / fingerprintRaw / email 仅对特权用户及本人可见；email 另提供 email_hash 供 gravatar 使用
         const sensitivePrivileged = Boolean(browser_privilege) ||
