@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { expect } from "chai";
-import { TokenManagerService } from "../../../../module/account/token/TokenManagerService";
-import { RedisService } from "../../../../module/redis/RedisService";
+import { TokenManagerService } from "../../../../application/account/token/TokenManagerService";
+import { RedisService } from "../../../../infrastructure/redis/service/RedisService";
 
 describe("TokenManagerService", function () {
     let mockRedisService: RedisService;

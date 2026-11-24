@@ -6,7 +6,7 @@
 const expect = require("chai").expect;
 
 describe("Status Device Tests", function () {
-    const router = require("../../routes/status/device");
+    const router = require("../../interfaces/http/routes/status/device");
 
     describe("路由导出验证", function () {
         it("should export a router", function () {
@@ -65,7 +65,7 @@ describe("Status Device Tests", function () {
 
     describe("模块结构验证", function () {
         it("should be importable from status.ts", function () {
-            const statusModule = require("../../routes/status");
+            const statusModule = require("../../interfaces/http/routes/status");
             expect(statusModule).to.be.an('array');
         });
 

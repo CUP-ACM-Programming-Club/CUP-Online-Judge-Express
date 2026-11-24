@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
-const ContestManager = require("../../../manager/contest/ContestManager").default || require("../../../manager/contest/ContestManager");
-const PrivilegeManager = require("../../../manager/user/PrivilegeManager").default || require("../../../manager/user/PrivilegeManager");
+const ContestManager = require("../../../infrastructure/persistence/contest/ContestManager").default || require("../../../infrastructure/persistence/contest/ContestManager");
+const PrivilegeManager = require("../../../infrastructure/persistence/user/PrivilegeManager").default || require("../../../infrastructure/persistence/user/PrivilegeManager");
 const fakeDb = require("../../mocks/fake-db");
 
 describe("ContestManager", function () {

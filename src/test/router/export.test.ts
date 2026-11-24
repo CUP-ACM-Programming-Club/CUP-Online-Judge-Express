@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
-const [error] = require("../../module/const_var");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
+const [error] = require("../../domain/constants/const_var");
 const fakeDb = require("../mocks/fake-db");
 async function removeAll() {
     await query("delete from users where nick = 'test' or nick = 'test1'");
@@ -13,8 +13,8 @@ async function removeAll() {
 describe("test export", function () {
     let server;
     server = require("../../app").default || require("../../app");
-    require("../../module/init/build_env")(true);
-    require("../../module/init/express_loader")(server);
+    require("../../main/init/build_env")(true);
+    require("../../main/init/express_loader")(server);
     const nopriv = require("supertest").agent(server);
     const priv = require("supertest").agent(server);
     before(async function () {

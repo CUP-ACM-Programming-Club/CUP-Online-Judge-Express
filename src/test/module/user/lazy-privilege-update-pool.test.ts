@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const pool = require("../../../module/user/LazyPrivilegeUpdatePool");
+const pool = require("../../../application/user/LazyPrivilegeUpdatePool");
 
 describe("LazyPrivilegeUpdatePool", function () {
 	beforeEach(function () {

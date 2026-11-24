@@ -32,7 +32,7 @@ describe("AdminProblemService Tests", function () {
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
             // console.log("Req:", request);
             if (request.includes("mysql_query")) return queryStub;
-            if (request.includes("module/status/update_solution_result")) return rejudgeStub;
+            if (request.includes("status/update_solution_result")) return rejudgeStub;
             if (request.includes("ProblemFileManager")) {
                 // Support both check 
                 (problemFileManagerStub as any).default = problemFileManagerStub;
@@ -45,11 +45,11 @@ describe("AdminProblemService Tests", function () {
         // 3. Re-require Service
         Object.keys(require.cache).forEach(key => {
             const normalized = key.replace(/\\/g, "/");
-            if (normalized.includes("module/status/update_solution_result") || normalized.includes("service/admin/AdminProblemService")) {
+            if (normalized.includes("application/status/update_solution_result") || normalized.includes("services/admin/AdminProblemService")) {
                 delete require.cache[key];
             }
         });
-        AdminProblemService = require("../../../service/admin/AdminProblemService").default;
+        AdminProblemService = require("../../../application/services/admin/AdminProblemService").default;
     });
 
     afterEach(function () {

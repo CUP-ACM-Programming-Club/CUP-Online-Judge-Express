@@ -55,8 +55,8 @@ describe("ContestService Tests", function () {
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../service/ContestService")];
-        ContestService = require("../../service/ContestService").default;
+        delete require.cache[require.resolve("../../application/services/ContestService")];
+        ContestService = require("../../application/services/ContestService").default;
     });
 
     afterEach(function () {

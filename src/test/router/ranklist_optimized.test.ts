@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 const dayjs = require("dayjs");
 
 async function removeAll() {
@@ -8,19 +8,19 @@ async function removeAll() {
 }
 
 function afterAll() {
-    require("../../module/mysql_cache").pool.end();
-    require("../../module/mysql_query").pool.end();
-    require("../../module/redis").quit();
+    require("../../infrastructure/db/legacy/mysql_cache").pool.end();
+    require("../../infrastructure/db/legacy/mysql_query").pool.end();
+    require("../../infrastructure/redis/redis").quit();
 }
 
 describe("test ranklist optimization", function () {
     let server;
     server = require("../../app").default || require("../../app");
-    require("../../module/init/build_env")(true);
-    require("../../module/init/express_loader")(server);
+    require("../../main/init/build_env")(true);
+    require("../../main/init/express_loader")(server);
     // const request = require("supertest").agent(server); // Not used for unit test
 
-    const fakeDb = require("../../test/mocks/fake-db");
+    const fakeDb = require("../mocks/fake-db");
 
     before(async function () {
         await removeAll();
@@ -62,7 +62,7 @@ describe("test ranklist optimization", function () {
     });
 
     it("should return correct monthly ranklist with split query", async function () {
-        const ranklistModule = require("../../routes/ranklist");
+        const ranklistModule = require("../../interfaces/http/routes/ranklist");
         const get_ranklist = ranklistModule.get_ranklist;
 
         const req = {
@@ -101,7 +101,7 @@ describe("test ranklist optimization", function () {
     });
 
     it("should return empty list if no solutions in time range", async function () {
-        const ranklistModule = require("../../routes/ranklist");
+        const ranklistModule = require("../../interfaces/http/routes/ranklist");
         const get_ranklist = ranklistModule.get_ranklist;
 
         const req = { query: { time_stamp: "M" } };
@@ -126,6 +126,6 @@ describe("test ranklist optimization", function () {
 
     after(async function () {
         await removeAll();
-        require("../../module/mysql_cache").pool.end();
+        require("../../infrastructure/db/legacy/mysql_cache").pool.end();
     })
 });

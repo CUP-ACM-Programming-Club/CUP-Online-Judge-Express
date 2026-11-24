@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const generateToken = require("../../middleware/generate_token");
+const generateToken = require("../../interfaces/http/middleware/generate_token");
 
 describe("generate_token", function () {
 	it("should set cookies even without next", function () {

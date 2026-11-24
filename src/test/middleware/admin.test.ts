@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
 describe("admin", function() {
-	const admin = require("../../middleware/admin");
+	const admin = require("../../interfaces/http/middleware/admin");
 	it("should go to next function", function (done) {
 		const req = {session:{isadmin:true}};
 		admin(req, {json: function(data){done(data)}}, done);

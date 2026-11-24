@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { openTransaction } from "../../../manager/mysql/transaction";
+import { openTransaction } from "../../../infrastructure/db/mysql/transaction";
 
 type Behaviour = (sql: string) => Error | null;
 

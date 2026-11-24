@@ -105,7 +105,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 export const CROSS_CUTTING: { title: string; detail: string; fixed?: string }[] = [
 	{
 		title: "WebSocket 身份可被 cookie 覆盖",
-		detail: "src/module/websocket/UserValidatorMiddleware.ts：`socket.user_id = cookie.user_id || session.user_id`，且只要 session 有 user_id 就直接放行——登录用户改 user_id cookie 即可在 socket 上冒充他人（privilege 仍取自自己的 session）。",
+		detail: "src/interfaces/websocket/UserValidatorMiddleware.ts：`socket.user_id = cookie.user_id || session.user_id`，且只要 session 有 user_id 就直接放行——登录用户改 user_id cookie 即可在 socket 上冒充他人（privilege 仍取自自己的 session）。",
 		fixed: "phase5 fix(c)：有登录 session 时以 session.user_id 为准；无 session 时仍按 cookie user_id + token 校验"
 	},
 	{
@@ -130,6 +130,6 @@ export const CROSS_CUTTING: { title: string; detail: string; fixed?: string }[] 
 	},
 	{
 		title: "ContestModeChecker 装饰器无引用",
-		detail: "src/decorator/common/ContestModeChecker.ts 未被使用（死代码），其语义与 policy.canBrowseSource 相同。"
+		detail: "src/interfaces/http/decorators/ContestModeChecker.ts 未被使用（死代码），其语义与 policy.canBrowseSource 相同。"
 	},
 ];

@@ -45,9 +45,9 @@ describe("ProblemSetManager Tests", function () {
         };
 
         // 3. Re-require
-        delete require.cache[require.resolve("../../manager/problem/ProblemSetManager")];
-        delete require.cache[require.resolve("../../module/common/CachePool")]; // decorators use this
-        ProblemSetManager = require("../../manager/problem/ProblemSetManager").default;
+        delete require.cache[require.resolve("../../infrastructure/persistence/problem/ProblemSetManager")];
+        delete require.cache[require.resolve("../../infrastructure/cache/CachePool")]; // decorators use this
+        ProblemSetManager = require("../../infrastructure/persistence/problem/ProblemSetManager").default;
     });
 
     afterEach(function () {

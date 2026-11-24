@@ -1,59 +1,59 @@
 /* eslint-disable no-console */
 /* eslint-disable require-atomic-updates */
-import Logger from "../module/console/Logger";
+import Logger from "../infrastructure/logging/console/Logger";
 
 const ENVIRONMENT = process.env.NODE_ENV;
 const config = global.config;
-import UserValidatorMiddleware from "../module/websocket/UserValidatorMiddleware";
-import BindUserInfo from "../module/websocket/BindUserInfo";
+import UserValidatorMiddleware from "../interfaces/websocket/UserValidatorMiddleware";
+import BindUserInfo from "../interfaces/websocket/BindUserInfo";
 require("debug")("express:server");
-const log4js = require("../module/logger");
+const log4js = require("../infrastructure/logging/logger");
 const logger = log4js.logger("normal", "info");
 let port: number | string;
-import localJudge from "../module/judger";
-import UnjudgedSubmissionCollector from "../module/judger/UnjudgedSubmissionCollector";
-import initEnv from "../middleware/init_env";
-import { app, server } from "../module/init/http-server";
+import localJudge from "../infrastructure/judger/localJudger";
+import UnjudgedSubmissionCollector from "../application/judging/UnjudgedSubmissionCollector";
+import initEnv from "../interfaces/http/middleware/init_env";
+import { app, server } from "../main/init/http-server";
 if (process.env.MODE === "websocket") {
 	port = process.env.PORT || config.ws.websocket_client_port;
-	const RuntimeErrorHandler = require("../module/judger/RuntimeErrorHandler");
+	const RuntimeErrorHandler = require("../application/judging/RuntimeErrorHandler");
 	localJudge.setErrorHandler(new RuntimeErrorHandler());
 	UnjudgedSubmissionCollector.setJudger(localJudge).start();
 } else {
 	port = process.env.PORT || config.ws.http_client_port;
 	app.use(initEnv);
 }
-const cache_query = require("../module/mysql_cache");
-import SubmissionService from "../service/SubmissionService";
+const cache_query = require("../infrastructure/db/legacy/mysql_cache");
+import SubmissionService from "../application/services/SubmissionService";
 const cookie = require("cookie");
-const sessionMiddleware = require("../module/session").sessionMiddleware;
-import { ConfigManager } from "../module/config/config-manager";
-import OnlineUserSet from "../module/websocket/set/OnlineUserSet";
-import NormalUserSet from "../module/websocket/set/NormalUserSet";
-import AdminUserSet from "../module/websocket/set/AdminUserSet";
-import SubmissionSet from "../module/websocket/set/SubmissionSet";
-import SocketSet from "../module/websocket/set/SocketSet";
-import UserSocketSet from "../module/websocket/set/UserSocketSet";
-import SubmissionOriginSet from "../module/websocket/set/SubmissionOriginSet";
-import BroadcastManager from "../manager/websocket/BroadcastManager";
-import UserSetCollector from "../module/websocket/UserSetCollector";
-import OnlineUserBroadcast from "../manager/websocket/OnlineUserBroadcast";
-import SolutionUserCollector from "../module/judger/SolutionUserCollector";
-import BuildSocketStatus, { buildSocket } from "../module/websocket/BuildSocketStatus";
-import ContestPagePushSet from "../module/websocket/set/ContestPagePushSet";
-import StatusSet from "../module/websocket/singleton/StatusSet";
-import InitExternalEnvironment from "../module/init/InitExternalEnvironment";
-import ProblemFromSpecialSubject from "../module/websocket/set/ProblemFromSpecialSubject";
-import SubmitUserInfo from "../module/websocket/set/SubmitUserInfo";
-import ProblemFromContest from "../module/websocket/set/ProblemFromContest";
-import SolutionContext from "../module/websocket/set/SolutionContext";
-import JudgeManager from "../manager/judge/JudgeManager";
-import whiteboard from "../module/websocket/whiteboard/SocketSet";
-import io from "../module/websocket/server/SocketServer";
-import { UserSocket } from "../module/websocket/Socket";
+const sessionMiddleware = require("../infrastructure/session/session").sessionMiddleware;
+import { ConfigManager } from "../infrastructure/config/config-manager";
+import OnlineUserSet from "../interfaces/websocket/set/OnlineUserSet";
+import NormalUserSet from "../interfaces/websocket/set/NormalUserSet";
+import AdminUserSet from "../interfaces/websocket/set/AdminUserSet";
+import SubmissionSet from "../interfaces/websocket/set/SubmissionSet";
+import SocketSet from "../interfaces/websocket/set/SocketSet";
+import UserSocketSet from "../interfaces/websocket/set/UserSocketSet";
+import SubmissionOriginSet from "../interfaces/websocket/set/SubmissionOriginSet";
+import BroadcastManager from "../interfaces/websocket/managers/BroadcastManager";
+import UserSetCollector from "../interfaces/websocket/UserSetCollector";
+import OnlineUserBroadcast from "../interfaces/websocket/managers/OnlineUserBroadcast";
+import SolutionUserCollector from "../application/judging/SolutionUserCollector";
+import BuildSocketStatus, { buildSocket } from "../interfaces/websocket/BuildSocketStatus";
+import ContestPagePushSet from "../interfaces/websocket/set/ContestPagePushSet";
+import StatusSet from "../interfaces/websocket/singleton/StatusSet";
+import InitExternalEnvironment from "../main/init/InitExternalEnvironment";
+import ProblemFromSpecialSubject from "../interfaces/websocket/set/ProblemFromSpecialSubject";
+import SubmitUserInfo from "../interfaces/websocket/set/SubmitUserInfo";
+import ProblemFromContest from "../interfaces/websocket/set/ProblemFromContest";
+import SolutionContext from "../interfaces/websocket/set/SolutionContext";
+import JudgeManager from "../infrastructure/persistence/judge/JudgeManager";
+import whiteboard from "../interfaces/websocket/whiteboard/SocketSet";
+import io from "../interfaces/websocket/server/SocketServer";
+import { UserSocket } from "../interfaces/websocket/Socket";
 InitExternalEnvironment.run();
 ConfigManager.useMySQLStore().initConfigMap().initSwitchMap();
-require("../module/init/express_loader")(app, io);
+require("../main/init/express_loader")(app, io);
 
 /**
  * 本地判题WebSocket服务器建立连接

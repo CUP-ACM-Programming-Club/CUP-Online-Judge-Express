@@ -26,17 +26,17 @@ RouterProto.use = function (this: any, ...args: any[]) {
 };
 
 const src = path.resolve(__dirname, "..", "src");
-const auth = require(path.join(src, "middleware/auth")).default;
-const admin = require(path.join(src, "middleware/admin"));
-const InitMiddleware = require(path.join(src, "middleware/init/InitMiddleware")).default;
+const auth = require(path.join(src, "interfaces/http/middleware/auth")).default;
+const admin = require(path.join(src, "interfaces/http/middleware/admin"));
+const InitMiddleware = require(path.join(src, "interfaces/http/middleware/init/InitMiddleware")).default;
 const knownGates = new Map<any, string>([
 	[auth, "auth"],
 	[admin, "admin"],
 	[InitMiddleware, "init-only"],
-	[require(path.join(src, "module/problemset/interceptor")), "switch:enable_problemset(admin bypass)"],
-	[require(path.join(src, "module/tutorial/interceptor")).default, "switch:enable_tutorial(admin bypass)"],
-	[require(path.join(src, "module/discuss/interceptor")), "switch:enable_discuss(admin bypass)"],
-	[require(path.join(src, "module/status/problem/SolveMapInterceptor")), "switch:enable_solvemap(admin bypass)"],
+	[require(path.join(src, "application/problemset/interceptor")), "switch:enable_problemset(admin bypass)"],
+	[require(path.join(src, "application/tutorial/interceptor")).default, "switch:enable_tutorial(admin bypass)"],
+	[require(path.join(src, "application/discuss/interceptor")), "switch:enable_discuss(admin bypass)"],
+	[require(path.join(src, "application/status/problem/SolveMapInterceptor")), "switch:enable_solvemap(admin bypass)"],
 ]);
 
 function gateName(fn: any): string {
@@ -50,7 +50,7 @@ function gateName(fn: any): string {
 }
 
 const app = express();
-require(path.join(src, "module/init/express_loader"))(app);
+require(path.join(src, "main/init/express_loader"))(app);
 
 interface Entry { method: string; path: string; gates: string[] }
 const entries: Entry[] = [];

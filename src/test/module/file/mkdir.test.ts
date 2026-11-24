@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
 describe("test mkdir", function () {
-    const { mkdir, mkdirAsync } = require("../../../module/file/mkdir");
+    const { mkdir, mkdirAsync } = require("../../../infrastructure/storage/file/mkdir");
     it('should make a dir', function (done) {
         mkdir("/tmp/testfilexxx", done);
     });

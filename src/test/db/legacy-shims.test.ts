@@ -3,7 +3,7 @@
  */
 import { expect } from "chai";
 import dayjs from "dayjs";
-import { createDb } from "../../db/core";
+import { createDb } from "../../infrastructure/db/core";
 
 const Module = require("module");
 const fs = require("fs");
@@ -59,15 +59,15 @@ function setup() {
     let mysqlQuery: any;
     const previousLoad = Module._load;
     Module._load = function (request: string) {
-        if (/(^|\/)db$/.test(request)) return dbModule;
+        if (request === ".." || /(^|\/)db$/.test(request)) return dbModule;
         if (request.includes("MySQLManager")) return fakeManager;
         if (request === "./mysql_query") return mysqlQuery;
         return previousLoad.apply(this, arguments as any);
     };
     let cacheQuery: any;
     try {
-        mysqlQuery = loadSource("../../module/mysql_query.ts");
-        cacheQuery = loadSource("../../module/mysql_cache.ts");
+        mysqlQuery = loadSource("../../infrastructure/db/legacy/mysql_query.ts");
+        cacheQuery = loadSource("../../infrastructure/db/legacy/mysql_cache.ts");
     } finally {
         Module._load = previousLoad;
     }

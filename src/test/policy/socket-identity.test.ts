@@ -3,7 +3,7 @@
  */
 import "../setup/mock-external";
 import { expect } from "chai";
-import userValidator from "../../module/websocket/UserValidatorMiddleware";
+import userValidator from "../../interfaces/websocket/UserValidatorMiddleware";
 
 function run(cookie: string | undefined, session: any): Promise<{ socket: any, err: any }> {
 	const socket: any = { handshake: { headers: { cookie } }, request: { session } };

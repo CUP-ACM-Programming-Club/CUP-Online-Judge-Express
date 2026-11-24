@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
-const mysqlFactory = require("../../../module/config/store/base/mysql").default || require("../../../module/config/store/base/mysql");
-const redisFactory = require("../../../module/config/store/base/redis").default || require("../../../module/config/store/base/redis");
-const loggerFactory = require("../../../module/config/log/base/logger-factory").default || require("../../../module/config/log/base/logger-factory");
+const mysqlFactory = require("../../../infrastructure/config/store/base/mysql").default || require("../../../infrastructure/config/store/base/mysql");
+const redisFactory = require("../../../infrastructure/config/store/base/redis").default || require("../../../infrastructure/config/store/base/redis");
+const loggerFactory = require("../../../infrastructure/config/log/base/logger-factory").default || require("../../../infrastructure/config/log/base/logger-factory");
 
 describe("config store and logger", function () {
 	it("should operate mysql store", async function () {
@@ -48,7 +48,7 @@ describe("config store and logger", function () {
 
 	it("should restore delete operation and ignore missing logs", async function () {
 		let removed = false;
-		const operations = require("../../../module/config/constants/operation");
+		const operations = require("../../../infrastructure/config/constants/operation");
 		const deleteLogger = loggerFactory({
 			create: () => Promise.resolve(),
 			findByPk: () => Promise.resolve({

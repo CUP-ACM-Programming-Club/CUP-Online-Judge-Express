@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import crypto from "crypto";
-import { redactRow, redactRows, gravatarEmailHash, isContestSensitivePrivileged, SUBMISSION_SENSITIVE_FIELDS } from "../../utils/privacy";
+import { redactRow, redactRows, gravatarEmailHash, isContestSensitivePrivileged, SUBMISSION_SENSITIVE_FIELDS } from "../../domain/policy/privacy";
 
 const md5 = (s: string) => crypto.createHash("md5").update(s).digest("hex");
 

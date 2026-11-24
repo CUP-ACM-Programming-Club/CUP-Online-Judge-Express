@@ -5,7 +5,7 @@
 const expect = require("chai").expect;
 
 describe("Status Runtime Error Tests", function () {
-    const router = require("../../routes/status/runtime_error");
+    const router = require("../../interfaces/http/routes/status/runtime_error");
 
     describe("路由导出验证", function () {
         it("should export a router", function () {
@@ -45,7 +45,7 @@ describe("Status Runtime Error Tests", function () {
 
     describe("模块导入验证", function () {
         it("should be importable", function () {
-            expect(() => require("../../routes/status/runtime_error")).to.not.throw();
+            expect(() => require("../../interfaces/http/routes/status/runtime_error")).to.not.throw();
         });
 
         it("should be usable as Express router", function () {

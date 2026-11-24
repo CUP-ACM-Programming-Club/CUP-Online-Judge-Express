@@ -19,8 +19,8 @@ const mysqlConfig = JSON.parse(process.env.EQUIV_MYSQL || "{}");
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mysql = require("mysql2");
-import { redactRows } from "../../utils/privacy";
-import const_variable from "../../module/const_name";
+import { redactRows } from "../../domain/policy/privacy";
+import const_variable from "../../domain/constants/const_name";
 
 const pool = mysql.createPool((global as any).config.mysql);
 function raw(sql: string, params: any[] = []): Promise<any> {
@@ -213,7 +213,7 @@ async function main() {
     if (process.argv.includes("--seed")) {
         await seed();
     }
-    const service = require("../../service/RanklistService").default;
+    const service = require("../../application/services/RanklistService").default;
     const monotone = await raw(`SELECT COUNT(*) AS n FROM (SELECT in_date, LAG(in_date) OVER (ORDER BY solution_id) AS prev FROM solution) t WHERE in_date < prev`);
     console.log(`solution 中 in_date 随 solution_id 递减的行数: ${monotone[0].n}（为 0 时并列次序与旧实现在任何执行计划下都一致）`);
     let diffs = 0, cases = 0;

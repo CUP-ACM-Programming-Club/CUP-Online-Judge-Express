@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
-const {Interceptor} = require("../../module/interceptor/middleware");
-const {error} = require("../../module/constants/state");
+const {Interceptor} = require("../../interfaces/http/interceptor/middleware");
+const {error} = require("../../domain/constants/state");
 
 describe("Interceptor middleware", function () {
 	it("should call res.json when validator fails", function () {

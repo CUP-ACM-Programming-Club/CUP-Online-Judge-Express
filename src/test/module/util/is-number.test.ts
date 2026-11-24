@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const isNumber = require("../../../module/util/isNumber").default || require("../../../module/util/isNumber");
+const isNumber = require("../../../shared/isNumber").default || require("../../../shared/isNumber");
 
 describe("isNumber", function () {
 	it("should detect numbers and numeric strings", function () {

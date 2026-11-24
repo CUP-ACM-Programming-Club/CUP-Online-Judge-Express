@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const {error, ok} = require("../../../module/constants/state");
+const {error, ok} = require("../../../domain/constants/state");
 
 describe("state constants", function () {
 	it("should build ok objects", function () {

@@ -10,10 +10,10 @@ const fakeDb = require("../mocks/fake-db");
 import app from "../../app";
 const request = require("supertest");
 const { expect } = require("chai");
-const util = require("../../module/util");
+const util = require("../../application/util");
 
 // 3. Mount Routes
-require("../../module/init/express_loader")(app);
+require("../../main/init/express_loader")(app);
 
 // 4. Globals
 global.contest_mode = false;

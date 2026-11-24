@@ -1,0 +1,41 @@
+const cache_query = require("../../../infrastructure/db/legacy/mysql_cache");
+const [error] = require("../../../domain/constants/const_var");
+import dayjs from "dayjs";
+import { Request, Response, NextFunction } from "express";
+import { isAdmin } from "../../../domain/policy/predicates";
+
+export = async (req: Request, res: Response, next: NextFunction) => {
+	if (isAdmin(req)) {
+		if (typeof next === "function") {
+			next();
+		} else {
+			return true;
+		}
+	} else {
+		if (!req.session!.auth) {
+			res.json(error.nologin);
+			return false;
+		}
+		const data = await cache_query("select bantime from ban_user where user_id = ?", [req.session!.user_id]);
+		if (!data || data.length === 0) {
+			if (typeof next === "function") {
+				next();
+			} else {
+				return true;
+			}
+		} else if (dayjs(data[0].bantime).isAfter(dayjs())) {
+			res.json(error.errorMaker({
+				ban: true,
+				expire: dayjs(data[0].bantime).format("YYYY-MM-DD HH:mm:ss")
+			}));
+			req.session!.destroy(() => { });
+			return false;
+		} else {
+			if (typeof next === "function") {
+				next();
+			} else {
+				return true;
+			}
+		}
+	}
+};

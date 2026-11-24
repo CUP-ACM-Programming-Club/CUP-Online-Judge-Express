@@ -52,7 +52,7 @@ describe("ProblemManageService Tests", function () {
             }
             if (request === "bluebird") return bluebirdStub;
             if (request === "rimraf") return () => { }; // mock rimraf function
-            if (request.endsWith("util/base64Image")) return { dataUriToImageFile: dataUriToImageFileStub };
+            if (request.endsWith("storage/base64Image")) return { dataUriToImageFile: dataUriToImageFileStub };
             if (request === "jschardet") return { detect: () => ({ encoding: "utf8" }) };
             if (request === "iconv-lite") return { decode: (buf: any) => buf.toString() };
             if (request === "strip-bom") return (str: any) => str;
@@ -60,8 +60,8 @@ describe("ProblemManageService Tests", function () {
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../service/ProblemManageService")];
-        ProblemManageService = require("../../service/ProblemManageService").default;
+        delete require.cache[require.resolve("../../application/services/ProblemManageService")];
+        ProblemManageService = require("../../application/services/ProblemManageService").default;
     });
 
     afterEach(function () {

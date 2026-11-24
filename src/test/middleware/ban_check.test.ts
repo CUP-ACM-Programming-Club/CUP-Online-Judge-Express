@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 global.unit_test = "autotest";
 
 async function removeAll() {
@@ -9,18 +9,18 @@ async function removeAll() {
 }
 
 function afterAll() {
-    require("../../module/mysql_cache").pool.end();
-    require("../../module/mysql_query").pool.end();
-    if (typeof require("../../module/redis").quit === "function") {
-        require("../../module/redis").quit();
+    require("../../infrastructure/db/legacy/mysql_cache").pool.end();
+    require("../../infrastructure/db/legacy/mysql_query").pool.end();
+    if (typeof require("../../infrastructure/redis/redis").quit === "function") {
+        require("../../infrastructure/redis/redis").quit();
     }
 }
 
 describe("test ban_check", function () {
-    const ban_check = require("../../middleware/ban_check");
+    const ban_check = require("../../interfaces/http/middleware/ban_check");
     before(async function () {
         await removeAll();
-        const query = require("../../module/mysql_query");
+        const query = require("../../infrastructure/db/legacy/mysql_query");
         await query("insert into privilege (user_id,rightstr)values(?,?)",
             ["test_name", "administrator"]);
         await query("insert into privilege (user_id,rightstr)values(?,?)",
@@ -47,7 +47,7 @@ describe("test ban_check", function () {
     it('should return nologin while not login', function (done) {
         ban_check({session: {auth: false, isadmin: false}}, {
             json: function (data) {
-                expect(data).to.deep.equal(require("../../module/const_var")[0].nologin);
+                expect(data).to.deep.equal(require("../../domain/constants/const_var")[0].nologin);
                 done();
             }
         }, () => {

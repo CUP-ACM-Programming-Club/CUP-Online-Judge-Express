@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const getIP = require("../../module/getIP");
+const getIP = require("../../interfaces/http/getIP");
 describe("getIP", function(){
 	it("should return IP address from x-forwarded-for", function () {
 		const req = {

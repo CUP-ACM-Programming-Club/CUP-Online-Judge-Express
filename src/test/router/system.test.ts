@@ -1,13 +1,13 @@
 const expect = require("chai").expect;
 const request = require("supertest");
-const {error} = require("../../module/constants/state");
+const {error} = require("../../domain/constants/state");
 
 describe("test system router", function () {
     let server;
     server = require("../../app").default || require("../../app");
-    require("../../module/init/build_env")(true);
-    require("../../module/init/express_loader")(server);
-    const query = require("../../module/mysql_cache");
+    require("../../main/init/build_env")(true);
+    require("../../main/init/express_loader")(server);
+    const query = require("../../infrastructure/db/legacy/mysql_cache");
     before(function (done) {
         query("insert into users (user_id,password) values(?,?)",
             ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"])

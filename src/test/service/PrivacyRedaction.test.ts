@@ -35,19 +35,19 @@ describe("StatusService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return queryStub;
-            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return assistantStub;
             if (request.includes("const_name")) return {};
             if (request.includes("graph_data_optimizer")) return { getGraphDataWithCache: sinon.stub(), getGraphLabel: sinon.stub(), TIME_GRANULARITY: {} };
             return previousLoad.apply(this, arguments);
         };
-        delete require.cache[require.resolve("../../service/StatusService")];
-        service = new (require("../../service/StatusService").StatusService)();
+        delete require.cache[require.resolve("../../application/services/StatusService")];
+        service = new (require("../../application/services/StatusService").StatusService)();
     });
 
     afterEach(function () {
         Module._load = previousLoad;
-        delete require.cache[require.resolve("../../service/StatusService")];
+        delete require.cache[require.resolve("../../application/services/StatusService")];
         sinon.restore();
     });
 
@@ -116,7 +116,7 @@ describe("StatusService privacy", function () {
 });
 
 describe("ScoreboardService.redactScoreboard", function () {
-    const ScoreboardService = require("../../service/ScoreboardService").default;
+    const ScoreboardService = require("../../application/services/ScoreboardService").default;
     const board = () => ({
         status: "OK",
         total: 2,
@@ -161,23 +161,23 @@ describe("scoreboard route privacy", function () {
             users: []
         }));
         assistant = sinon.stub().resolves(false);
-        const realScoreboard = require("../../service/ScoreboardService").default;
+        const realScoreboard = require("../../application/services/ScoreboardService").default;
         previousLoad = Module._load;
         Module._load = function (request: string) {
-            if (request.endsWith("service/ScoreboardService")) {
+            if (request.endsWith("services/ScoreboardService")) {
                 return { __esModule: true, default: { getScoreboard, redactScoreboard: realScoreboard.redactScoreboard.bind(realScoreboard), clearScoreboardCache: sinon.stub() } };
             }
-            if (request.endsWith("service/ContestService")) return { __esModule: true, default: { checkContestAccess: sinon.stub().resolves() } };
+            if (request.endsWith("services/ContestService")) return { __esModule: true, default: { checkContestAccess: sinon.stub().resolves() } };
             if (request.endsWith("contest/ContestAssistantManager")) return { __esModule: true, default: { userIsContestAssistant: assistant } };
             return previousLoad.apply(this, arguments);
         };
-        delete require.cache[require.resolve("../../routes/scoreboard")];
-        router = require("../../routes/scoreboard")[2];
+        delete require.cache[require.resolve("../../interfaces/http/routes/scoreboard")];
+        router = require("../../interfaces/http/routes/scoreboard")[2];
     });
 
     afterEach(function () {
         Module._load = previousLoad;
-        delete require.cache[require.resolve("../../routes/scoreboard")];
+        delete require.cache[require.resolve("../../interfaces/http/routes/scoreboard")];
         sinon.restore();
     });
 
@@ -224,16 +224,16 @@ describe("RanklistService privacy", function () {
         previousLoad = Module._load;
         Module._load = function (request: string) {
             if (request.includes("mysql_cache")) return { __esModule: true, default: queryStub };
-            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             return previousLoad.apply(this, arguments);
         };
-        delete require.cache[require.resolve("../../service/RanklistService")];
-        service = require("../../service/RanklistService").default;
+        delete require.cache[require.resolve("../../application/services/RanklistService")];
+        service = require("../../application/services/RanklistService").default;
     });
 
     afterEach(function () {
         Module._load = previousLoad;
-        delete require.cache[require.resolve("../../service/RanklistService")];
+        delete require.cache[require.resolve("../../application/services/RanklistService")];
         sinon.restore();
     });
 

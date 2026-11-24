@@ -1,0 +1,8 @@
+import SelfInfoManager from "../../../../infrastructure/persistence/user/SelfInfoManager";
+import express from "express";
+const router = express.Router();
+router.get("/", (req, res) => {
+	res.json(SelfInfoManager.getSelfInfoByRequest(req));
+});
+
+export default router;

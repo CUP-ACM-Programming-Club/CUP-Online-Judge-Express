@@ -6,7 +6,7 @@
 const expect = require("chai").expect;
 
 describe("User Submit Stat Tests", function () {
-    const module = require("../../routes/user/submit_stat");
+    const module = require("../../interfaces/http/routes/user/submit_stat");
     const router = module.default;
 
     describe("模块导出验证", function () {

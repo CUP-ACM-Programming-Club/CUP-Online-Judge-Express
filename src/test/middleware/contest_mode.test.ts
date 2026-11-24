@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
 describe("contest mode", function() {
-	const contest_mode = require("../../middleware/contest_mode");
+	const contest_mode = require("../../interfaces/http/middleware/contest_mode");
 	it("should return next if user is admin", async function () {
 		const req = {
 			session:{
@@ -30,6 +30,6 @@ describe("contest mode", function() {
 		global.contest_mode = undefined;
 	});
 	after(function(){
-		require("../../module/mysql_cache").pool.end();
+		require("../../infrastructure/db/legacy/mysql_cache").pool.end();
 	})
 });

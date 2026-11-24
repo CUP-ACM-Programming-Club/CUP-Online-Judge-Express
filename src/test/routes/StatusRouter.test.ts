@@ -66,13 +66,13 @@ describe("Status Router Legacy Routes", function () {
         });
 
         // Require the service (instance)
-        const StatusServiceInstance = require("../../service/StatusService").default;
+        const StatusServiceInstance = require("../../application/services/StatusService").default;
 
         // Stub the method on the instance
         const getStatusListStub = sinon.stub(StatusServiceInstance, "getStatusList").resolves({ result: [], total: 0 });
         statusServiceStub = { getStatusList: getStatusListStub };
 
-        const routeExport = require("../../routes/status");
+        const routeExport = require("../../interfaces/http/routes/status");
 
         // Setup Express
         app = express();

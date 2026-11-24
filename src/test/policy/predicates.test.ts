@@ -1,11 +1,11 @@
 import "../setup/mock-external";
 import { expect } from "chai";
 import dayjs from "dayjs";
-import * as policy from "../../policy";
-import HttpError from "../../module/util/HttpError";
+import * as policy from "../../interfaces/http/policy";
+import HttpError from "../../domain/errors/HttpError";
 
 const sinon = require("sinon");
-const ContestAssistantManager = require("../../manager/contest/ContestAssistantManager").default;
+const ContestAssistantManager = require("../../infrastructure/persistence/contest/ContestAssistantManager").default;
 
 function req(session: any) {
 	return { session } as any;
@@ -169,7 +169,7 @@ describe("policy 谓词", function () {
 		});
 
 		it("requireLogin 就是 auth 中间件", function () {
-			expect(policy.requireLogin).to.equal(require("../../middleware/auth").default);
+			expect(policy.requireLogin).to.equal(require("../../interfaces/http/middleware/auth").default);
 		});
 	});
 });

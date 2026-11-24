@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const contestCache = require("../../../module/contest/ContestCachePool");
+const contestCache = require("../../../application/contest/ContestCachePool");
 
 describe("ContestCachePool", function () {
 	it("should set and get cached value", async function () {

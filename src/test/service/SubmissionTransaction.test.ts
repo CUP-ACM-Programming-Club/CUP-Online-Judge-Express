@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
-import { openTransaction } from "../../manager/mysql/transaction";
+import { openTransaction } from "../../infrastructure/db/mysql/transaction";
 
 /**
  * 提交路径的事务语义：用真实 openTransaction + 假连接，断言
@@ -77,14 +77,14 @@ describe("SubmissionService submit transaction", function () {
             if (request.includes("getIP")) return () => "127.0.0.1";
             return previousLoad.apply(this, arguments);
         };
-        delete require.cache[require.resolve("../../service/SubmissionService")];
-        const ServiceModule = require("../../service/SubmissionService");
+        delete require.cache[require.resolve("../../application/services/SubmissionService")];
+        const ServiceModule = require("../../application/services/SubmissionService");
         service = new ServiceModule.SubmissionService();
     });
 
     afterEach(function () {
         Module._load = previousLoad;
-        delete require.cache[require.resolve("../../service/SubmissionService")];
+        delete require.cache[require.resolve("../../application/services/SubmissionService")];
         sinon.restore();
     });
 

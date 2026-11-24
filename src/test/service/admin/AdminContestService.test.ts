@@ -61,12 +61,12 @@ describe("AdminContestService Tests", function () {
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
             if (request.includes("mysql_query")) return queryStub;
             if (request.includes("MySQLManager")) return { MySQLManager: mysqlManagerStub };
-            if (request.includes("module/util/isNumber")) {
+            if (request.includes("shared/isNumber")) {
                 const fn = (val: any) => !isNaN(val);
                 (fn as any).default = fn;
                 return fn;
             }
-            if (request.endsWith("module/util")) return utilStub; // strict matching to avoid matching isNumber if path overlaps
+            if (/(^|\/)util$/.test(request)) return utilStub; // strict matching to avoid matching isNumber if path overlaps
             if (request.includes("ProblemSetCachePool")) return problemSetCacheStub;
             if (request.includes("ContestCachePool")) return contestCacheStub;
             if (request.includes("config-manager")) return { ConfigManager: configManagerStub };
@@ -75,8 +75,8 @@ describe("AdminContestService Tests", function () {
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../../service/admin/AdminContestService")];
-        AdminContestService = require("../../../service/admin/AdminContestService").default;
+        delete require.cache[require.resolve("../../../application/services/admin/AdminContestService")];
+        AdminContestService = require("../../../application/services/admin/AdminContestService").default;
     });
 
     afterEach(function () {

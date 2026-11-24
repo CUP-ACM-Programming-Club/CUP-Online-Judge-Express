@@ -22,14 +22,14 @@ describe("AdminUserService Tests", function () {
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
             if (request.includes("mysql_query")) return queryStub;
             // module/util import
-            if (request.endsWith("module/util")) return utilStub;
+            if (/(^|\/)util$/.test(request)) return utilStub;
 
             return previousLoad.apply(this, arguments);
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../../service/admin/AdminUserService")];
-        AdminUserService = require("../../../service/admin/AdminUserService").default;
+        delete require.cache[require.resolve("../../../application/services/admin/AdminUserService")];
+        AdminUserService = require("../../../application/services/admin/AdminUserService").default;
     });
 
     afterEach(function () {

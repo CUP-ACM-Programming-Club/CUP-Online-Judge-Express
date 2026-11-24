@@ -232,7 +232,7 @@ function buildScenarios(): Scenario[] {
 export async function runRankScenario(opt: any, viewer: any, data: RankData, log: QueryLog[]) {
     const restore = interceptQueryLayer(makeRankEngine(data, log));
     try {
-        const service = freshRequire("../../service/RanklistService").default;
+        const service = freshRequire("../../application/services/RanklistService").default;
         // routes/ranklist 把 invalidParams 以外的任何异常都返回 error.database，所以只记录是否抛错
         return await settle(() => service.getRanklist(Object.assign({}, opt), viewer), false);
     } finally {

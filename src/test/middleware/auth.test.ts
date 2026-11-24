@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 global.unit_test = "autotest";
 
 async function removeAll() {
@@ -7,18 +7,18 @@ async function removeAll() {
 }
 
 function afterAll() {
-    require("../../module/mysql_cache").pool.end();
-    require("../../module/mysql_query").pool.end();
-    if (typeof require("../../module/redis").quit === "function") {
-        require("../../module/redis").quit();
+    require("../../infrastructure/db/legacy/mysql_cache").pool.end();
+    require("../../infrastructure/db/legacy/mysql_query").pool.end();
+    if (typeof require("../../infrastructure/redis/redis").quit === "function") {
+        require("../../infrastructure/redis/redis").quit();
     }
 }
 
 describe("test auth", function () {
-    const auth = require("../../middleware/auth").default;
+    const auth = require("../../interfaces/http/middleware/auth").default;
     before(async function () {
         await removeAll();
-        const query = require("../../module/mysql_query");
+        const query = require("../../infrastructure/db/legacy/mysql_query");
         await query("insert into privilege (user_id,rightstr)values(?,?)",
             ["test_name", "administrator"]);
         await query("insert into privilege (user_id,rightstr)values(?,?)",
@@ -120,7 +120,7 @@ describe("test auth", function () {
     });
 
     it("should refresh session when already authenticated", function (done) {
-        const UpdatePool = require("../../module/user/LazyPrivilegeUpdatePool");
+        const UpdatePool = require("../../application/user/LazyPrivilegeUpdatePool");
         UpdatePool.addToUpdate("test_name");
         let req = {
             session: {

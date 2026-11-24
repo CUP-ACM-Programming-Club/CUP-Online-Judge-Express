@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const ContestAssistantManager = require("../../../manager/contest/ContestAssistantManager").default || require("../../../manager/contest/ContestAssistantManager");
+const ContestAssistantManager = require("../../../infrastructure/persistence/contest/ContestAssistantManager").default || require("../../../infrastructure/persistence/contest/ContestAssistantManager");
 const fakeDb = require("../../mocks/fake-db");
 
 describe("ContestAssistantManager", function () {

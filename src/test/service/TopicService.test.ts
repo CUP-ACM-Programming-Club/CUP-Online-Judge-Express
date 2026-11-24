@@ -29,8 +29,8 @@ describe("TopicService Tests", function () {
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../service/TopicService")];
-        TopicService = require("../../service/TopicService").default;
+        delete require.cache[require.resolve("../../application/services/TopicService")];
+        TopicService = require("../../application/services/TopicService").default;
     });
 
     afterEach(function () {

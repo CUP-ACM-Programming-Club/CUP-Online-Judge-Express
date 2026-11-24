@@ -5,7 +5,7 @@ import { expect } from "chai";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { imageFileToDataUri, dataUriToImageFile } from "../../module/util/base64Image";
+import { imageFileToDataUri, dataUriToImageFile } from "../../infrastructure/storage/base64Image";
 
 describe("base64Image (base64-img replacement)", function () {
     let dir: string;

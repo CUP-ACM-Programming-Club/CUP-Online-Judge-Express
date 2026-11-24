@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const SegmentLock = require("../../../module/common/SegmentLock").default;
+const SegmentLock = require("../../../shared/SegmentLock").default;
 describe("SegmentLock tester", function () {
     it("should release all lock", async function () {
         const lock = new SegmentLock();

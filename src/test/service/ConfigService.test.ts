@@ -1,6 +1,6 @@
 
 import { expect } from "chai";
-import { ConfigService } from "../../service/ConfigService";
+import { ConfigService } from "../../application/services/ConfigService";
 
 describe("ConfigService Tests", function () {
     let configService: ConfigService;

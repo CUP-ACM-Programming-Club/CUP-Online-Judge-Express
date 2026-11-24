@@ -6,8 +6,8 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
-import { StatusService } from "../../service/StatusService";
-import { JudgeResult } from "../../enums/JudgeResult";
+import { StatusService } from "../../application/services/StatusService";
+import { JudgeResult } from "../../domain/enums/JudgeResult";
 
 // Needs to be compatible with how the service imports mysql_cache (require)
 // But since we are testing the class instance which might have already imported it...
@@ -52,7 +52,7 @@ describe("Status Service Tests", function () {
         Module._load = function (request: any, parent: any, isMain: any) {
             if (request.includes("mysql_cache")) return queryStub;
             // StatusService 现在通过 src/db 的 cachedQuery 访问数据库
-            if (request === "../db") return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
+            if (request.endsWith("infrastructure/db")) return { cachedQuery: (sql: string, params: any[]) => queryStub(sql, params), LEGACY_CACHE_TTL_MS: 2000 };
             if (request.includes("ContestAssistantManager")) return contestAssistantStub;
             if (request.includes("const_name")) return {}; // mock const_name
             if (request.includes("graph_data_optimizer")) return optimizerStub;
@@ -60,8 +60,8 @@ describe("Status Service Tests", function () {
         };
 
         // 3. Clear cache and re-require the service
-        delete require.cache[require.resolve("../../service/StatusService")];
-        const ServiceModule = require("../../service/StatusService");
+        delete require.cache[require.resolve("../../application/services/StatusService")];
+        const ServiceModule = require("../../application/services/StatusService");
         service = new ServiceModule.StatusService();
     });
 

@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const collector = require("../../../module/error/collector");
+const collector = require("../../../application/error/collector");
 
 describe("ErrorCollector", function () {
 	it("should store and return errors", function () {

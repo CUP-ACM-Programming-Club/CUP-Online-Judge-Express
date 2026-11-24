@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { resolveHttpWorkers } from "../../module/init/http_workers";
+import { resolveHttpWorkers } from "../../main/init/http_workers";
 
 describe("resolveHttpWorkers", function () {
     it("defaults to 8 when neither env nor config is set", function () {

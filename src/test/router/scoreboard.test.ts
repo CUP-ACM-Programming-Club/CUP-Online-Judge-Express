@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 const sinon = require("sinon");
 
 async function removeAll() {
@@ -11,9 +11,9 @@ async function removeAll() {
 }
 
 function afterAll() {
-    require("../../module/mysql_cache").pool.end();
-    require("../../module/mysql_query").pool.end();
-    require("../../module/redis").quit();
+    require("../../infrastructure/db/legacy/mysql_cache").pool.end();
+    require("../../infrastructure/db/legacy/mysql_query").pool.end();
+    require("../../infrastructure/redis/redis").quit();
 }
 
 describe("test scoreboard", function () {
@@ -22,13 +22,13 @@ describe("test scoreboard", function () {
     let getLineBreakInfoStub;
 
     server = require("../../app").default || require("../../app");
-    require("../../module/init/build_env")(true);
-    require("../../module/init/express_loader")(server);
+    require("../../main/init/build_env")(true);
+    require("../../main/init/express_loader")(server);
     const request = require("supertest").agent(server);
 
     before(async function () {
         // Mock ScoreboardService.getScoreboard 来避免 Redis 依赖
-        const ScoreboardService = require("../../service/ScoreboardService").default;
+        const ScoreboardService = require("../../application/services/ScoreboardService").default;
         getScoreboardStub = sinon.stub(ScoreboardService, "getScoreboard");
         getScoreboardStub.resolves({
             status: "OK",

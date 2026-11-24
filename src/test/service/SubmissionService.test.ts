@@ -2,8 +2,8 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
-import { SubmissionService } from "../../service/SubmissionService";
-import { SubmissionType } from "../../enums/SubmissionEnums";
+import { SubmissionService } from "../../application/services/SubmissionService";
+import { SubmissionType } from "../../domain/enums/SubmissionEnums";
 
 describe("Submission Service Tests", function () {
     let service: SubmissionService;
@@ -65,8 +65,8 @@ describe("Submission Service Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        delete require.cache[require.resolve("../../service/SubmissionService")];
-        const ServiceModule = require("../../service/SubmissionService");
+        delete require.cache[require.resolve("../../application/services/SubmissionService")];
+        const ServiceModule = require("../../application/services/SubmissionService");
         service = new ServiceModule.SubmissionService();
     });
 

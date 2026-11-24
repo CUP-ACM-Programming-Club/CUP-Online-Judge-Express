@@ -5,7 +5,7 @@
 const expect = require("chai").expect;
 
 describe("User Lost Tests", function () {
-    const module = require("../../routes/user/lost");
+    const module = require("../../interfaces/http/routes/user/lost");
     const router = module.default;
     describe("模块导出验证", function () {
         it("should export router as default", function () {

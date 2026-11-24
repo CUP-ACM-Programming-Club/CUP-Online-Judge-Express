@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
 
 describe("detect classroom", function () {
-	const detectClassroom = require("../../module/detect_classroom");
+	const detectClassroom = require("../../application/detect_classroom");
 	it('should return null while string does not contain dot', function () {
 		expect(detectClassroom("1111")).to.equal(null);
 	});

@@ -8,51 +8,51 @@ const expect = require("chai").expect;
 describe("Cache Helper Tests", function () {
     describe("模块导出验证", function () {
         it("should export withCache function", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
             expect(withCache).to.be.a('function');
         });
 
         it("should export clearCache function", function () {
-            const { clearCache } = require("../../utils/cache-helper");
+            const { clearCache } = require("../../infrastructure/cache/cache-helper");
             expect(clearCache).to.be.a('function');
         });
 
         it("should export clearCacheBatch function", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             expect(clearCacheBatch).to.be.a('function');
         });
 
         it("should export withConditionalCache function", function () {
-            const { withConditionalCache } = require("../../utils/cache-helper");
+            const { withConditionalCache } = require("../../infrastructure/cache/cache-helper");
             expect(withConditionalCache).to.be.a('function');
         });
     });
 
     describe("函数签名验证", function () {
         it("withCache should accept options and fetchFn", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
             expect(withCache.length).to.equal(2);
         });
 
         it("clearCache should accept key and optional name", function () {
-            const { clearCache } = require("../../utils/cache-helper");
+            const { clearCache } = require("../../infrastructure/cache/cache-helper");
             expect(clearCache.length).to.be.at.least(1);
         });
 
         it("clearCacheBatch should accept keys array and optional name", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             expect(clearCacheBatch.length).to.be.at.least(1);
         });
 
         it("withConditionalCache should accept options, fetchFn and shouldCache", function () {
-            const { withConditionalCache } = require("../../utils/cache-helper");
+            const { withConditionalCache } = require("../../infrastructure/cache/cache-helper");
             expect(withConditionalCache.length).to.equal(3);
         });
     });
 
     describe("返回值类型验证", function () {
         it("withCache should return a Promise", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
             const result = withCache(
                 { key: "test", ttl: 300 },
                 async () => ({ data: "test" })
@@ -61,19 +61,19 @@ describe("Cache Helper Tests", function () {
         });
 
         it("clearCache should return a Promise", function () {
-            const { clearCache } = require("../../utils/cache-helper");
+            const { clearCache } = require("../../infrastructure/cache/cache-helper");
             const result = clearCache("test:key");
             expect(result).to.be.a('promise');
         });
 
         it("clearCacheBatch should return a Promise", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             const result = clearCacheBatch(["key1", "key2"]);
             expect(result).to.be.a('promise');
         });
 
         it("withConditionalCache should return a Promise", function () {
-            const { withConditionalCache } = require("../../utils/cache-helper");
+            const { withConditionalCache } = require("../../infrastructure/cache/cache-helper");
             const result = withConditionalCache(
                 { key: "test", ttl: 300 },
                 async () => ({ data: "test" }),
@@ -85,7 +85,7 @@ describe("Cache Helper Tests", function () {
 
     describe("边界情况测试", function () {
         it("withCache should handle various TTL values", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
 
             // Short TTL
             expect(() => withCache({ key: "test", ttl: 1 }, async () => ({}))).to.not.throw();
@@ -95,17 +95,17 @@ describe("Cache Helper Tests", function () {
         });
 
         it("clearCacheBatch should handle empty array", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             expect(() => clearCacheBatch([])).to.not.throw();
         });
 
         it("clearCacheBatch should handle single key", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             expect(() => clearCacheBatch(["single:key"])).to.not.throw();
         });
 
         it("clearCacheBatch should handle many keys", function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             const keys = Array.from({ length: 100 }, (_, i) => `key:${i}`);
             expect(() => clearCacheBatch(keys)).to.not.throw();
         });
@@ -113,7 +113,7 @@ describe("Cache Helper Tests", function () {
 
     describe("withCache 参数验证", function () {
         it("should accept all cache options", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
 
             const options = {
                 key: "complex:key:123",
@@ -125,7 +125,7 @@ describe("Cache Helper Tests", function () {
         });
 
         it("should work without optional name", function () {
-            const { withCache } = require("../../utils/cache-helper");
+            const { withCache } = require("../../infrastructure/cache/cache-helper");
 
             const options = {
                 key: "simple:key",
@@ -138,7 +138,7 @@ describe("Cache Helper Tests", function () {
 
     describe("withConditionalCache 参数验证", function () {
         it("should accept boolean returning function", function () {
-            const { withConditionalCache } = require("../../utils/cache-helper");
+            const { withConditionalCache } = require("../../infrastructure/cache/cache-helper");
 
             const shouldCacheTrue = () => true;
             const shouldCacheFalse = () => false;
@@ -157,7 +157,7 @@ describe("Cache Helper Tests", function () {
         });
 
         it("should accept condition based on data", function () {
-            const { withConditionalCache } = require("../../utils/cache-helper");
+            const { withConditionalCache } = require("../../infrastructure/cache/cache-helper");
 
             const shouldCache = (data: any) => data && data.count > 10;
 
@@ -171,25 +171,25 @@ describe("Cache Helper Tests", function () {
 
     describe("函数调用兼容性", function () {
         it("clearCache should work with just key parameter", async function () {
-            const { clearCache } = require("../../utils/cache-helper");
+            const { clearCache } = require("../../infrastructure/cache/cache-helper");
             // Should not throw when called without name
             await clearCache("test:key");
         });
 
         it("clearCache should work with both parameters", async function () {
-            const { clearCache } = require("../../utils/cache-helper");
+            const { clearCache } = require("../../infrastructure/cache/cache-helper");
             // Should not throw when called with name
             await clearCache("test:key", "Test Cache");
         });
 
         it("clearCacheBatch should work with just keys", async function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             // Should not throw when called without name
             await clearCacheBatch(["key1", "key2"]);
         });
 
         it("clearCacheBatch should work with both parameters", async function () {
-            const { clearCacheBatch } = require("../../utils/cache-helper");
+            const { clearCacheBatch } = require("../../infrastructure/cache/cache-helper");
             // Should not throw when called with name
             await clearCacheBatch(["key1", "key2"], "Test Batch");
         });

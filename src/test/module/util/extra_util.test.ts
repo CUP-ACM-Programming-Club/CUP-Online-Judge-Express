@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const util = require("../../../module/util");
+const util = require("../../../application/util");
 const fakeDb = require("../../mocks/fake-db");
 
 describe("util extra", function () {

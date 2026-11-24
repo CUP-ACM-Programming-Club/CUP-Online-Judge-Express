@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import dayjs from "dayjs";
-import { createDb, cacheKeyOf } from "../../db/core";
-import { openTransaction } from "../../manager/mysql/transaction";
+import { createDb, cacheKeyOf } from "../../infrastructure/db/core";
+import { openTransaction } from "../../infrastructure/db/mysql/transaction";
 
 function fakeCache() {
     const store = new Map<string, { data: any, time: dayjs.Dayjs }>();

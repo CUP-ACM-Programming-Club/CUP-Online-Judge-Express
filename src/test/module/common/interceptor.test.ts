@@ -1,9 +1,9 @@
-import {ConfigInterceptor} from "../../../module/common/interceptor";
+import {ConfigInterceptor} from "../../../interfaces/http/interceptor/interceptor";
 const expect = require("chai").expect;
-const {ConfigManager} = require("../../../module/config/config-manager");
-const sequelize = require("../../../orm/instance/sequelize");
-const {error} = require("../../../module/constants/state");
-const {isAdministrator} = require("../../../module/account/privilege");
+const {ConfigManager} = require("../../../infrastructure/config/config-manager");
+const sequelize = require("../../../infrastructure/orm/instance/sequelize");
+const {error} = require("../../../domain/constants/state");
+const {isAdministrator} = require("../../../application/account/privilege");
 
 describe("ConfigManager Interceptor Factory", function () {
     it('should call next() when Switch is on', function (done) {
@@ -50,6 +50,6 @@ describe("ConfigManager Interceptor Factory", function () {
 
     after(async function() {
         sequelize.close();
-        require("../../../module/redis").quit();
+        require("../../../infrastructure/redis/redis").quit();
     });
 });

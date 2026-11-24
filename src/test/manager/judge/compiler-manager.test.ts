@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
 const fs = require("fs");
 const path = require("path");
-const CompilerManager = require("../../../manager/judge/CompilerManager").default || require("../../../manager/judge/CompilerManager");
+const CompilerManager = require("../../../infrastructure/persistence/judge/CompilerManager").default || require("../../../infrastructure/persistence/judge/CompilerManager");
 
 describe("CompilerManager", function () {
 	const compilePath = path.join(__dirname, "..", "..", "fixtures", "compile.json");

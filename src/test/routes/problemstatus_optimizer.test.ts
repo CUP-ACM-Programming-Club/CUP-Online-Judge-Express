@@ -6,7 +6,7 @@
 const expect = require("chai").expect;
 
 describe("ProblemStatus Optimizer Tests - With Pure Functions", function () {
-    const ProblemStatusService = require("../../service/ProblemStatusService").default;
+    const ProblemStatusService = require("../../application/services/ProblemStatusService").default;
 
     // Access private methods for testing
     const service: any = ProblemStatusService;
@@ -135,7 +135,7 @@ describe("ProblemStatus Optimizer Tests - With Pure Functions", function () {
         });
 
         it("should be importable from problemstatus.ts", function () {
-            const problemstatusModule = require("../../routes/problemstatus");
+            const problemstatusModule = require("../../interfaces/http/routes/problemstatus");
             expect(problemstatusModule).to.be.an('array');
             expect(problemstatusModule).to.have.property('clearProblemStatusCache');
         });

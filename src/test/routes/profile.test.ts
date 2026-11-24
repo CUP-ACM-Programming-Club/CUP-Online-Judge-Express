@@ -72,7 +72,7 @@ describe("Profile Route Tests (Full Coverage)", function () {
                 return checkPasswordStub;
             }
             if (request.includes("login_action")) return loginActionStub;
-            if (request.includes("module/util")) return utilStub;
+            if (/(^|\/)util$/.test(request)) return utilStub;
             if (request.includes("const_var")) return constVarStub;
             return previousLoad.apply(this, arguments);
         };
@@ -82,7 +82,7 @@ describe("Profile Route Tests (Full Coverage)", function () {
 
         // 4. Stub UserManager (Must happen after clearing cache if UserManager was loaded)
         // Ensure UserManager is fresh or we stub the singleton if it's already loaded
-        const UserManager = require("../../manager/user/UserManager").default;
+        const UserManager = require("../../infrastructure/persistence/user/UserManager").default;
 
         // Restore existing stubs if any
         if (UserManager.getUser.restore) UserManager.getUser.restore();
@@ -107,14 +107,14 @@ describe("Profile Route Tests (Full Coverage)", function () {
             }
         });
 
-        const profileModule = require("../../routes/user/update/profile");
+        const profileModule = require("../../interfaces/http/routes/user/update/profile");
         router = profileModule.default;
         handler = router.stack.find(layer => layer.route && layer.route.methods.post).route.stack[0].handle;
     });
 
     afterEach(function () {
         if (previousLoad) Module._load = previousLoad;
-        const UserManager = require("../../manager/user/UserManager").default;
+        const UserManager = require("../../infrastructure/persistence/user/UserManager").default;
         if (UserManager.getUser.restore) UserManager.getUser.restore();
         if (UserManager.updateUser.restore) UserManager.updateUser.restore();
         sinon.restore();

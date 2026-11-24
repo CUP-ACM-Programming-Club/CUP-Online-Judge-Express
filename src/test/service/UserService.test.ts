@@ -20,8 +20,8 @@ describe("UserService Tests", function () {
             return previousLoad.apply(this, arguments);
         };
 
-        delete require.cache[require.resolve("../../service/UserService")];
-        UserService = require("../../service/UserService").default;
+        delete require.cache[require.resolve("../../application/services/UserService")];
+        UserService = require("../../application/services/UserService").default;
     });
 
     afterEach(function () {

@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
-const PasswordManager = require("../../../manager/user/PasswordManager").default || require("../../../manager/user/PasswordManager");
-const util = require("../../../module/util");
+const PasswordManager = require("../../../infrastructure/persistence/user/PasswordManager").default || require("../../../infrastructure/persistence/user/PasswordManager");
+const util = require("../../../application/util");
 const crypto = require("crypto");
 
 describe("PasswordManager", function () {

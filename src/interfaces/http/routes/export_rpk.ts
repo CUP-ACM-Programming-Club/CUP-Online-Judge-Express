@@ -1,0 +1,179 @@
+/* eslint-disable no-console */
+const promise = require("bluebird");
+const fs = promise.promisifyAll(require("fs"));
+const router = require("express").Router();
+const path = require("path");
+const query = require("../../../infrastructure/db/legacy/mysql_cache");
+const suffix = require("../../../domain/constants/const_name").language_suffix.local;
+const zlib = require("zlib");
+const home_dir = path.join(global.config.judger.oj_home, "data");
+const middleWare = require("../middleware/admin");
+import auth from "../middleware/auth";
+
+const error_cb = {
+	status: "ERROR",
+	statement: "No such problem_id or contest_id"
+};
+
+const readDir = async (dir: any) => {
+	let _dir = {
+		input: [] as any[],
+		output: [] as any[],
+		spj: "",
+		prepend: [] as any[],
+		append: [] as any[],
+		solution: [] as any[]
+	};
+	const fileList = await fs.readdirAsync(dir);
+	fileList.forEach((name: string) => {
+		if (name.match(/\.in$/)) {
+			_dir.input.push(path.join(dir, name));
+		} else if (name.match(/\.out$/)) {
+			_dir.output.push(path.join(dir, name));
+		} else if (name.match(/^prepend/)) {
+			_dir.prepend.push(path.join(dir, name));
+		} else if (name.match(/^append/)) {
+			_dir.append.push(path.join(dir, name));
+		} else if (name.match(/^spj.[\s\S]+/)) {
+			_dir.spj = path.join(dir, name);
+		}
+	});
+	return _dir;
+};
+
+const readFile = async (file_list: any) => {
+	try {
+		return Promise.all(file_list.map(async (i: any) => {
+			if (typeof i === "string" && i.length > 0) {
+				return { name: path.basename(i), content: (await fs.readFileAsync(i)).toString("base64") };
+			}
+			return "";
+		}));
+	} catch (e) {
+		console.log(e);
+		return [];
+	}
+};
+
+async function prependAppendCodePacker(prefix: any, problem_id: any) {
+	return (await query("select * from prefile where problem_id = ?", [problem_id]))
+		.map((i: any) => {
+			return { name: `${prefix}.${suffix[i.type]}`, content: Buffer.from(i.code).toString("base64") };
+		});
+}
+
+const pack_problem = async (_problem_detail: any, problem_dir: any, problem_id: any) => {
+	const problem_details = {
+		title: _problem_detail.title,
+		time: _problem_detail.time_limit,
+		memory: _problem_detail.memory_limit,
+		label: _problem_detail.label ? _problem_detail.label.split(" ") : [],
+		description: _problem_detail.description,
+		input: _problem_detail.input,
+		output: _problem_detail.output,
+		sample_input: _problem_detail.sample_input,
+		sample_output: _problem_detail.sample_output,
+		hint: _problem_detail.hint,
+		input_files: [] as any[],
+		output_files: [] as any[],
+		prepend: [] as any[],
+		append: [] as any[],
+		spj: "",
+		solution: [] as any[],
+	};
+	const dirFileList = await readDir(problem_dir);
+	[problem_details.input_files, problem_details.output_files, problem_details.prepend, problem_details.append]
+		= await Promise.all([readFile(dirFileList.input), readFile(dirFileList.output), readFile(dirFileList.prepend), readFile(dirFileList.append)]);
+	problem_details.spj = (await readFile([dirFileList.spj]))[0] as any;
+	const [prepend_file_database, append_file_database] = await Promise.all([prependAppendCodePacker("prepend", problem_id), prependAppendCodePacker("append", problem_id)]);
+	problem_details.prepend.push(...prepend_file_database);
+	problem_details.append.push(...append_file_database);
+	return problem_details;
+};
+
+function packProblemObject(_solution: any, problem_details: any) {
+	if (_solution.length > 0) {
+		_solution = _solution[0];
+		problem_details.solution.push({
+			code: _solution.source,
+			language: _solution.language,
+			name: `solution.${suffix[_solution.language]}`
+		});
+	}
+}
+
+const send_file = (req: any, res: any, data: any, filename: any) => {
+	zlib.gzip(JSON.stringify(data), (err: any, result: any) => {
+		if (err) {
+			res.json(err);
+			return;
+		}
+		res.writeHead(200, {
+			"Content-Type": "application/rpk",
+			"Content-disposition": "attachment;filename=" + filename + ".rpk",
+			"Content-Length": result.length
+		});
+		res.end(Buffer.from(result, "binary"));
+	});
+};
+
+const pack_file = async (req: any, res: any, opt: any = {}) => {
+	if ((typeof opt.problem_id === "undefined" && typeof opt.contest_id === "undefined") || (isNaN(opt.problem_id) && isNaN(opt.contest_id))) {
+		res.json(error_cb);
+	} else {
+		if (typeof opt.problem_id !== "undefined" && !isNaN(opt.problem_id)) {
+			const problem_id = parseInt(opt.problem_id);
+			const problem_dir = path.join(home_dir, problem_id.toString());
+			let _problem_detail = await query("SELECT * FROM problem WHERE problem_id = ?", [problem_id]);
+			if (_problem_detail.length === 0) {
+				res.json(error_cb);
+				return;
+			}
+			let _solution = await query(`select * from (
+select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
+sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
+			const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
+			packProblemObject(_solution, problem_details);
+			send_file(req, res, [problem_details], opt.problem_id);
+		} else if (typeof opt.contest_id !== "undefined" && !isNaN(opt.contest_id)) {
+			const contest_id = parseInt(opt.contest_id);
+			const contest_detail = await query("SELECT * FROM contest_problem WHERE contest_id = ?", [contest_id]);
+			if (contest_detail.length === 0) {
+				res.json(error_cb);
+				return;
+			}
+			let result: any[] = [], len = contest_detail.length;
+			await Promise.all(contest_detail.map((i: any) => packHandler({ req, res }, { i, contest_id, result, len })));
+			send_file(req, res, result, `Contest ${contest_id}`);
+		}
+	}
+};
+
+async function packHandler(httpInstance: any, val: any = {}) {
+	let { res } = httpInstance, { i, result } = val;
+	const problem_id = i.problem_id;
+	const problem_dir = path.join(home_dir, problem_id.toString());
+	let _problem_detail = await query("SELECT * FROM problem WHERE problem_id = ?", [problem_id]);
+	if (_problem_detail.length === 0) {
+		res.json(error_cb);
+		return;
+	}
+	let _solution = await query(`select * from (
+select source_code_user.source,solution.problem_id,time,language from solution left join source_code_user on source_code_user.solution_id = solution.solution_id)
+sol where problem_id = ? order by sol.time limit 1`, [problem_id]);
+
+	const problem_details = await pack_problem(_problem_detail[0], problem_dir, problem_id);
+	packProblemObject(_solution, problem_details);
+	result.push(problem_details);
+}
+
+router.get("/", middleWare, (req: any, res: any) => {
+	const problem_id = req.query.problem_id;
+	const contest_id = req.query.contest_id;
+	pack_file(req, res, {
+		problem_id: problem_id,
+		contest_id: contest_id
+	});
+});
+
+export = ["/export", auth, router];

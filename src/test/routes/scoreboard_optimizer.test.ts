@@ -6,7 +6,7 @@
 const expect = require("chai").expect;
 
 describe("Scoreboard Optimizer Tests - With Pure Functions", function () {
-    const ScoreboardService = require("../../service/ScoreboardService").default;
+    const ScoreboardService = require("../../application/services/ScoreboardService").default;
 
     // Access private methods for testing
     const service: any = ScoreboardService;
@@ -188,7 +188,7 @@ describe("Scoreboard Optimizer Tests - With Pure Functions", function () {
         });
 
         it("should be importable from scoreboard.ts", function () {
-            const scoreboardModule = require("../../routes/scoreboard");
+            const scoreboardModule = require("../../interfaces/http/routes/scoreboard");
             expect(scoreboardModule).to.be.an('array');
             expect(scoreboardModule).to.have.property('clearScoreboardCache');
         });

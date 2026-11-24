@@ -5,7 +5,7 @@
 const expect = require("chai").expect;
 
 describe("Status Sim Tests", function () {
-    const router = require("../../routes/status/sim");
+    const router = require("../../interfaces/http/routes/status/sim");
 
     describe("路由导出验证", function () {
         it("should export a router", function () {
@@ -56,7 +56,7 @@ describe("Status Sim Tests", function () {
 
     describe("模块结构验证", function () {
         it("should be importable", function () {
-            expect(() => require("../../routes/status/sim")).to.not.throw();
+            expect(() => require("../../interfaces/http/routes/status/sim")).to.not.throw();
         });
 
         it("should use async route handlers", function () {

@@ -174,8 +174,8 @@ function buildApp() {
 	app.use(require("body-parser").json({ limit: "50mb" }));
 	app.use(require("body-parser").urlencoded({ limit: "50mb", extended: true }));
 	app.use(require("cookie-parser")());
-	app.use(require("../../module/session").sessionMiddleware);
-	require("../../module/init/express_loader")(app);
+	app.use(require("../../infrastructure/session/session").sessionMiddleware);
+	require("../../main/init/express_loader")(app);
 	return app;
 }
 
@@ -285,9 +285,9 @@ describe("权限矩阵（角色 × 接口）", function () {
 
 	before(async function () {
 		seed();
-		const ContestService = require("../../service/ContestService").default;
+		const ContestService = require("../../application/services/ContestService").default;
 		stubs.push(sinon.stub(ContestService, "getContestGeneralDetail").resolves({ title: "pm" }));
-		const ScoreboardService = require("../../service/ScoreboardService").default;
+		const ScoreboardService = require("../../application/services/ScoreboardService").default;
 		scoreboardStub = sinon.stub(ScoreboardService, "getScoreboard").callsFake(async () => ({
 			status: "OK",
 			data: [
@@ -298,16 +298,16 @@ describe("权限矩阵（角色 × 接口）", function () {
 		}));
 		stubs.push(scoreboardStub);
 		stubs.push(sinon.stub(ScoreboardService, "getLineBreakInfo").resolves([]));
-		const ProblemManageService = require("../../service/ProblemManageService").default;
+		const ProblemManageService = require("../../application/services/ProblemManageService").default;
 		stubs.push(sinon.stub(ProblemManageService, "updateProblem").resolves());
 		// 以下只替换数据读取（fake-db 无法解析的 SQL / ORM），权限判断仍走真实代码
-		const ProblemInfoManager = require("../../module/problem/ProblemInfoManager");
+		const ProblemInfoManager = require("../../infrastructure/persistence/problem/ProblemInfoManager");
 		stubs.push(sinon.stub(ProblemInfoManager.prototype, "find").callsFake(async function (this: any) {
 			const row = table("problem").find((p: any) => String(p.problem_id) === String(this.problemId));
 			return row ? { get: () => Object.assign({}, row) } : null;
 		}));
-		stubs.push(sinon.stub(require("../../service/UserService").default, "getUserProfile").resolves({}));
-		stubs.push(sinon.stub(require("../../service/TopicService").default, "getTopicDetail").resolves({}));
+		stubs.push(sinon.stub(require("../../application/services/UserService").default, "getUserProfile").resolves({}));
+		stubs.push(sinon.stub(require("../../application/services/TopicService").default, "getTopicDetail").resolves({}));
 		registerSqlEmulation();
 		for (const role of LOGGED_IN) {
 			await login(role);
@@ -437,7 +437,7 @@ describe("权限矩阵（角色 × 接口）", function () {
 		});
 
 		it("POST /admin/contest/assistant/remove：走移除助教（phase5 fix a，之前被 /:topicId 遮蔽）", async function () {
-			const ContestAssistantManager = require("../../manager/contest/ContestAssistantManager").default;
+			const ContestAssistantManager = require("../../infrastructure/persistence/contest/ContestAssistantManager").default;
 			const removeStub = sinon.stub(ContestAssistantManager, "removeContestAssistantByRequest").resolves({ status: "OK", data: "remove" });
 			const topicStub = sinon.stub(ContestAssistantManager, "setContestAssistantByTopicByRequest").resolves({ status: "OK", data: "topic" });
 			try {
@@ -487,7 +487,7 @@ describe("权限矩阵（角色 × 接口）", function () {
 		});
 
 		it("POST /admin/contest/edit 按 body.contest_id 判断", async function () {
-			const AdminContestService = require("../../service/admin/AdminContestService").default;
+			const AdminContestService = require("../../application/services/admin/AdminContestService").default;
 			const stub = sinon.stub(AdminContestService, "updateContest").resolves();
 			try {
 				await runCase({
@@ -555,7 +555,7 @@ describe("权限矩阵（角色 × 接口）", function () {
 		});
 
 		it("GET /scoreboard：门禁 + browserPrivilege + 他人 ip 可见性", async function () {
-			const ScoreboardService = require("../../service/ScoreboardService").default;
+			const ScoreboardService = require("../../application/services/ScoreboardService").default;
 			await runCase({
 				name: "scoreboard",
 				path: `/scoreboard/${C_PRIVATE}`,

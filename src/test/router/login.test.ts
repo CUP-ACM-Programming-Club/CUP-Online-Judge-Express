@@ -1,6 +1,6 @@
 const expect = require("chai").expect;
 const request = require("supertest");
-const [error, ok] = require("../../module/const_var");
+const [error, ok] = require("../../domain/constants/const_var");
 const signature = require("cookie-signature");
 
 function extractCaptchaText(svgText) {
@@ -59,17 +59,17 @@ function getCaptchaFromResponse(res) {
 }
 
 function afterAll() {
-    require("../../module/mysql_cache").pool.end();
-    require("../../module/mysql_query").pool.end();
-    require("../../module/redis").quit();
+    require("../../infrastructure/db/legacy/mysql_cache").pool.end();
+    require("../../infrastructure/db/legacy/mysql_query").pool.end();
+    require("../../infrastructure/redis/redis").quit();
 }
 
 describe("test login router", function () {
     let server;
     server = require("../../app").default || require("../../app");
-    require("../../module/init/build_env")(true);
-    require("../../module/init/express_loader")(server);
-    const query = require("../../module/mysql_cache");
+    require("../../main/init/build_env")(true);
+    require("../../main/init/express_loader")(server);
+    const query = require("../../infrastructure/db/legacy/mysql_cache");
     before(function () {
         query("insert into users (user_id,password) values(?,?)",
             ["test", "ZNs/zvia7mVswcknwoXWOiuNwJUyMDg1"]);
@@ -269,7 +269,7 @@ describe("test login router", function () {
     });
 
     it("should login with token", function (done) {
-        const memcache = require("../../module/memcached");
+        const memcache = require("../../infrastructure/cache/memcached");
         const originalGet = memcache.get;
         memcache.get = () => Promise.resolve("token123");
         const tokenPayload = Buffer.from(JSON.stringify({ user_id: "test", token: "token123" })).toString("base64");
@@ -357,7 +357,7 @@ describe("test login router", function () {
         // Let's try mocking req.session (but difficult with supertest).
 
         // Login first
-        const memcache = require("../../module/memcached");
+        const memcache = require("../../infrastructure/cache/memcached");
         const originalGet = memcache.get;
         memcache.get = () => Promise.resolve("token123");
         const tokenPayload = Buffer.from(JSON.stringify({ user_id: "test", token: "token123" })).toString("base64");
@@ -378,7 +378,7 @@ describe("test login router", function () {
                     .end(function (err2, res2) {
                         memcache.get = originalGet;
                         if (err2) return done(err2);
-                        expect(res2.body).to.deep.equal(require("../../module/const_var")[1].logined);
+                        expect(res2.body).to.deep.equal(require("../../domain/constants/const_var")[1].logined);
                         done();
                     });
             });
@@ -421,7 +421,7 @@ describe("test login router", function () {
     */
 
     it("should fail if memcached token does not match", function (done) {
-        const memcache = require("../../module/memcached");
+        const memcache = require("../../infrastructure/cache/memcached");
         const originalGet = memcache.get;
         memcache.get = () => Promise.resolve("different");
         const tokenPayload = Buffer.from(JSON.stringify({ user_id: "test", token: "token123" })).toString("base64");

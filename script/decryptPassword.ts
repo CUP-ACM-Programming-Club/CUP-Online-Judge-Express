@@ -1,4 +1,4 @@
-const cryptojs = require("../src/module/encrypt");
+const cryptojs = require("../src/shared/encrypt");
 
 function reverse(val: any) {
     if (typeof val !== "string")

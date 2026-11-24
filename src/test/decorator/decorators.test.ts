@@ -1,10 +1,10 @@
 const expect = require("chai").expect;
-const CachePool = require("../../module/common/CachePool").default || require("../../module/common/CachePool");
-const Cacheable = require("../../decorator/Cacheable").default || require("../../decorator/Cacheable");
-const Lock = require("../../decorator/Lock").default || require("../../decorator/Lock");
-const Timer = require("../../decorator/Timer").default || require("../../decorator/Timer");
-const ResponseLogger = require("../../decorator/ResponseLogger").default || require("../../decorator/ResponseLogger");
-const {ErrorHandlerFactory} = require("../../decorator/ErrorHandler");
+const CachePool = require("../../infrastructure/cache/CachePool").default || require("../../infrastructure/cache/CachePool");
+const Cacheable = require("../../infrastructure/cache/Cacheable").default || require("../../infrastructure/cache/Cacheable");
+const Lock = require("../../shared/decorators/Lock").default || require("../../shared/decorators/Lock");
+const Timer = require("../../shared/decorators/Timer").default || require("../../shared/decorators/Timer");
+const ResponseLogger = require("../../interfaces/http/decorators/ResponseLogger").default || require("../../interfaces/http/decorators/ResponseLogger");
+const {ErrorHandlerFactory} = require("../../interfaces/http/decorators/ErrorHandler");
 
 describe("decorators", function () {
 	it("Lock should acquire and release around method", async function () {

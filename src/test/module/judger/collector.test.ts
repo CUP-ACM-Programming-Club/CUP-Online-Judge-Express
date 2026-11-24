@@ -25,17 +25,17 @@ describe("UnjudgedSubmissionCollector", function () {
             if (request.includes("mysql/MySQLManager")) return { MySQLManager: { execQuery: queryStub, transaction: sinon.stub() } };
             if (request.includes("judger") && !request.includes("UnjudgedSubmissionCollector")) return { localJudger: {}, default: judgerStub };
             if (request.includes("config/config-manager")) return { ConfigManager: configStub };
-            if (request.includes("decorator/RetryAsync")) return { wait: sinon.stub().resolves() };
+            if (request.includes("decorators/RetryAsync")) return { wait: sinon.stub().resolves() };
             return previousLoad.apply(this, arguments);
         };
 
         // 3. Load
-        delete require.cache[require.resolve("../../../module/judger/UnjudgedSubmissionCollector")];
-        Collector = require("../../../module/judger/UnjudgedSubmissionCollector").default;
+        delete require.cache[require.resolve("../../../application/judging/UnjudgedSubmissionCollector")];
+        Collector = require("../../../application/judging/UnjudgedSubmissionCollector").default;
         console.log("Collector:", Collector);
         if (!Collector || typeof Collector.setJudger !== "function") {
             // Fallback if .default is not correct structure
-            const mod = require("../../../module/judger/UnjudgedSubmissionCollector");
+            const mod = require("../../../application/judging/UnjudgedSubmissionCollector");
             // console.log("Module:", mod);
             if (mod.setJudger) Collector = mod;
         }

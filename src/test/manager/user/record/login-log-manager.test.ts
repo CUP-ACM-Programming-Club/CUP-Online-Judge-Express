@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const LoginLogManager = require("../../../../manager/user/record/LoginLogManager").default || require("../../../../manager/user/record/LoginLogManager");
+const LoginLogManager = require("../../../../infrastructure/persistence/user/record/LoginLogManager").default || require("../../../../infrastructure/persistence/user/record/LoginLogManager");
 const fakeDb = require("../../../mocks/fake-db");
 
 describe("LoginLogManager", function () {

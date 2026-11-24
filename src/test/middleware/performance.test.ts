@@ -6,7 +6,7 @@ res.set = function(key, value) {
 };
 describe("performance middleware", function(){
 	it("should contain a header X-Execution-Time", function () {
-		const performance = require("../../middleware/http_header");
+		const performance = require("../../interfaces/http/middleware/http_header");
 		performance({}, res, ()=>{});
 		res.send();
 		expect(res["X-Execution-Time"]).to.be.a("string");
@@ -26,7 +26,7 @@ describe("performance middleware", function(){
 			}
 		}
 		cluster.worker = {id: 7};
-		const performance = require("../../middleware/http_header");
+		const performance = require("../../interfaces/http/middleware/http_header");
 		const localRes = {
 			send() {},
 			set(key, value) {

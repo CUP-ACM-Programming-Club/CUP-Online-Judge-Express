@@ -1,7 +1,7 @@
 const expect = require("chai").expect;
-const md5 = require("../../../module/util/md5").default || require("../../../module/util/md5");
-const parameterHash = require("../../../module/util/parameterHash").default || require("../../../module/util/parameterHash");
-const isNumber = require("../../../module/util/isNumber").default || require("../../../module/util/isNumber");
+const md5 = require("../../../shared/md5").default || require("../../../shared/md5");
+const parameterHash = require("../../../shared/parameterHash").default || require("../../../shared/parameterHash");
+const isNumber = require("../../../shared/isNumber").default || require("../../../shared/isNumber");
 
 describe("util hash helpers", function () {
 	it("should create md5 hash", function () {

@@ -1,0 +1,15 @@
+import {Request} from "express";
+import {error} from "../../../domain/constants/state";
+const checkCaptcha = require("../captcha_checker").checkCaptcha;
+export default function CaptchaChecker(requestPosition: number, captchaFrom: string) {
+    return function (target: any, propertyName: string, propertyDescriptor: PropertyDescriptor) {
+        const method = propertyDescriptor.value;
+        propertyDescriptor.value = function (...args: any[]) {
+            const request: Request = args[requestPosition];
+            if (!checkCaptcha(request, captchaFrom)) {
+                throw error.invalidCaptcha;
+            }
+            return method.apply(this, args);
+        }
+    }
+}

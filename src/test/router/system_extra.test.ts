@@ -2,7 +2,7 @@ const expect = require("chai").expect;
 const request = require("supertest");
 const path = require("path");
 const fs = require("fs");
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 
 describe("system router extra", function () {
 	let server;
@@ -11,8 +11,8 @@ describe("system router extra", function () {
 
 	before(async function () {
 		server = require("../../app").default || require("../../app");
-		require("../../module/init/build_env")(true);
-		require("../../module/init/express_loader")(server);
+		require("../../main/init/build_env")(true);
+		require("../../main/init/express_loader")(server);
 		fs.writeFileSync(compilePath, JSON.stringify({ 0: ["-O2"] }), "utf8");
 		global.config.etc = global.config.etc || {};
 		global.config.etc.compile_arguments = compilePath;
@@ -76,7 +76,7 @@ describe("system router extra", function () {
 	});
 
 	it("git / dependencies / devDependencies 对未登录与非管理员拒绝（phase5 fix b）", async function () {
-		const noprivilege = require("../../module/constants/state").error.noprivilege;
+		const noprivilege = require("../../domain/constants/state").error.noprivilege;
 		for (const ep of ["git", "dependencies", "devDependencies"]) {
 			const res = await request(server).get(`/system/config/version_control/${ep}`).expect(200);
 			expect(res.body).to.deep.equal(noprivilege);
@@ -87,7 +87,7 @@ describe("system router extra", function () {
 	});
 
 	it("should return error when version info fails", async function () {
-		const VersionManager = require("../../manager/system/VersionManager").default;
+		const VersionManager = require("../../infrastructure/persistence/system/VersionManager").default;
 		const originalVersion = Object.getOwnPropertyDescriptor(VersionManager, "version");
 
 		Object.defineProperty(VersionManager, "version", {
@@ -100,7 +100,7 @@ describe("system router extra", function () {
 			.expect(200)
 			.then(res => {
 				Object.defineProperty(VersionManager, "version", originalVersion);
-				expect(res.body).to.deep.equal(require("../../module/constants/state").error.internalError);
+				expect(res.body).to.deep.equal(require("../../domain/constants/state").error.internalError);
 			})
 			.catch(err => {
 				Object.defineProperty(VersionManager, "version", originalVersion);
@@ -109,7 +109,7 @@ describe("system router extra", function () {
 	});
 
 	it("should return error when git info fails", async function () {
-		const VersionManager = require("../../manager/system/VersionManager").default;
+		const VersionManager = require("../../infrastructure/persistence/system/VersionManager").default;
 		const originalGit = Object.getOwnPropertyDescriptor(VersionManager, "git");
 		Object.defineProperty(VersionManager, "git", {
 			get: () => { throw new Error("mock error"); },
@@ -120,7 +120,7 @@ describe("system router extra", function () {
 			.expect(200)
 			.then(res => {
 				Object.defineProperty(VersionManager, "git", originalGit);
-				expect(res.body).to.deep.equal(require("../../module/constants/state").error.internalError);
+				expect(res.body).to.deep.equal(require("../../domain/constants/state").error.internalError);
 			})
 			.catch(err => {
 				Object.defineProperty(VersionManager, "git", originalGit);
@@ -129,7 +129,7 @@ describe("system router extra", function () {
 	});
 
 	it("should return error when dependencies info fails", async function () {
-		const VersionManager = require("../../manager/system/VersionManager").default;
+		const VersionManager = require("../../infrastructure/persistence/system/VersionManager").default;
 		const originalDependencies = Object.getOwnPropertyDescriptor(VersionManager, "dependencies");
 		Object.defineProperty(VersionManager, "dependencies", {
 			get: () => { throw new Error("mock error"); },
@@ -140,7 +140,7 @@ describe("system router extra", function () {
 			.expect(200)
 			.then(res => {
 				Object.defineProperty(VersionManager, "dependencies", originalDependencies);
-				expect(res.body).to.deep.equal(require("../../module/constants/state").error.internalError);
+				expect(res.body).to.deep.equal(require("../../domain/constants/state").error.internalError);
 			})
 			.catch(err => {
 				Object.defineProperty(VersionManager, "dependencies", originalDependencies);
@@ -149,7 +149,7 @@ describe("system router extra", function () {
 	});
 
 	it("should return error when devDependencies info fails", async function () {
-		const VersionManager = require("../../manager/system/VersionManager").default;
+		const VersionManager = require("../../infrastructure/persistence/system/VersionManager").default;
 		const originalDevDependencies = Object.getOwnPropertyDescriptor(VersionManager, "devDependencies");
 		Object.defineProperty(VersionManager, "devDependencies", {
 			get: () => { throw new Error("mock error"); },
@@ -160,7 +160,7 @@ describe("system router extra", function () {
 			.expect(200)
 			.then(res => {
 				Object.defineProperty(VersionManager, "devDependencies", originalDevDependencies);
-				expect(res.body).to.deep.equal(require("../../module/constants/state").error.internalError);
+				expect(res.body).to.deep.equal(require("../../domain/constants/state").error.internalError);
 			})
 			.catch(err => {
 				Object.defineProperty(VersionManager, "devDependencies", originalDevDependencies);

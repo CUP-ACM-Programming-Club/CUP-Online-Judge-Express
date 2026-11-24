@@ -110,7 +110,7 @@ const noCache = {
 	removeAll() { }
 };
 const mockDb = (() => {
-	const { createDb } = require("../../db/core");
+	const { createDb } = require("../../infrastructure/db/core");
 	const db = createDb({
 		execQuery: (sql, params) => fakeDb.query(sql, params, undefined),
 		transaction: () => fakeDb.transaction(),
@@ -189,18 +189,18 @@ function registerOverride(filePath: string, mockValue: any) {
 	overrides.set(path.resolve(filePath), mockValue);
 }
 
-registerOverride(path.join(srcRoot, "module", "mysql_query.ts"), mockMysqlQuery);
-registerOverride(path.join(srcRoot, "module", "mysql_cache.ts"), mockMysqlCache);
-registerOverride(path.join(srcRoot, "manager", "mysql", "MySQLManager.ts"), { MySQLManager: mockMySQLManager });
-registerOverride(path.join(srcRoot, "db", "index.ts"), mockDb);
-registerOverride(path.join(srcRoot, "orm", "instance", "sequelize.ts"), mockSequelize);
-registerOverride(path.join(srcRoot, "orm", "ts-model", "index.ts"), modelProxy);
-registerOverride(path.join(srcRoot, "module", "memcached.ts"), mockMemcachedModule);
-registerOverride(path.join(srcRoot, "module", "init", "build_env.ts"), mockBuildEnv);
-registerOverride(path.join(srcRoot, "module", "redis.ts"), mockRedisModule);
-registerOverride(path.join(srcRoot, "module", "redis.ts"), mockRedisModule);
-registerOverride(path.join(srcRoot, "manager", "cache", "scheduler", "CacheScheduler.ts"), mockCacheScheduler);
-registerOverride(path.join(srcRoot, "manager", "user", "UserRegisterManager.ts"), {
+registerOverride(path.join(srcRoot, "infrastructure", "db", "legacy", "mysql_query.ts"), mockMysqlQuery);
+registerOverride(path.join(srcRoot, "infrastructure", "db", "legacy", "mysql_cache.ts"), mockMysqlCache);
+registerOverride(path.join(srcRoot, "infrastructure", "db", "mysql", "MySQLManager.ts"), { MySQLManager: mockMySQLManager });
+registerOverride(path.join(srcRoot, "infrastructure", "db", "index.ts"), mockDb);
+registerOverride(path.join(srcRoot, "infrastructure", "orm", "instance", "sequelize.ts"), mockSequelize);
+registerOverride(path.join(srcRoot, "infrastructure", "orm", "ts-model", "index.ts"), modelProxy);
+registerOverride(path.join(srcRoot, "infrastructure", "cache", "memcached.ts"), mockMemcachedModule);
+registerOverride(path.join(srcRoot, "main", "init", "build_env.ts"), mockBuildEnv);
+registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
+registerOverride(path.join(srcRoot, "infrastructure", "redis", "redis.ts"), mockRedisModule);
+registerOverride(path.join(srcRoot, "infrastructure", "cache", "manager", "scheduler", "CacheScheduler.ts"), mockCacheScheduler);
+registerOverride(path.join(srcRoot, "infrastructure", "persistence", "user", "UserRegisterManager.ts"), {
 	UserRegisterValidator: class {
 		async validate(payload: any) { }
 		async validateWithoutInviteCode(payload: any) { }
@@ -220,7 +220,7 @@ registerOverride(path.join(srcRoot, "manager", "user", "UserRegisterManager.ts")
 		registerUserRequest: () => Promise.resolve({ status: "OK" })
 	}
 });
-registerOverride(path.join(srcRoot, "manager", "init", "InitManager.ts"), {
+registerOverride(path.join(srcRoot, "main", "init", "manager", "InitManager.ts"), {
 	default: {
 		setInitFlag: () => { }
 	}

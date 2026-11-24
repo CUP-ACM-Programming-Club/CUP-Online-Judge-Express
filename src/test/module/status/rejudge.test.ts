@@ -39,9 +39,9 @@ describe("Rejudge Logic (update_solution_result)", function () {
 
         // 3. Load Module
         try {
-            delete require.cache[require.resolve("../../../module/status/update_solution_result")];
+            delete require.cache[require.resolve("../../../application/status/update_solution_result")];
         } catch (e) { }
-        rejudgeModule = require("../../../module/status/update_solution_result");
+        rejudgeModule = require("../../../application/status/update_solution_result");
     });
 
     afterEach(function () {

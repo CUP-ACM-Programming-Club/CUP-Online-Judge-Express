@@ -1,10 +1,10 @@
 const expect = require("chai").expect;
 
 describe("login action test", function () {
-    const login_action = require("../../module/login_action");
+    const login_action = require("../../application/auth/login_action");
 
     before(async function () {
-        const query = require("../../module/mysql_query");
+        const query = require("../../infrastructure/db/legacy/mysql_query");
         await query("insert into privilege (user_id,rightstr)values(?,?)",
             ["test_name", "administrator"]);
         await query("insert into privilege (user_id,rightstr)values(?,?)",
@@ -44,7 +44,7 @@ describe("login action test", function () {
     });
 
     after(async function () {
-        const query = require("../../module/mysql_query");
+        const query = require("../../infrastructure/db/legacy/mysql_query");
         await query("delete from privilege where user_id = ?", ["test_name"]);
         query.pool.end();
     })

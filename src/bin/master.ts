@@ -1,5 +1,5 @@
 import cluster from "cluster";
-import { resolveHttpWorkers } from "../module/init/http_workers";
+import { resolveHttpWorkers } from "../main/init/http_workers";
 
 let num_processes = 0;
 
@@ -31,13 +31,13 @@ async function bootStrap() {
         const workers: any[] = [];
         global.workers = workers;
         global.clusterMode = true;
-        require("../module/init/preinstall")();
-        require("../module/init/build_env")();
+        require("../main/init/preinstall")();
+        require("../main/init/build_env")();
         if (!!global.config.enable_cluster_transfer) {
-            require("../module/config/transfer/ClusterTransfer")();
+            require("../infrastructure/config/transfer/ClusterTransfer")();
         }
-        require("../module/config/cluster/hot-reload");
-        // await require("../module/init/init-mysql").default();
+        require("../infrastructure/config/cluster/hot-reload");
+        // await require("../main/init/init-mysql").default();
         const workerDecision = resolveHttpWorkers(process.env, global.config);
         num_processes = workerDecision.count;
         console.log(`HTTP workers: ${num_processes} (source: ${workerDecision.source}, cpus: ${require("os").cpus().length})`);

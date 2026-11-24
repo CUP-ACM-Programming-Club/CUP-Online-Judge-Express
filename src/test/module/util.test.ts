@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const util = require("../../module/util");
+const util = require("../../application/util");
 
 describe("util", function () {
 	it("should reverse strings and non-strings", function () {

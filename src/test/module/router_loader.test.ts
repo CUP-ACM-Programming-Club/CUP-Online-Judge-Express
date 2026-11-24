@@ -3,7 +3,7 @@ const path = require("path");
 
 describe("router_loader", function () {
 	it("should register routes twice and keep path when custom dir is provided", function () {
-		const routerLoader = require("../../module/router_loader");
+		const routerLoader = require("../../interfaces/http/router_loader");
 		const fixtureDir = path.join(__dirname, "..", "fixtures", "router_loader");
 		const validRouter = require(path.join(fixtureDir, "valid.ts"));
 		const calls = [];
@@ -21,7 +21,7 @@ describe("router_loader", function () {
 	});
 
 	it("should swallow router load errors", function () {
-		const routerLoader = require("../../module/router_loader");
+		const routerLoader = require("../../interfaces/http/router_loader");
 		const fixtureDir = path.join(__dirname, "..", "fixtures", "router_loader");
 		const originalError = console.error;
 		let errorCalls = 0;

@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const VersionManager = require("../../../manager/system/VersionManager").default || require("../../../manager/system/VersionManager");
+const VersionManager = require("../../../infrastructure/persistence/system/VersionManager").default || require("../../../infrastructure/persistence/system/VersionManager");
 
 describe("VersionManager", function () {
 	it("should expose version info", function () {

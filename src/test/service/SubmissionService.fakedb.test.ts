@@ -1,6 +1,6 @@
 require("../setup/mock-external");
 const expect = require("chai").expect;
-const query = require("../../module/mysql_cache");
+const query = require("../../infrastructure/db/legacy/mysql_cache");
 const table_name = ["solution", "source_code", "source_code_user"];
 const fakeDb = require("../mocks/fake-db");
 // 从已删除的 module/submitControl.test.ts 迁移而来：submitControl.ts 是 SubmissionService 的旧副本（已无引用）。
@@ -10,8 +10,8 @@ describe("SubmissionService.submit (fake-db, ported from submitControl)", functi
 
     before(async function () {
         // SubmissionService.test.ts 会用桩替换依赖后重新加载该模块，这里强制取一份真实依赖的实例
-        delete require.cache[require.resolve("../../service/SubmissionService")];
-        const service = require("../../service/SubmissionService").default;
+        delete require.cache[require.resolve("../../application/services/SubmissionService")];
+        const service = require("../../application/services/SubmissionService").default;
         submitControl = (req, data, cookie) => service.submit(req, data, cookie);
         await query("delete from problem where problem_id = 1000");
         await query("insert into problem (problem_id, defunct)values(?,?)", [1000, "N"]);
@@ -281,7 +281,7 @@ describe("SubmissionService.submit (fake-db, ported from submitControl)", functi
         await Promise.all(PromisifyQuery);
         await query("delete from privilege where user_id = ?", ["test_name"]);
         query.pool.end();
-        require("../../module/mysql_query").pool.end();
-        require("../../module/redis").quit();
+        require("../../infrastructure/db/legacy/mysql_query").pool.end();
+        require("../../infrastructure/redis/redis").quit();
     })
 });

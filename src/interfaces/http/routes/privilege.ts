@@ -1,0 +1,13 @@
+import express from "express";
+import { ok } from "../../../domain/constants/state";
+
+const router = express.Router();
+import auth from "../middleware/auth";
+
+router.get("/", (req, res) => {
+    res.json(ok.okMaker({
+        admin: req.session!.isadmin
+    }));
+});
+
+export = ["/privilege", auth, router];

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import sinon from "sinon";
 import Module from "module";
-import { ScoreboardInvalidator } from "../../../module/judger/recorder/ScoreboardInvalidator";
+import { ScoreboardInvalidator } from "../../../application/judging/recorder/ScoreboardInvalidator";
 
 function flush() {
     return new Promise(resolve => setImmediate(resolve));
@@ -102,13 +102,13 @@ describe("recorder.storeSubmission scoreboard invalidation", function () {
             if (request.includes("mysql_query") || request.includes("mysql_cache")) return queryStub;
             return previousLoad.apply(this, arguments);
         };
-        delete require.cache[require.resolve("../../../module/judger/recorder")];
-        recorder = require("../../../module/judger/recorder");
+        delete require.cache[require.resolve("../../../application/judging/recorder")];
+        recorder = require("../../../application/judging/recorder");
     });
 
     afterEach(function () {
         (Module as any)._load = previousLoad;
-        delete require.cache[require.resolve("../../../module/judger/recorder")];
+        delete require.cache[require.resolve("../../../application/judging/recorder")];
         sinon.restore();
     });
 

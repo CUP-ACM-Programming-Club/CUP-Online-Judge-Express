@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const CachePool = require("../../../module/common/CachePool").default || require("../../../module/common/CachePool");
+const CachePool = require("../../../infrastructure/cache/CachePool").default || require("../../../infrastructure/cache/CachePool");
 
 describe("CachePool", function () {
 	it("should set and get values", async function () {

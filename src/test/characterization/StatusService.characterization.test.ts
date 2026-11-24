@@ -131,7 +131,7 @@ async function runScenario(sc: Scenario, log: QueryLog[]) {
         graph_data_optimizer: { getGraphDataWithCache: async () => [], getGraphLabel: () => [], TIME_GRANULARITY: {} }
     });
     try {
-        const { StatusService } = freshRequire("../../service/StatusService");
+        const { StatusService } = freshRequire("../../application/services/StatusService");
         const service = new StatusService();
         return await settle(() => service.getStatusList({ session: Object.assign({}, sc.session) }, Object.assign({}, sc.query)));
     } finally {

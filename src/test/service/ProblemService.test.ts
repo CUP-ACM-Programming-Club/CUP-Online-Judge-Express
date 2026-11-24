@@ -59,15 +59,15 @@ describe("ProblemService Tests", function () {
             if (request.includes("ProblemInfoManager")) return problemInfoManagerStub;
             if (request.includes("ContestAssistantManager")) return { default: contestAssistantStub, ...contestAssistantStub };
             if (request.includes("SourcePrivilegeCache")) return { default: sourcePrivilegeCacheStub, ...sourcePrivilegeCacheStub };
-            if (request.includes("cachePool")) return cachePoolStub;
+            if (request.includes("nodeCache")) return cachePoolStub;
             // Cheerio is usually a library, require it normally or let it load key logic
             // But we can mock it if needed. For now let it load real cheerio it has logic.
             return previousLoad.apply(this, arguments);
         };
 
         // 3. Re-require Service
-        delete require.cache[require.resolve("../../service/ProblemService")];
-        ProblemService = require("../../service/ProblemService").default;
+        delete require.cache[require.resolve("../../application/services/ProblemService")];
+        ProblemService = require("../../application/services/ProblemService").default;
     });
 
     afterEach(function () {
