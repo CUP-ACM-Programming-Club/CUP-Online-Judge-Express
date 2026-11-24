@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import {wait} from "../../decorator/RetryAsync";
 import express from "express";
-import isPromise from "is-promise";
 import log4j from "./log4j"
 
 console.log = function (message: any, ...args: any[]) {
@@ -18,10 +17,9 @@ console.error = function (message: any, ...args: any[]) {
 }
 
 export = async function (TEST_MODE: boolean = false) {
-	const _get = express.Router.prototype.get;
-	const _post = express.Router.prototype.post;
 	// Catch rejected async route handlers and hand the error to Express (500) instead of leaving the request hanging.
-	// The old check isPromise(handler) was always false for a function, so nothing was ever wrapped.
+	// Two old bugs made this a no-op: isPromise(handler) is always false for a function, and Express routers inherit
+	// their methods from the express.Router function object itself, not from express.Router.prototype.
 	const wrapper = (fn: any) => (...args: any) => Promise.resolve().then(() => fn(...args)).catch((e: any) => {
 		console.log("Catch error: ");
 		console.log(e);
@@ -30,20 +28,21 @@ export = async function (TEST_MODE: boolean = false) {
 			args[2](e);
 		}
 	});
-	express.Router.prototype.get = function (...args: any[]) {
-		const handler = args[args.length - 1];
-		if (typeof handler === "function" && handler.length < 4) {
-			args[args.length - 1] = wrapper(handler);
+	const routerProto: any = express.Router;
+	for (const method of ["get", "post", "put", "delete", "patch"]) {
+		const original = routerProto[method];
+		if (typeof original !== "function" || original.__kcWrapped) {
+			continue;
 		}
-		return _get.apply(this, args);
-	}
-
-	express.Router.prototype.post = function (...args: any[]) {
-		const handler = args[args.length - 1];
-		if (typeof handler === "function" && handler.length < 4) {
-			args[args.length - 1] = wrapper(handler);
-		}
-		return _post.apply(this, args);
+		const patched = function (this: any, ...args: any[]) {
+			const handler = args[args.length - 1];
+			if (typeof handler === "function" && handler.length < 4) {
+				args[args.length - 1] = wrapper(handler);
+			}
+			return original.apply(this, args);
+		};
+		(patched as any).__kcWrapped = true;
+		routerProto[method] = patched;
 	}
 	global.config = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "config.json"), "utf-8"));
 	require("../../orm/instance/sequelize");

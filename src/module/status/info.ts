@@ -12,7 +12,8 @@ export = async function (req: any, database: string, solution_id: any, own_watch
 			return error.noprivilege;
 		} else {
 			return ok.okMaker({
-				info: infoRes[0].error
+				// accepted submissions have no compile/runtime info row
+				info: infoRes.length > 0 ? infoRes[0].error : ""
 			});
 		}
 	} else {
