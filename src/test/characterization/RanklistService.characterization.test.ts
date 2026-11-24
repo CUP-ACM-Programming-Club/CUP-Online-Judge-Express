@@ -71,8 +71,60 @@ export function buildRankData(seed = 20260301): RankData {
     return { users, solutions, vjudge };
 }
 
-/** 重构后新 SQL 的假库实现（由 refactor 提交补充）；返回 undefined 表示不认识该 SQL */
-export const extraHandlers: Array<(s: string, params: any[], data: RankData) => any> = [];
+/**
+ * 重构后新 SQL 在假库中的实现（按 SQL 语义模拟：BINARY 分组/去重、窗口函数、ORDER BY、LIMIT）；
+ * 返回 undefined 表示不认识该 SQL。真实 MySQL 上的等价性由 src/test/equivalence/ranklist.equiv.ts 验证。
+ */
+export const extraHandlers: Array<(s: string, params: any[], data: RankData) => any> = [
+    (s, params, data) => {
+        const m = s.match(/^SELECT user_id, solved, has_reserved_key FROM .* FROM (solution|vjudge_solution) WHERE in_date >= \? AND result = 4 GROUP BY CAST\(user_id AS BINARY\) \) agg \) ranked ORDER BY solved DESC, array_index IS NULL, array_index, first_sid( LIMIT \?, \?)?$/);
+        if (!m) return undefined;
+        const [reserved, regexp, timeStart, offset, count] = params;
+        const rows = m[1] === "solution" ? data.solutions : data.vjudge;
+        const keyOf = m[1] === "solution" ? (x: any) => x.problem_id : (x: any) => x.oj_name + x.problem_id;
+        const groups = new Map<string, { user_id: string, problems: Set<any>, first_sid: number }>();
+        for (const x of rows) {
+            if (!(x.in_date >= timeStart && x.result === 4)) continue;
+            let g = groups.get(x.user_id);
+            if (!g) {
+                g = { user_id: x.user_id, problems: new Set(), first_sid: x.solution_id };
+                groups.set(x.user_id, g);
+            }
+            g.problems.add(keyOf(x));
+            g.first_sid = Math.min(g.first_sid, x.solution_id);
+        }
+        const re = new RegExp(regexp.replace("\\z", "$"));
+        const ranked = [...groups.values()].map(g => {
+            const num = re.test(g.user_id) ? Number(g.user_id) : null;
+            return { user_id: g.user_id, solved: g.problems.size, first_sid: g.first_sid, array_index: num !== null && num <= 4294967294 ? num : null };
+        });
+        const hasReserved = ranked.some(r => reserved.includes(r.user_id)) ? 1 : 0;
+        ranked.sort((a, b) => (b.solved - a.solved)
+            || ((a.array_index === null ? 1 : 0) - (b.array_index === null ? 1 : 0))
+            || ((a.array_index ?? 0) - (b.array_index ?? 0))
+            || (a.first_sid - b.first_sid));
+        const out = ranked.map(r => ({ user_id: r.user_id, solved: r.solved, has_reserved_key: hasReserved }));
+        return m[2] ? out.slice(offset, offset + count) : out;
+    },
+    (s, params, data) => {
+        const m = s.match(/^SELECT 1 AS any_ac FROM (solution|vjudge_solution) WHERE in_date >= \? AND result = 4 LIMIT 1$/);
+        if (!m) return undefined;
+        const rows = m[1] === "solution" ? data.solutions : data.vjudge;
+        return rows.some(x => x.in_date >= params[0] && x.result === 4) ? [{ any_ac: 1 }] : [];
+    },
+    (s, params, data) => {
+        if (!/^SELECT MIN\(user_id\) AS user_id, COUNT\(\*\) AS submit FROM vjudge_solution WHERE in_date >= \? AND user_id IN \(\?\) GROUP BY CAST\(user_id AS BINARY\)$/.test(s)) return undefined;
+        const ids: any[] = params[1];
+        if (!ids.length) throw new Error("ER_PARSE_ERROR: IN ()");
+        const counts = new Map<string, number>();
+        for (const x of data.vjudge) {
+            if (x.in_date >= params[0] && ids.some(id => ciEqual(id, x.user_id))) {
+                counts.set(x.user_id, (counts.get(x.user_id) || 0) + 1);
+            }
+        }
+        return [...counts.entries()].map(([user_id, submit]) => ({ user_id, submit }));
+    }
+];
 
 export function makeRankEngine(data: RankData, log: QueryLog[]): Engine {
     return async (sql: string, params: any[] = []) => {
@@ -149,6 +201,31 @@ function buildScenarios(): Scenario[] {
         list.push({ name: `search/${vjudge ? "vjudge" : "local"}`, opt: { page: 0, search: "u01", vjudge } });
     }
     list.push({ name: "search+time/invalid", opt: { page: 0, search: "x", time_stamp: "M", vjudge: false } });
+
+    const base = buildRankData();
+    const recent = (rows: any[]) => rows[rows.length - 1].in_date;
+    // 时间段内有 Object.prototype 同名 user_id 的 AC：原实现抛 TypeError
+    const reserved: RankData = {
+        users: base.users.concat([{ user_id: "constructor", nick: "c", biography: null, email: null, avatar: 0, avatarUrl: null }]),
+        solutions: base.solutions.concat([{ solution_id: 999999, user_id: "constructor", problem_id: 1000, result: 4, contest_id: null, in_date: recent(base.solutions) }]),
+        vjudge: base.vjudge.concat([{ solution_id: 999999, user_id: "toString", problem_id: 1000, oj_name: "HDU", result: 4, in_date: recent(base.vjudge) }])
+    };
+    // 同名 user_id 只有非 AC 提交：不影响结果
+    const reservedNoAc: RankData = {
+        users: base.users,
+        solutions: base.solutions.concat([{ solution_id: 999999, user_id: "valueOf", problem_id: 1000, result: 6, contest_id: null, in_date: recent(base.solutions) }]),
+        vjudge: base.vjudge.concat([{ solution_id: 999999, user_id: "__proto__", problem_id: 1000, oj_name: "HDU", result: 6, in_date: recent(base.vjudge) }])
+    };
+    // 不足 50 人的小数据集：负的小数页码（-0.5 → slice(-25, 25)）会取到非空结果
+    const small: RankData = { users: base.users, solutions: base.solutions.slice(-40), vjudge: base.vjudge.slice(-40) };
+    for (const vjudge of [false, true]) {
+        const tag = vjudge ? "vjudge" : "local";
+        list.push({ name: `time/${tag}/X/reserved-key-ac`, opt: { page: 0, search: "", time_stamp: "X", vjudge }, data: reserved });
+        list.push({ name: `time/${tag}/X/reserved-key-no-ac`, opt: { page: 0, search: "", time_stamp: "X", vjudge }, data: reservedNoAc });
+        for (const page of [0, "-0.5", -1, "abc", 1]) {
+            list.push({ name: `time/${tag}/X/small/page=${page}`, opt: { page, search: "", time_stamp: "X", vjudge }, data: small });
+        }
+    }
     return list;
 }
 
@@ -156,7 +233,8 @@ export async function runRankScenario(opt: any, viewer: any, data: RankData, log
     const restore = interceptQueryLayer(makeRankEngine(data, log));
     try {
         const service = freshRequire("../../service/RanklistService").default;
-        return await settle(() => service.getRanklist(Object.assign({}, opt), viewer));
+        // routes/ranklist 把 invalidParams 以外的任何异常都返回 error.database，所以只记录是否抛错
+        return await settle(() => service.getRanklist(Object.assign({}, opt), viewer), false);
     } finally {
         restore();
     }
@@ -194,5 +272,7 @@ describe("characterization: RanklistService.getRanklist", function () {
         expect(all.some((r: any) => r.user_id === undefined)).to.equal(true); // 缺失用户只剩 {solved}
         expect(JSON.parse(actual["time/local/X/page=9"])).to.have.property("__threw__");
         expect(JSON.parse(actual["time/local/D/no-ac"]).ranklist).to.deep.equal([]);
+        expect(JSON.parse(actual["time/local/X/reserved-key-ac"])).to.deep.equal({ __threw__: "error" });
+        expect(JSON.parse(actual["time/local/X/small/page=-0.5"]).ranklist.length).to.be.greaterThan(0);
     });
 });

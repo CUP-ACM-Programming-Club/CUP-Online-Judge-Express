@@ -100,11 +100,15 @@ export function project(sql: string, row: Record<string, any>) {
     return out;
 }
 
-/** 捕获异常并转为可快照的结果（真实 MySQL 错误文本与假库不同，只记录「抛错」本身） */
-export async function settle(fn: () => Promise<any>) {
+/**
+ * 捕获异常并转为可快照的结果（真实 MySQL 错误文本与假库不同，只记录「抛错」本身）。
+ * keepTypeErrorMessage：错误会经 next(e) 交给全局错误处理的接口保留 TypeError 文本；
+ * 像 /ranklist 这样把一切异常都映射成 error.database 的接口则只记录「抛错」。
+ */
+export async function settle(fn: () => Promise<any>, keepTypeErrorMessage = true) {
     try {
         return JSON.stringify(await fn());
     } catch (e: any) {
-        return JSON.stringify({ __threw__: e instanceof TypeError ? `TypeError: ${e.message}` : "error" });
+        return JSON.stringify({ __threw__: keepTypeErrorMessage && e instanceof TypeError ? `TypeError: ${e.message}` : "error" });
     }
 }
