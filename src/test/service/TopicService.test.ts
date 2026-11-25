@@ -76,6 +76,27 @@ describe("TopicService Tests", function () {
             expect(result.owner).to.equal("test_user");
         });
 
+        it("隐藏帖：普通用户打开详情得到 404，作者本人与管理员可以看", async () => {
+            const hidden = [{ article_id: 2, title: "Hidden", defunct: "Y", user_id: "author" }];
+            const load = () => {
+                cacheQueryStub.resetBehavior();
+                cacheQueryStub.onCall(cacheQueryStub.callCount).resolves([]);
+                cacheQueryStub.onCall(cacheQueryStub.callCount + 1).resolves([{ cnt: 0 }]);
+                cacheQueryStub.onCall(cacheQueryStub.callCount + 2).resolves(hidden);
+            };
+            load();
+            try {
+                await TopicService.getTopicDetail(2, 0, 20, "someone_else", false);
+                expect.fail("Should throw");
+            } catch (e: any) {
+                expect(e.statusCode).to.equal(404);
+            }
+            load();
+            expect((await TopicService.getTopicDetail(2, 0, 20, "author", false)).discuss_header_content.title).to.equal("Hidden");
+            load();
+            expect((await TopicService.getTopicDetail(2, 0, 20, "admin_user", true)).discuss_header_content.title).to.equal("Hidden");
+        });
+
         it("should throw 404 if topic not found", async () => {
             cacheQueryStub.onCall(0).resolves([]);
             cacheQueryStub.onCall(1).resolves([{ cnt: 0 }]);

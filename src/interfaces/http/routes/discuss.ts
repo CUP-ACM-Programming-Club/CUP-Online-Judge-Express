@@ -220,6 +220,11 @@ router.get("/update/reply/:id/:comment_id", async (req: any, res: any) => {
 });
 
 router.get("/update/reply/block/:id/:comment_id", async (req: any, res: any) => {
+	// 屏蔽回复是管理员操作（前端也只给管理员显示按钮）；修复：之前任何登录用户都能屏蔽别人的回复
+	if (!isAdmin(req)) {
+		res.json(error.noprivilege);
+		return;
+	}
 	const article_id = parseInt(req.params.id);
 	const comment_id = parseInt(req.params.comment_id);
 	try {

@@ -55,8 +55,9 @@ from (SELECT * FROM problem WHERE problem_id = ?)a
     }
 
     searchProblems(queryVal: string, isAdmin: boolean) {
+        // 非 admin 只能搜到公开题：OR 条件整体加括号（修复：之前 defunct 过滤只作用于 problem_id，隐藏题可按标题等搜出）
         return cache_query(`SELECT * FROM problem WHERE ${(isAdmin ? "" : " defunct='N' AND")} 
-			 problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?`, [queryVal, queryVal, queryVal, queryVal, queryVal]);
+			 (problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?)`, [queryVal, queryVal, queryVal, queryVal, queryVal]);
     }
 
     findAllLabels(vjudge: string) {

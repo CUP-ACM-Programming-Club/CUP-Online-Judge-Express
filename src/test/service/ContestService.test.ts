@@ -377,9 +377,10 @@ describe("ContestService Tests", function () {
 
     describe("getContestStatistics", () => {
         it("should return statistics", async () => {
-            // Mock queries: 1. stats, 2. total
-            cacheQueryStub.onCall(0).resolves([]);
-            cacheQueryStub.onCall(1).resolves([{ total_problem: 10 }]);
+            // Mock queries: 0. 比赛（门禁：已开始的公开比赛）, 1. stats, 2. total
+            cacheQueryStub.onCall(0).resolves([{ contest_id: 1000, private: 0, defunct: "N", cmod_visible: 0, start_time: "2000-01-01 00:00:00" }]);
+            cacheQueryStub.onCall(1).resolves([]);
+            cacheQueryStub.onCall(2).resolves([{ total_problem: 10 }]);
 
             const result = await ContestService.getContestStatistics(mockReq, 1000);
             expect(result.status).to.equal("OK");

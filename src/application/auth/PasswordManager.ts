@@ -16,8 +16,16 @@ class PasswordManager {
                 .update(inputPassword)
                 .digest("hex") + salt)
             .digest() + salt;
-        const decryptedPassword = decryptPassword(newpassword, AESSalt);
-        return SHA1Password === convertedOriginalPassword || decryptedPassword === inputPassword;
+        if (SHA1Password === convertedOriginalPassword) {
+            return true;
+        }
+        // newpassword 为空（老账号从未用新方式登录过）或格式不对时，crypto-js 解密会用随机盐，
+        // 约 1% 的概率抛出 Malformed UTF-8；以前这个异常没人接，登录请求就一直挂着不返回。
+        try {
+            return decryptPassword(newpassword, AESSalt) === inputPassword;
+        } catch (e) {
+            return false;
+        }
     }
 
     generateRandomPassword(length: number) {

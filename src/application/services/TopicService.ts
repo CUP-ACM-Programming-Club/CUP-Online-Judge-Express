@@ -41,6 +41,10 @@ class TopicService {
         if (!_article || _article.length === 0) {
             throw new HttpError("Topic not found", 404);
         }
+        // 被隐藏的帖子：与列表一致，只对管理员（以及作者本人）可见（修复：之前直接打开详情就能看）
+        if (!isAdmin && _article[0].defunct === "Y" && _article[0].user_id !== userId) {
+            throw new HttpError("Topic not found", 404);
+        }
 
         return {
             discuss: discuss_content,

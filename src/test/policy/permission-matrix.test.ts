@@ -550,8 +550,8 @@ describe("权限矩阵（角色 × 接口）", function () {
 			});
 		});
 
-		it("GET /contest/statistics：无比赛访问检查（已知不一致，锁定现状）", async function () {
-			await runCase({ name: "statistics", path: `/contest/statistics/${C_PRIVATE}`, expect: e("ok") });
+		it("GET /contest/statistics：与比赛详情同一门禁（修复）", async function () {
+			await runCase({ name: "statistics", path: `/contest/statistics/${C_PRIVATE}`, expect: privateAccess });
 		});
 
 		it("GET /scoreboard：门禁 + browserPrivilege + 他人 ip 可见性", async function () {
@@ -660,8 +660,9 @@ describe("权限矩阵（角色 × 接口）", function () {
 			});
 		});
 
-		it("比赛题（未开始的公开比赛）：不检查开始时间（已知漏洞，锁定现状）", async function () {
-			await runCase({ name: "future contest problem", path: `/problem/local?cid=${C_FUTURE}&pid=0`, expect: e("ok") });
+		it("比赛题（未开始 / 隐藏的公开比赛）：与比赛题目列表同一门禁（修复考试前漏题）", async function () {
+			await runCase({ name: "future contest problem", path: `/problem/local?cid=${C_FUTURE}&pid=0`, expect: e("err:Contest not start!", { admin: "ok" }) });
+			await runCase({ name: "hidden contest problem", path: `/problem/local?cid=${C_HIDDEN}&pid=0`, expect: e("deny", { cmanager: "err:invalid params", admin: "err:invalid params" }) }); // 隐藏比赛夹具里没有题目：过了门禁就报 invalid params
 		});
 
 		it("POST /problem/:source/:id 修改题目：admin | editor", async function () {
@@ -716,16 +717,38 @@ describe("权限矩阵（角色 × 接口）", function () {
 			await runCase({ name: "runtimeerror", path: `/status/runtimeerror?sid=${S_STUDENT}`, expect: e("deny", { sbrowser: "ok", admin: "ok" }) });
 		});
 
-		it("GET /status/:sid/:tr：任意登录用户（已知漏洞，锁定现状）", async function () {
-			await runCase({ name: "sid tr", path: `/status/${S_STUDENT}/1`, expect: e("ok") });
+		it("GET /status/:sid/:tr：结果对登录用户开放；错误详情与 runtime_info 同一权限（修复）", async function () {
+			// fake-db 不认带反引号的 runtimeinfo / compileinfo 查询，这里直接给出错误详情
+			const SubmissionService = require("../../application/services/SubmissionService").default;
+			const local = [
+				sinon.stub(SubmissionService, "getRuntimeInfo").resolves([{ error: "re-detail" }]),
+				sinon.stub(SubmissionService, "getCompileInfo").resolves([{ error: "ce-detail" }])
+			];
+			try {
+				// 结果为 4（非编译错误）走运行错误：只有 source-privilege（本人也不行，同 runtime_info）
+				await runCase({
+					name: "sid tr",
+					path: `/status/${S_STUDENT}/1`,
+					expect: e("ok"),
+					extract: res => res.body.data && res.body.data.tr !== undefined,
+					extra: { student: false, contestant: false, assistant: false, maker: false, cmanager: false, editor: false, sbrowser: true, admin: true }
+				});
+			} finally {
+				local.forEach(st => st.restore());
+			}
+		});
+
+		it("GET /status/sim、/status/sim/:cid：查重结果只给 admin | source_browser | 该比赛管理者（修复）", async function () {
+			await runCase({ name: "sim all", path: "/status/sim", expect: e("deny", { sbrowser: "ok", admin: "ok" }) });
+			await runCase({ name: "sim contest", path: `/status/sim/${C_PRIVATE}`, expect: e("deny", { assistant: "ok", maker: "ok", cmanager: "ok", sbrowser: "ok", admin: "ok" }) });
 		});
 
 		it("GET /problem/:source/:id/:sid：实际只有 admin（source_code 无 user_id 列）", async function () {
 			await runCase({ name: "problem source sid", path: `/problem/local/${P_FREE}/${S_CONTESTANT}`, expect: e("deny", { admin: "ok" }) });
 		});
 
-		it("GET /problem/:source/:id/:sid：admin 看过之后缓存对任意登录用户可见（已知漏洞，锁定现状）", async function () {
-			await runCase({ name: "problem source sid cached", path: `/problem/local/${P_FREE}/${S_CONTESTANT}`, expect: e("ok") });
+		it("GET /problem/:source/:id/:sid：admin 看过之后，其他人仍拿不到缓存（修复缓存漏代码）", async function () {
+			await runCase({ name: "problem source sid cached", path: `/problem/local/${P_FREE}/${S_CONTESTANT}`, expect: e("deny", { admin: "ok" }) });
 		});
 
 		it("GET /solution/info/:id：admin | 本人", async function () {
@@ -756,12 +779,13 @@ describe("权限矩阵（角色 × 接口）", function () {
 			await runCase({ name: "user email", path: "/user/email/pm_other", expect: e("ok") });
 		});
 
-		it("讨论：帖子正文 / 回复读取 / 屏蔽回复对任意登录用户开放（锁定现状）", async function () {
+		it("讨论：帖子正文 / 回复读取对任意登录用户开放；屏蔽回复只给 admin（修复）", async function () {
 			await runCase({ name: "discuss detail", path: `/discuss/${ARTICLE}`, expect: e("ok") });
+			// getTopicDetail 在本文件里被 stub（只测路由门禁）；隐藏帖的可见性在 TopicService.test 里测
 			await runCase({ name: "discuss defunct detail", path: `/discuss/${ARTICLE_DEFUNCT}`, expect: e("ok") });
 			await runCase({ name: "discuss post content", method: "post", path: `/discuss/update/${ARTICLE}`, expect: e("ok") });
 			await runCase({ name: "discuss reply content", path: `/discuss/update/reply/${ARTICLE}/1`, expect: e("ok") });
-			await runCase({ name: "discuss block", path: `/discuss/update/reply/block/${ARTICLE}/1`, expect: e("ok") });
+			await runCase({ name: "discuss block", path: `/discuss/update/reply/block/${ARTICLE}/1`, expect: e("deny", { admin: "ok" }) });
 		});
 
 		it("讨论编辑：只有作者本人能改（SQL 条件），其他人静默成功", async function () {

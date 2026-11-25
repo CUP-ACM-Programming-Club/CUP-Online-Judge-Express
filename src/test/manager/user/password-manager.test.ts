@@ -12,6 +12,13 @@ describe("PasswordManager", function () {
 		expect(result).to.equal(true);
 	});
 
+	it("newpassword 为空（老账号）时不会抛异常：多次校验都只返回 true/false", function () {
+		// crypto-js 解密非法密文会用随机盐，偶尔抛 Malformed UTF-8；以前这会让登录请求挂起
+		for (let i = 0; i < 500; i++) {
+			expect(PasswordManager.checkPassword("invalid", "123456", null)).to.equal(false);
+		}
+	});
+
 	it("should generate random password", function () {
 		const result = PasswordManager.generateRandomPassword(10);
 		expect(result).to.have.length(10);

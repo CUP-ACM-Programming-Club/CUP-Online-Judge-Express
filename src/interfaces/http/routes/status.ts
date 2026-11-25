@@ -68,6 +68,7 @@ router.use(...require("./status/ip"));
 router.use(...require("./status/problem"));
 
 import StatusService from "../../../application/services/StatusService";
+const { canViewJudgeInfo } = require("../../../application/status/info");
 import { JudgeResult } from "../../../domain/enums/JudgeResult";
 
 async function get_status(req: any, res: any, next: any, request_query: any = {}, limit: any = 0) {
@@ -264,8 +265,9 @@ router.get("/:sid/:tr", async function (req: any, res: any) {
 					pass_point: dataPack["pass_point"]
 				}
 			};
-			if (test_run.length > 0 && parseInt(dataPack["result"]) > 3) {
-				const result_flag = parseInt(dataPack["result"]);
+			const result_flag = parseInt(dataPack["result"]);
+			// 错误详情与 /status/compile_info、/status/runtime_info 同一权限（修复：之前任何登录用户都能读别人的报错）
+			if (test_run.length > 0 && result_flag > 3 && await canViewJudgeInfo(req, sid, dataPack["user_id"], result_flag === 11)) {
 				if (result_flag === 11) {
 					const compileInfo = await SubmissionService.getCompileInfo(sid);
 					if (compileInfo.length > 0) {

@@ -14,7 +14,7 @@
   - init-only: 3
   - login: 93
   - owner / source-privilege: 9
-- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 4 条，见“已修复”列）
+- 标记的不一致 / 疑似漏洞：**33** 条（其中本阶段已修复 14 条，见“已修复”列）
 
 术语：
 - `login` = 经 `auth` 中间件（含 ban_check、contest_mode 刷新）；`admin` = `session.isadmin`；`editor` / `source_browser` / `contest_manager` 为全局权限位。
@@ -105,13 +105,13 @@
 | GET | `/contest/v2/list` | auth | login | 同 /contest/list |  |  |
 | GET | `/contest/list/all` | auth | login | 非 admin/contest_manager 过滤 defunct | 不做 contest_mode/cmod_visible 过滤，比 /contest/list 宽松 |  |
 | GET | `/contest/total` | auth | login | 同 /contest/list |  |  |
-| GET | `/contest/statistics/:cid` | auth | login |  | 无 contest-access 检查：私有/隐藏/未开始比赛的提交结果分布对任意登录用户可见（详情接口 general/problem 有检查） |  |
+| GET | `/contest/statistics/:cid` | auth | login |  | 无 contest-access 检查：私有/隐藏/未开始比赛的提交结果分布对任意登录用户可见（详情接口 general/problem 有检查） | phase7：加 contest-access（与比赛详情一致） |
 | POST | `/contest/password/:cid` | auth | login |  |  |  |
 | GET | `/contestset/list/:contestSetId` | auth | login；非 admin 要求 contest_set.defunct='N'（不看 visible） |  |  |  |
 | GET | `/contestset/set/:contestSetId` | auth | login |  | 无 defunct/visible 检查；列表 /contestset/set 对非 admin 过滤 defunct='N' and visible=1，详情更宽松 |  |
 | GET | `/contestset/set` | auth | login | 非 admin 只列 defunct='N' and visible=1 |  |  |
 | GET | `/discuss/my` | auth → switch:enable_discuss(admin bypass) | login | 不做 contest_mode 检查 |  |  |
-| GET | `/discuss/:id` | auth → switch:enable_discuss(admin bypass) | login；contest_mode 下要求 admin \| source_browser |  | 不检查 article.defunct（列表对非 admin 过滤 defunct）；返回所有回复者与楼主的 email |  |
+| GET | `/discuss/:id` | auth → switch:enable_discuss(admin bypass) | login；contest_mode 下要求 admin \| source_browser |  | 不检查 article.defunct（列表对非 admin 过滤 defunct）；返回所有回复者与楼主的 email | phase7：隐藏帖详情只给 admin 与作者（email 未改） |
 | GET | `/discuss` | auth → switch:enable_discuss(admin bypass) | login；contest_mode 下要求 admin \| source_browser | 非 admin 过滤 defunct |  |  |
 | POST | `/discuss/reply/:id` | auth → switch:enable_discuss(admin bypass) | login |  |  |  |
 | GET | `/discuss/search/:search_val` | auth → switch:enable_discuss(admin bypass) | login |  | 不过滤 defunct、不做 contest_mode 检查 |  |
@@ -120,7 +120,7 @@
 | POST | `/discuss/update/:id` | auth → switch:enable_discuss(admin bypass) | login | 读帖子正文，任意登录用户，含 defunct |  |  |
 | POST | `/discuss/update/reply/:id/:comment_id` | auth → switch:enable_discuss(admin bypass) | owner（同上） |  |  |  |
 | GET | `/discuss/update/reply/:id/:comment_id` | auth → switch:enable_discuss(admin bypass) | login |  |  |  |
-| GET | `/discuss/update/reply/block/:id/:comment_id` | auth → switch:enable_discuss(admin bypass) | login |  | 任意登录用户可“屏蔽”任意回复（改写回复内容），应为管理员操作 |  |
+| GET | `/discuss/update/reply/block/:id/:comment_id` | auth → switch:enable_discuss(admin bypass) | login |  | 任意登录用户可“屏蔽”任意回复（改写回复内容），应为管理员操作 | phase7：限 admin（前端按钮本来只给 admin） |
 | POST | `/env/client` | auth | login |  |  |  |
 | GET | `/export/contest_code/:contest_id` | auth | admin（handler 内 checkAdmin） |  |  |  |
 | GET | `/export` | auth → admin | admin | export.ts 与 export_rpk.ts 都挂 /export，auth 执行两次 |  |  |
@@ -148,13 +148,13 @@
 | GET | `/problem/prefile/append/:problem_id` | auth | login |  | 同上 |  |
 | POST | `/problem/prefile/prepend` | auth → admin | admin |  |  |  |
 | POST | `/problem/prefile/append` | auth → admin | admin |  |  |  |
-| GET | `/problem/module/search/:val` | auth | login | 非 admin 拼 `defunct='N' AND a OR b OR ...` | 运算符优先级：defunct 过滤只作用于 problem_id LIKE，私有题可经 title/source/description/label 命中；不排除比赛中题目、不做 contest_mode 检查 |  |
-| GET | `/problem/module/search/dropdown/:val` | auth | login |  | 同 /problem/module/search/:val |  |
+| GET | `/problem/module/search/:val` | auth | login | 非 admin 拼 `defunct='N' AND a OR b OR ...` | 运算符优先级：defunct 过滤只作用于 problem_id LIKE，私有题可经 title/source/description/label 命中；不排除比赛中题目、不做 contest_mode 检查 | phase7：OR 条件整体加括号，非 admin 只搜公开题（比赛中题目 / contest_mode 未改） |
+| GET | `/problem/module/search/dropdown/:val` | auth | login |  | 同 /problem/module/search/:val | phase7：同上 |
 | GET | `/problem/:id(\d+)` | auth | login；非 (admin \| source_browser)：contest_mode 拒绝、defunct 拒绝、在未结束比赛中拒绝 |  | editor 不在豁免内（editor 可提交/编辑私有题，却不能在此查看） |  |
-| GET | `/problem/:source` | auth | ?id 同 /problem/:id；?cid&pid：非 (admin\|source_browser) 且 contest_mode 且 cmod_visible=0 拒绝，private=1 时 contest-access(cid)；?tid&pid：contest_mode 下要求 admin\|source_browser |  | ?cid&pid 对公开比赛不做开始时间与 defunct 检查：未开始/隐藏的公开比赛题面可提前读取；?tid&pid 不检查专题 private/defunct，也不检查题目 defunct/比赛中 |  |
+| GET | `/problem/:source` | auth | ?id 同 /problem/:id；?cid&pid：非 (admin\|source_browser) 且 contest_mode 且 cmod_visible=0 拒绝，private=1 时 contest-access(cid)；?tid&pid：contest_mode 下要求 admin\|source_browser |  | ?cid&pid 对公开比赛不做开始时间与 defunct 检查：未开始/隐藏的公开比赛题面可提前读取；?tid&pid 不检查专题 private/defunct，也不检查题目 defunct/比赛中 | phase7：?cid&pid 改用 checkContestAccess（与比赛题目列表一致：开始时间、隐藏、私有、比赛模式）；?tid&pid 未改 |
 | POST | `/problem/add` | auth | login |  | 任意登录用户可创建题目并获得 p<pid>（problem_maker） |  |
 | POST | `/problem/:source/:id` | auth | admin \| editor（handler 内，拒绝返回 "illegal request"） |  |  |  |
-| GET | `/problem/:source/:id/:sid` | auth | admin（代码写的是 admin \| owner，但 owner 取 source_code.user_id，该表无此列，实际只有 admin） |  | 结果缓存（10 天）在权限检查之前读取：admin 看过之后，任意登录用户可拿到同一 key 的代码（矩阵测试锁定现状） |  |
+| GET | `/problem/:source/:id/:sid` | auth | admin（代码写的是 admin \| owner，但 owner 取 source_code.user_id，该表无此列，实际只有 admin） |  | 结果缓存（10 天）在权限检查之前读取：admin 看过之后，任意登录用户可拿到同一 key 的代码（矩阵测试锁定现状） | phase7：只有 admin 读缓存，其他人先过权限检查 |
 | GET | `/problemset` | auth → switch:enable_problemset(admin bypass) | login | admin \| source_browser \| editor 可见范围更大（含 defunct 等）；/problemset/* 同 |  |  |
 | GET | `/problemset/search/:search` | auth → switch:enable_problemset(admin bypass) | login |  |  |  |
 | GET | `/problemset/:start` | auth → switch:enable_problemset(admin bypass) | login |  |  |  |
@@ -192,8 +192,8 @@
 | GET | `/status/device/os` | auth | login |  |  |  |
 | GET | `/status/device/browser` | auth | login |  |  |  |
 | GET | `/status/device/all` | auth | login |  |  |  |
-| GET | `/status/sim` | auth | login |  | 任意登录用户可取任意比赛（或全站）的查重相似对 |  |
-| GET | `/status/sim/:cid` | auth | login |  | 同上 |  |
+| GET | `/status/sim` | auth | login |  | 任意登录用户可取任意比赛（或全站）的查重相似对 | phase7：限 admin \| source_browser |
+| GET | `/status/sim/:cid` | auth | login |  | 同上 | phase7：限 admin \| source_browser \| 该比赛 maker / contest_manager / 助教 |
 | GET | `/status/runtimeerror` | auth | admin \| source_browser |  |  |  |
 | GET | `/status/submit_hour` | auth | login |  |  |  |
 | POST | `/status/ban_submission` | auth → admin | admin |  |  |  |
@@ -218,7 +218,7 @@
 | GET | `/status` | auth | login | browse_code = admin \| source_browser；ip/指纹/email 只对特权与本人保留 |  |  |
 | GET | `/status/graph` | auth | login |  |  |  |
 | GET | `/status/solution` | auth | owner \| source-privilege(sid) \| share===1 | share 由 SQL 计算：share=1 或题解引用，且题目不在未结束的比赛中 |  |  |
-| GET | `/status/:sid/:tr` | auth → inline | login |  | 任意登录用户可读任意提交的编译错误 / 运行错误信息（绕过 runtime_info 的特权要求） |  |
+| GET | `/status/:sid/:tr` | auth → inline | login |  | 任意登录用户可读任意提交的编译错误 / 运行错误信息（绕过 runtime_info 的特权要求） | phase7：错误详情与 compile_info / runtime_info 同一权限，结果字段仍对登录用户开放 |
 | GET | `/system/config/version_control/version` | - | anonymous | 前端“版本控制”页匿名调用，保持公开 |  |  |
 | GET | `/system/config/version_control/git` | admin | admin（requireAdmin，无 auth，与 /system/log 一致） |  | 匿名暴露仓库地址 | phase5 fix(b)：限 admin（前端未调用） |
 | GET | `/system/config/version_control/dependencies` | admin | admin（requireAdmin，无 auth，与 /system/log 一致） |  | 匿名暴露依赖及版本 | phase5 fix(b)：限 admin（前端未调用） |

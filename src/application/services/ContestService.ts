@@ -174,25 +174,9 @@ class ContestService {
             throw new HttpError("Invalid Contest ID", 400, error.invalidParams);
         }
 
-        // This also validates access by returning (or throwing)
-        // But for statistics, maybe looser check (if public)? 
-        // Original code checks "if (~cid && cid >= 1000)" then does queries.
-        // It doesn't explicitly check privilege in route? 
-        // Wait, route /statistics/:cid logic: parameters check -> query.
-        // It seems PUBLIC statistics if contest is found?
-        // But standard contest access rules 'should' apply if it's private.
-        // The original route DID NOT check privilege explicitly, implying it might be public info or relies on front-end to block?
-        // HOWEVER, accessing statistics of a PRIVATE contest without logging in is often a leak.
-        // I will enforce checkContestAccess to be safe, or least basic check.
-        // Re-reading original route:
-        /*
-        router.get("/statistics/:cid", async (req: any, res: any) => {
-           let cid = ...
-           if (~cid && cid >= 1000) { ... perform query ... } else { error }
-        });
-        */
-        // It seems the original code was OPEN.
-        // I will keep it open to avoid breaking changes, but maybe I should check if contest exists.
+        // 与比赛详情同一门禁（修复：之前私有 / 隐藏 / 未开始比赛的统计任何登录用户都能看）。
+        // 前端只在比赛内的状态页调用，能进比赛的人不受影响。
+        await this.checkContestAccess(req, cid);
 
         const [contest_statistics_detail, total] = await Promise.all([
             contestRepository.findContestStatistics(cid),
@@ -238,25 +222,9 @@ class ContestService {
             throw new HttpError("Contest not found", 404);
         }
 
-        // This mirrors `checkPrivilege` check in router but inside service
-        // We should use `checkContestAccess`? 
-        // The router uses `checkContestPrivilege` which calls `checkContestAccess`.
-        // Let's use `checkContestAccess` at the start if we want to be strict.
-        // But the original logic:
-        // 1. check Privilege(req) (admin/browser) -> if false: check cmod_visible
-        // 2. check private -> if 1: checkContestPrivilege
-
-        const isPrivileged = canBrowseSource(req);
-        if (!isPrivileged) {
-            // @ts-ignore
-            if (global.contest_mode && parseInt(contest[0].cmod_visible) === 0) {
-                throw error.contestMode;
-            }
-        }
-
-        if (parseInt(contest[0].private) === 1) {
-            await this.checkContestAccess(req, cid);
-        }
+        // 与比赛题目列表（getContestProblemList）同一套可见性判断：开始时间、隐藏、私有、比赛模式。
+        // 之前这里只检查了比赛模式和私有，公开比赛在开始前 / 隐藏时可以直接读到题面。
+        await this.checkContestAccess(req, cid);
 
         if (result.length > 0) {
             if (result[0].oj_name && result[0].oj_name.length > 0) {

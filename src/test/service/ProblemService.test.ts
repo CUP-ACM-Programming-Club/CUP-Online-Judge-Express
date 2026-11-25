@@ -275,6 +275,14 @@ describe("ProblemService Tests", function () {
     });
 
     describe("searchProblems", () => {
+        it("非 admin：defunct='N' 作用于全部 OR 条件（隐藏题不能按标题等搜出）", async () => {
+            cachePoolStub.get.returns(undefined);
+            cacheQueryStub.resolves([]);
+            await ProblemService.searchProblems("A", false, false);
+            const sql: string = cacheQueryStub.lastCall.args[0];
+            expect(sql.replace(/\s+/g, " ")).to.contain("defunct='N' AND (problem_id LIKE ? OR title LIKE ? OR source LIKE ? OR description LIKE ? OR label LIKE ?)");
+        });
+
         it("should return cached result if available", async () => {
             cachePoolStub.get.returns({ items: [] });
             const result = await ProblemService.searchProblems("Test", false, false);

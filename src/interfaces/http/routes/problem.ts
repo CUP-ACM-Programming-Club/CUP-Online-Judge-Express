@@ -241,7 +241,8 @@ router.get("/:source/:id/:sid", async function (req: any, res: any) {
 	const source = req.params.source === "local" ? "" : req.params.source.toUpperCase();
 	const id = parseInt(req.params.id);
 	const sid = parseInt(req.params.sid);
-	const _res = ProblemService.getCachedSourceCode(source, id, sid);
+	// 缓存不区分用户：只有管理员能直接读缓存，其他人先走 getSourceCode 的权限检查（修复缓存漏代码）
+	const _res = isAdmin(req) ? ProblemService.getCachedSourceCode(source, id, sid) : undefined;
 	if (_res === undefined) {
 		try {
 			const data = await ProblemService.getSourceCode(req, id, sid, source, source.length > 0);
