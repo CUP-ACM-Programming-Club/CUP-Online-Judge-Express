@@ -6,6 +6,8 @@ import Logger from "../../shared/Logger";
 import { wait } from "../../shared/decorators/RetryAsync";
 const DEFAULT_LOOP_SECONDS = 3000;
 const SUBMISSION_COLLECT_LIMIT = 30;
+// 与 localJudger 的领取租约一致：排队超过这么久没判完就重新领取
+const CLAIM_LEASE_SECONDS = 300;
 
 class UnjudgedSubmissionCollector {
     private judger?: SubmissionJudger;
@@ -41,7 +43,9 @@ class UnjudgedSubmissionCollector {
             const noDataProblemIdList = Array.from(this.noDataProblemIdSet);
             const waitingResult = await judgeQueueRepository.findWaitingSubmissions(noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT));
             const rejudgeResult = await judgeQueueRepository.findRejudgeSubmissions(noDataProblemIdList, ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT));
-            const result = [...waitingResult, ...rejudgeResult];
+            // 领取后迟迟没判完的提交（领取方可能已崩溃），租约过期后由收集器重新领取
+            const staleResult = await judgeQueueRepository.findStaleClaimedSubmissions(noDataProblemIdList, ConfigManager.getConfig("judge_claim_lease_seconds", CLAIM_LEASE_SECONDS), ConfigManager.getConfig("submission_collect_limit", SUBMISSION_COLLECT_LIMIT));
+            const result = [...waitingResult, ...rejudgeResult, ...staleResult];
             await wait(2000);
             for (let i in result) {
                 if (!Object.prototype.hasOwnProperty.call(result, i)) {

@@ -49,4 +49,16 @@ export class MySqlJudgeQueueRepository implements JudgeQueueRepository {
 	countAdministratorForRejudge(userId: string) {
 		return query("SELECT count(1) as cnt FROM privilege WHERE user_id = ? AND rightstr = 'administrator'", [userId]);
 	}
+
+	async claimForJudging(solutionId: number | string, leaseSeconds: number) {
+		// InnoDB 行锁保证：两台服务器同时执行，只有一条 UPDATE 的 affectedRows 为 1
+		const res: any = await MySQLManager.execQuery(
+			"UPDATE solution SET result = 14, judgetime = NOW() WHERE solution_id = ? AND (result IN (0, 1) OR (result = 14 AND judgetime < NOW() - INTERVAL ? SECOND))",
+			[solutionId, leaseSeconds]);
+		return !!res && res.affectedRows === 1;
+	}
+
+	findStaleClaimedSubmissions(noDataProblemIds: any[], leaseSeconds: number, limit: number) {
+		return MySQLManager.execQuery("SELECT solution_id,user_id,result FROM solution WHERE result=14 and judgetime < NOW() - INTERVAL ? SECOND and language not in (15,22) and problem_id != 0 and problem_id not in (?) order by solution_id limit ?", [leaseSeconds, noDataProblemIds, limit]);
+	}
 }

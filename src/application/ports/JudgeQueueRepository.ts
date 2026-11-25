@@ -23,6 +23,13 @@ export interface JudgeQueueRepository {
 	findSolutionOwner(solutionId: number): Promise<any[]>;
 	/** 重判用：用户是否管理员，返回 [{cnt}] */
 	countAdministratorForRejudge(userId: string): Promise<any[]>;
+	/**
+	 * 领取一份提交去判：把「等待 / 等待重判」或「排队超过 leaseSeconds 秒没判完」的提交原子地改成排队（result=14）。
+	 * 多台服务器共用一个数据库，同一时刻只有一台能改成功；返回 true 表示本机领到了。
+	 */
+	claimForJudging(solutionId: number | string, leaseSeconds: number): Promise<boolean>;
+	/** 排队（result=14）超过 leaseSeconds 秒还没判完的提交：领取它的服务器可能已经崩了，交给收集器重新领取 */
+	findStaleClaimedSubmissions(noDataProblemIds: any[], leaseSeconds: number, limit: number): Promise<any[]>;
 }
 
 export const judgeQueueRepository = definePort<JudgeQueueRepository>("JudgeQueueRepository");

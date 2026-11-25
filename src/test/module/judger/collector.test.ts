@@ -107,4 +107,19 @@ describe("UnjudgedSubmissionCollector", function () {
         if (!updateCall) throw new Error("Update call missing");
         expect(updateCall.args[1][0]).to.equal(1004);
     });
+
+    it("should re-collect claimed submissions whose lease expired", async () => {
+        configStub.getConfig.withArgs("judge_claim_lease_seconds").returns(300);
+        queryStub.withArgs(sinon.match(/result=14/)).resolves([{ solution_id: "1005", user_id: "u1", result: 14 }]);
+        queryStub.withArgs(sinon.match(/SELECT count\(1\)/)).resolves([{ cnt: 0 }]);
+
+        await Collector.collectHandler();
+
+        const staleCall = queryStub.getCalls().find(c => c.args[0].includes("result=14"));
+        expect(staleCall).to.exist;
+        if (!staleCall) throw new Error("staleCall missing");
+        expect(staleCall.args[0]).to.include("judgetime < NOW() - INTERVAL ? SECOND");
+        expect(staleCall.args[1][0]).to.equal(300);
+        expect(judgerStub.addTask.calledWith(1005)).to.equal(true);
+    });
 });
