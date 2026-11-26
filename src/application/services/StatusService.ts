@@ -84,7 +84,7 @@ export class StatusService {
             _end = end_cnt[0].cnt;
             _res = await submissionStatusRepository.findStatusPage("contest", request_query, limit);
         } else {
-            _res = await submissionStatusRepository.findStatusPage("global", request_query, limit);
+            _res = await submissionStatusRepository.findStatusPage("global", request_query, limit, req.session && req.session.user_id);
         }
 
         const userInfo = await this.loadUserInfo(_res);

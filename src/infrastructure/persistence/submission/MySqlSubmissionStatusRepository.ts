@@ -61,7 +61,7 @@ function generateSqlData(request_query: any) {
 
 /** 状态页 SQL（自 application/services/StatusService 原样搬来）。 */
 export class MySqlSubmissionStatusRepository implements SubmissionStatusRepository {
-    async findStatusPage(scope: StatusListScope, request_query: StatusQueryOptions, limit: number): Promise<any[]> {
+    async findStatusPage(scope: StatusListScope, request_query: StatusQueryOptions, limit: number, viewerId?: string): Promise<any[]> {
         let { where_sql, sql_arr } = generateSqlData(request_query);
         let pre_sim = "", end_sim = "";
 
@@ -113,6 +113,15 @@ export class MySqlSubmissionStatusRepository implements SubmissionStatusReposito
         } else {
             where_sql.unshift("problem_id > 0");
             where_sql.unshift("contest_id is null");
+            // 隐藏题（problem.defunct = 'Y'）的题库提交不对普通用户公开，避免从题号看出考前备题；
+            // 自己的提交照常可见
+            const hiddenProblem = "exists (select 1 from problem hp where hp.problem_id = solution.problem_id and hp.defunct = 'Y')";
+            if (viewerId) {
+                where_sql.push(` (user_id = ? or not ${hiddenProblem})`);
+                sql_arr.push(viewerId);
+            } else {
+                where_sql.push(` not ${hiddenProblem}`);
+            }
             where_clause = ` where ${where_sql.join(" and ").trim()}`;
 
             sql_arr.push(limit);

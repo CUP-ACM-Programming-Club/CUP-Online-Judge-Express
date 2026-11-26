@@ -1,4 +1,5 @@
 import ProblemFromContest from "../set/ProblemFromContest";
+import HiddenProblemSubmission from "../set/HiddenProblemSubmission";
 import ProblemFromSpecialSubject from "../set/ProblemFromSpecialSubject";
 import SubmissionOriginSet from "../set/SubmissionOriginSet";
 import SubmitUserInfo from "../set/SubmitUserInfo";
@@ -16,6 +17,7 @@ import {JudgeResultNotifier} from "../../../application/ports/JudgeResultNotifie
  */
 export class JudgeResultManager implements JudgeResultNotifier {
     setCollector = [ProblemFromContest
+        , HiddenProblemSubmission
         , ProblemFromSpecialSubject
         , SubmissionOriginSet
         , SubmitUserInfo
@@ -33,7 +35,7 @@ export class JudgeResultManager implements JudgeResultNotifier {
     pushResult(solutionId: number, solutionPack: any) {
         if (SubmissionSet.has(solutionId)) {
             SubmissionSet.get(solutionId)!.emit("result", solutionPack);
-            BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId));
+            BroadcastManager.sendMessage(StatusSet.getList(), "result", solutionPack, 1, !!ProblemFromContest.get(solutionId) || !!HiddenProblemSubmission.get(solutionId));
             if (SubmissionOriginSet.has(solutionId)) {
                 BroadcastManager.sendMessage(ContestPagePushSet.get(SubmissionOriginSet.get(solutionId)), "result", solutionPack, 1);
             }

@@ -47,6 +47,7 @@ import InitExternalEnvironment from "../main/init/InitExternalEnvironment";
 import ProblemFromSpecialSubject from "../interfaces/websocket/set/ProblemFromSpecialSubject";
 import SubmitUserInfo from "../interfaces/websocket/set/SubmitUserInfo";
 import ProblemFromContest from "../interfaces/websocket/set/ProblemFromContest";
+import HiddenProblemSubmission from "../interfaces/websocket/set/HiddenProblemSubmission";
 import SolutionContext from "../interfaces/websocket/set/SolutionContext";
 import JudgeManager from "../infrastructure/persistence/judge/JudgeManager";
 import whiteboard from "../interfaces/websocket/whiteboard/SocketSet";
@@ -285,7 +286,15 @@ io.on("connection", async function (socket: UserSocket) {
 				SubmissionOriginSet.set(submission_id, contest_id);
 			}
 		} else {
-			BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1);
+			// 隐藏题的题库提交不实时推给普通用户（与状态页列表口径一致）
+			const problemId = data.val && parseInt(data.val.id);
+			const hidden = problemId > 0
+				? await cache_query("SELECT 1 FROM problem WHERE problem_id = ? AND defunct = 'Y'", [problemId])
+				: [];
+			if (hidden.length) {
+				HiddenProblemSubmission.set(submission_id, true);
+			}
+			BroadcastManager.sendMessage(StatusSet.getList(), "submit", data, 1, hidden.length > 0);
 		}
 		// const language = parseInt(data.val.language);
 		SolutionUserCollector.set(data.submission_id, data);

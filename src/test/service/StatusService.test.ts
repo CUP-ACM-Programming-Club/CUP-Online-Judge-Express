@@ -321,12 +321,31 @@ describe("Status Service Tests", function () {
             // But it shouldn't be pushed TWICE (once for where, once for limit).
             // problem_id is pushed once.
             // limit is pushed once (at the end).
-            // So total params length should be 2.
-            expect(params.length).to.equal(2);
+            // The global (non-privileged) scope also pushes the viewer id once for the
+            // hidden-problem filter, right before the LIMIT param.
+            // So total params length should be 3.
+            expect(params.length).to.equal(3);
+            expect(params[params.length - 2]).to.equal("test_user");
         });
     });
 
     describe("Privilege Flows", () => {
+        it("should hide hidden-problem submissions of others for normal users", async function () {
+            await service.getStatusList(mockReq, { limit: 0 });
+            const call = queryStub.lastCall;
+            const sql = call.args[0];
+            const params = call.args[1];
+            expect(sql).to.include("hp.defunct = 'Y'");
+            expect(sql).to.match(/\(user_id = \? or not exists/);
+            expect(params).to.deep.equal(["test_user", 0]);
+        });
+
+        it("should not apply the hidden-problem filter for privileged users", async function () {
+            await service.getStatusList({ session: { user_id: "admin_user", isadmin: true, source_browser: false } }, { limit: 0 });
+            const sql = queryStub.lastCall.args[0];
+            expect(sql).to.not.include("hp.defunct");
+        });
+
         it("should generate admin query when browser_privilege is true", async function () {
             const adminReq = {
                 session: {

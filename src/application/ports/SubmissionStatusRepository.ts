@@ -22,7 +22,7 @@ export type StatusListScope = "privileged" | "contest" | "global";
 /** 状态页数据访问。实现：infrastructure/persistence/submission/MySqlSubmissionStatusRepository。 */
 export interface SubmissionStatusRepository {
 	/** 按筛选条件取一页（20 条）提交，筛选条件到 SQL 的转换在实现里 */
-	findStatusPage(scope: StatusListScope, requestQuery: StatusQueryOptions, limit: number): Promise<any[]>;
+	findStatusPage(scope: StatusListScope, requestQuery: StatusQueryOptions, limit: number, viewerId?: string): Promise<any[]>;
 	/** 比赛是否已结束：返回 [{cnt}] */
 	findContestEnded(contestId: number): Promise<any[]>;
 	/** 批量取用户信息（user_id IN (?)） */
