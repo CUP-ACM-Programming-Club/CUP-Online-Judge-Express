@@ -11,6 +11,7 @@ import { judgeResultRepository } from "../../application/ports/JudgeResultReposi
 import { submissionUserRepository } from "../../application/ports/SubmissionUserRepository";
 import { submissionGraphData } from "../../application/ports/SubmissionGraphData";
 import { submissionStatusRepository } from "../../application/ports/SubmissionStatusRepository";
+import { submitContextRepository } from "../../application/ports/SubmitContextRepository";
 import { ranklistRepository } from "../../application/ports/RanklistRepository";
 import { submissionProblemStatusRepository } from "../../application/ports/SubmissionProblemStatusRepository";
 import {
@@ -49,3 +50,4 @@ bindPort(submissionSolutionRepository, lazy(() => new (require("../../infrastruc
 bindPort(submissionExportRepository, lazy(() => new (require("../../infrastructure/persistence/submission/MySqlSubmissionExportRepository").MySqlSubmissionExportRepository)()));
 bindPort(compileArgumentsStore, lazy(() => require("../../infrastructure/persistence/judge/CompilerManager").default));
 bindPort(submissionSolveMap, lazy(() => require("../../infrastructure/persistence/SolveMap/SolveMapManager").default));
+bindPort(submitContextRepository, lazy(() => new (require("../../infrastructure/persistence/submission/MySqlSubmitContextRepository").MySqlSubmitContextRepository)()));
