@@ -1,7 +1,10 @@
 import { SubmissionExportRepository } from "../../../application/ports/SubmissionExportRepository";
 
-import cache_query = require("../../db/legacy/mysql_cache");
-import query = require("../../db/legacy/mysql_query");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 
 /** 导出相关 SQL，原样搬自 ExportService 与 routes/export_rpk。 */
 export class MySqlSubmissionExportRepository implements SubmissionExportRepository {

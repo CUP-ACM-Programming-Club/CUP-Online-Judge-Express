@@ -1,13 +1,16 @@
 import { ContestListCriteria, ContestRepository } from "../../../application/ports/ContestRepository";
 import { contest as Contest, contestProblem as ContestProblem } from "../../orm/ts-model";
 import ContestManager from "./ContestManager";
-import cache_query = require("../../db/legacy/mysql_cache");
-import query = require("../../db/legacy/mysql_query");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 
 /**
  * 比赛数据访问。SQL 逐字搬自原 application/services/ContestService、application/contest/ContestInfoManager、
  * application/problem/ContestFinder、interfaces/http/middleware/contest_mode；
- * 仍走 legacy mysql_cache（固定 2s 缓存、旧缓存键）以保持缓存行为不变。
+ * 读语句沿用原 mysql_cache 的 2s 缓存（cachedQuery），写语句直接 query。
  * 比赛列表相关的 SQL 拼装与缓存在 ContestManager。
  */
 export class MySqlContestRepository implements ContestRepository {

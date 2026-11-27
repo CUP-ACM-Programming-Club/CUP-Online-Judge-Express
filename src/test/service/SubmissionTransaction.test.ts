@@ -3,6 +3,7 @@ const sinon = require("sinon");
 const Module = require("module");
 import { openTransaction } from "../../infrastructure/db/mysql/transaction";
 import { rebindSubmissionServicePorts } from "../setup/submission-ports";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 /**
  * 提交路径的事务语义：用真实 openTransaction + 假连接，断言
@@ -63,8 +64,7 @@ describe("SubmissionService submit transaction", function () {
         const redisStub = { lrangeAsync: sinon.stub().resolves([]) };
         previousLoad = Module._load;
         Module._load = function (request: string) {
-            if (request.includes("mysql_cache")) return queryStub;
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: queryStub });
             if (request.includes("login_action")) return sinon.stub();
             if (request.includes("Logger")) {
                 const loggerStub = { log: sinon.stub() };

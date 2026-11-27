@@ -1,11 +1,16 @@
 /**
  * 题解 SQL（从 application/services/TutorialService 与原 TutorialManager 逐字搬来）。
- * 注意 insert/update 也走 mysql_cache 外壳——与旧实现一致（外壳会识别写语句不缓存）。
+ * 原先 insert/update 也走 mysql_cache 外壳（外壳识别出写语句后直接查询、不缓存），现在直接用 query；
+ * 读语句与原先一样走 2s 缓存。
  */
-import cache_query = require("../../db/legacy/mysql_cache");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
 import Cacheable from "../../../shared/cache/Cacheable";
 import CachePool from "../../../shared/cache/CachePool";
 import { TutorialListItem, TutorialRepository } from "../../../application/ports/TutorialRepository";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（下面经它的 SQL 都不含 update/insert/delete 字样；table_name 只会是 solution / tutorial） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 
 export class MySqlTutorialRepository implements TutorialRepository {
     findOwnerRows(table_name: string, id: any) {
@@ -45,13 +50,13 @@ where tutorial.source = ? and tutorial.problem_id = ? order by 'like' desc, disl
     }
 
     insertTutorial(source: string, problem_id: string, userId: string, solution_id: string, content: string) {
-        return cache_query(`insert into tutorial(source,problem_id,user_id,solution_id,content)
+        return query(`insert into tutorial(source,problem_id,user_id,solution_id,content)
         values(?,?,?,?,?)`,
             [source, problem_id, userId, solution_id, content]);
     }
 
     updateTutorial(content: string, solution_id: string, tutorial_id: string) {
-        return cache_query(`update tutorial set content = ?,
+        return query(`update tutorial set content = ?,
         solution_id = ? where tutorial_id = ?`, [content, solution_id, tutorial_id]);
     }
 

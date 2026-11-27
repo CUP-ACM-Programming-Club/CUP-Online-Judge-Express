@@ -1,5 +1,5 @@
 import { GlobalSettingRepository } from "../../../application/ports/GlobalSettingRepository";
-const query = require("../../db/legacy/mysql_query");
+import { query } from "../../db";
 
 export class MySqlGlobalSettingRepository implements GlobalSettingRepository {
 	findAll() {

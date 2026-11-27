@@ -5,6 +5,7 @@ import Module from "module";
 import { bindPort, boundImpl } from "../../../application/ports/registry";
 import { adminContestRepository } from "../../../application/ports/AdminContestRepository";
 import { contestCache } from "../../../application/ports/ContestCache";
+import { dbModuleStub, isDbModuleRequest } from "../../helpers/db-module-stub";
 
 const REPO_PATH = "../../../infrastructure/persistence/contest/MySqlAdminContestRepository";
 
@@ -66,7 +67,7 @@ describe("AdminContestService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub });
             if (request.includes("MySQLManager")) return { MySQLManager: mysqlManagerStub };
             if (request.includes("shared/isNumber")) {
                 const fn = (val: any) => !isNaN(val);

@@ -11,7 +11,7 @@
  *   该池由 CacheScheduler 每 60s 清扫一次「早于 2s」的条目：ttlMs > 2000 的条目可能被提前清掉
  *   （只会多一次回源，不影响正确性）。
  * - cachedQuery 返回的是缓存里的共享对象，调用方不要原地修改。
- * - module/mysql_query、module/mysql_cache 现在只是这里的兼容外壳，旧调用方无需改动。
+ * - legacy/mysql_query、legacy/mysql_cache 只是这里的兼容外壳；src/ 下的业务代码已全部改用本模块，外壳仅留给测试与外部脚本。
  */
 import { MySQLManager } from "./mysql/MySQLManager";
 import CacheScheduler from "../../shared/cache/CacheScheduler";

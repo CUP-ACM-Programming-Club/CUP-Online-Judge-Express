@@ -3,7 +3,10 @@ import {MySQLManager} from "../../db/mysql/MySQLManager";
 import {ErrorHandler} from "../../../shared/decorators/ErrorHandler";
 import {IInviteInfo, UserInviteRepository} from "../../../application/ports/UserInviteRepository";
 import { v1 as uuidV1 } from "uuid";
-const query = require("../../db/legacy/mysql_cache");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 原先全部 SQL 都经 mysql_cache：select 走 2s 缓存，update/insert/delete 被识别为写语句直接查询 */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
 
 export type {IInviteInfo};
 
@@ -15,7 +18,7 @@ function timeToString(time: any) {
 export class InviteManager implements UserInviteRepository {
 
     async getInviteInfoByInviteCode (inviteCode: string) {
-        const result = await query(`select * from invite where invite_code = ?`, [inviteCode]);
+        const result = await cachedQuery(`select * from invite where invite_code = ?`, [inviteCode], CACHE);
         if (result && result.length && result.length > 0) {
             return result[0] as IInviteInfo;
         }
@@ -23,7 +26,7 @@ export class InviteManager implements UserInviteRepository {
     }
 
     async getInviteInfoByUserId(userId: string) {
-        return await query(`select * from invite where user_id = ?`, [userId]);
+        return await cachedQuery(`select * from invite where user_id = ?`, [userId], CACHE);
     }
 
     async expireInviteCode (inviteCode: string) {
@@ -104,11 +107,11 @@ export class InviteManager implements UserInviteRepository {
     }
 
     async getAllInviteCode(): Promise<IInviteInfo[]> {
-        return await query(`select * from invite order by valid_date desc`);
+        return await cachedQuery(`select * from invite order by valid_date desc`, undefined, CACHE);
     }
 
     async getInviteCodeByConditional(page: number, offset: number): Promise<IInviteInfo[]> {
-        return await query(`select * from invite order by valid_date limit ?, ?`, [page, offset]);
+        return await cachedQuery(`select * from invite order by valid_date limit ?, ?`, [page, offset], CACHE);
     }
 
 }

@@ -9,6 +9,7 @@
 const expect = require("chai").expect;
 const sinon = require("sinon");
 const Module = require("module");
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 describe("Graph Data Optimizer Tests (Full Coverage)", function () {
     let queryStub;
@@ -39,8 +40,8 @@ describe("Graph Data Optimizer Tests (Full Coverage)", function () {
         Module._load = function (request, parent, isMain) {
             // 使用 includes 模糊匹配来拦截特定模块
             // 注意：request 可能是相对路径，也可能是模块名
-            if (request.includes("mysql_cache")) {
-                return queryStub;
+            if (isDbModuleRequest(request)) {
+                return dbModuleStub({ cachedQuery: queryStub });
             }
             if (request.includes("cache-helper")) {
                 return {

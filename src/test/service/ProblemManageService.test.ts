@@ -6,6 +6,7 @@ import { problemManageRepository } from "../../application/ports/ProblemManageRe
 import { problemImportStorage } from "../../application/ports/ProblemImportStorage";
 import { problemImageStorage } from "../../application/ports/ProblemImageStorage";
 import { problemInfoStore } from "../../application/ports/ProblemInfoStore";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 describe("ProblemManageService Tests", function () {
     let ProblemManageService: any;
@@ -52,7 +53,7 @@ describe("ProblemManageService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub });
             if (request === "fs") {
                 return { ...originalFs, ...fsStub };
             }

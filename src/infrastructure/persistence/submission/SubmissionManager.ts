@@ -5,7 +5,11 @@ import {MySQLManager} from "../../db/mysql/MySQLManager";
 import {RESULT_CHINESE_STRING} from "../../../domain/constants/result_chinese";
 import {ExportSolutionInfo, SolutionInfoDAO} from "../../../application/ports/SubmissionSolutionRepository";
 
-const cache_query = require("../../db/legacy/mysql_cache");
+import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 
 // 结果中文名与 DAO 类型现在定义在 domain / application 端口里，这里保留原有导出
 export { RESULT_CHINESE_STRING };

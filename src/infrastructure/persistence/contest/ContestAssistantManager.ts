@@ -3,7 +3,11 @@ import { ContestAssistantRepository } from "../../../application/ports/ContestAs
 import Cacheable from "../../../shared/cache/Cacheable";
 import CachePool from "../../../shared/cache/CachePool";
 
-const cache_query = require("../../db/legacy/mysql_cache");
+import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 
 /** 比赛 / 专题助教的数据访问；按请求取参数的部分在 interfaces/http/controllers/ContestAssistantController。 */
 class ContestAssistantManager implements ContestAssistantRepository {

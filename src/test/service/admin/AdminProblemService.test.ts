@@ -5,6 +5,7 @@ import Module from "module";
 import { PortHarness } from "../../helpers/problem-port-harness";
 import { adminProblemRepository } from "../../../application/ports/AdminProblemRepository";
 import { problemDataStorage } from "../../../application/ports/ProblemDataStorage";
+import { dbModuleStub, isDbModuleRequest } from "../../helpers/db-module-stub";
 
 describe("AdminProblemService Tests", function () {
     let AdminProblemService: any;
@@ -35,7 +36,7 @@ describe("AdminProblemService Tests", function () {
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
             // console.log("Req:", request);
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub });
             if (request.includes("status/update_solution_result")) return rejudgeStub;
             return previousLoad.apply(this, arguments);
         };

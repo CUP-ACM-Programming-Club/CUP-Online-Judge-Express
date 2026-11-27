@@ -25,7 +25,7 @@ async function defaultLookupContestId(solutionId: number | string): Promise<numb
  * 判题结果落库后清除对应比赛的榜单 Redis 缓存。
  *
  * - fire-and-forget：调用方不 await，任何错误（MySQL/Redis）只记日志，不影响判题结果存储；
- * - 榜单底层查询走 mysql_cache（约 2 秒进程内缓存），失效后紧接着的重建可能拿到 2 秒内的旧数据
+ * - 榜单底层查询走 cachedQuery（与原 mysql_cache 相同的约 2 秒进程内缓存），失效后紧接着的重建可能拿到 2 秒内的旧数据
  *   并重新写入 Redis 180 秒，因此在 trailingDelayMs 后再清一次（同一比赛合并为一次）；
  * - 原有 180 秒 TTL 保留作为兜底。
  */

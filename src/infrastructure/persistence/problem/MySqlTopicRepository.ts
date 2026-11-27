@@ -1,6 +1,9 @@
 /** 讨论区/专题题目 SQL（从 application/services/TopicService 逐字搬来）。 */
-import cache_query from "../../db/legacy/mysql_cache";
-import query from "../../db/legacy/mysql_query";
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 import { TopicRepository } from "../../../application/ports/TopicRepository";
 
 export class MySqlTopicRepository implements TopicRepository {

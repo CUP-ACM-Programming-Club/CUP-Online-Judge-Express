@@ -5,6 +5,7 @@ import Module from "module";
 import { bindPort, boundImpl } from "../../application/ports/registry";
 import { contestRepository } from "../../application/ports/ContestRepository";
 import { contestCache } from "../../application/ports/ContestCache";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 const REPO_PATH = "../../infrastructure/persistence/contest/MySqlContestRepository";
 
@@ -54,8 +55,7 @@ describe("ContestService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_cache")) return cacheQueryStub;
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: cacheQueryStub });
             if (request.includes("ContestManager")) return { default: contestManagerStub, ...contestManagerStub };
             if (request.includes("ContestAssistantManager")) return { default: contestAssistantStub, ...contestAssistantStub };
             if (request.includes("ContestCachePool")) return contestCachePoolStart;

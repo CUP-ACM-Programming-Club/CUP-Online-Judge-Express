@@ -7,6 +7,7 @@ import { problemRepository } from "../../application/ports/ProblemRepository";
 import { problemInfoStore } from "../../application/ports/ProblemInfoStore";
 import { problemSourcePrivilege } from "../../application/ports/ProblemSourcePrivilege";
 import { problemResultCache } from "../../application/ports/ProblemResultCache";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 describe("ProblemService Tests", function () {
     let ProblemService: any;
@@ -60,8 +61,7 @@ describe("ProblemService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_cache")) return cacheQueryStub;
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: cacheQueryStub });
             if (request.includes("ProblemInfoManager")) return problemInfoManagerStub;
             if (request.includes("ContestAssistantManager")) return { default: contestAssistantStub, ...contestAssistantStub };
             if (request.includes("SourcePrivilegeCache")) return { default: sourcePrivilegeCacheStub, ...sourcePrivilegeCacheStub };

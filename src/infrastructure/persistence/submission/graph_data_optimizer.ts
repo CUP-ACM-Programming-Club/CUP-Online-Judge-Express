@@ -8,7 +8,11 @@ import { withCache, clearCacheBatch } from "../../cache/cache-helper";
 import { SubmissionGraphData } from "../../../application/ports/SubmissionGraphData";
 import { TIME_GRANULARITY, indexToGranularity, getGraphLabel } from "../../../domain/constants/graph_granularity";
 
-const cache_query = require("../../db/legacy/mysql_cache");
+import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 import { getLogger } from "../../../application/ports/Logger";
 const logger = getLogger("cheese", "info");
 

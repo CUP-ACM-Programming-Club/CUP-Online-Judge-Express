@@ -5,6 +5,7 @@ const Module = require("module");
 import { SubmissionService } from "../../application/services/SubmissionService";
 import { SubmissionType } from "../../domain/enums/SubmissionEnums";
 import { rebindSubmissionServicePorts } from "../setup/submission-ports";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 describe("Submission Service Tests", function () {
     let service: SubmissionService;
@@ -48,8 +49,7 @@ describe("Submission Service Tests", function () {
 
         previousLoad = Module._load;
         Module._load = function (request: string, parent: any, isMain: any) {
-            if (request.includes("mysql_cache")) return queryStub;
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: queryStub });
             if (request.includes("login_action")) return sinon.stub();
 
             if (request.includes("Logger")) {

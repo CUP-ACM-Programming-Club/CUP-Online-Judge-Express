@@ -1,7 +1,7 @@
 /** 题目创建/修改/导入的写库 SQL（从 application/services/ProblemManageService 逐字搬来）。 */
 import { ProblemManageRepository, ProblemUpdateFields } from "../../../application/ports/ProblemManageRepository";
 
-const query = require("../../db/legacy/mysql_query");
+import { query } from "../../db";
 
 const checkEmpty = (str: any) => {
     if (str === "" || str === null || str === undefined) {

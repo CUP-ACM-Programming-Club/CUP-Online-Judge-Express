@@ -4,6 +4,7 @@ const sinon = require("sinon");
 const Module = require("module");
 import { PortHarness } from "../helpers/problem-port-harness";
 import { problemSetRepository } from "../../application/ports/ProblemSetRepository";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 // 原 ProblemSetManager 已拆成 ProblemSetController（HTTP）+ ProblemSetUseCases + MySqlProblemSetRepository（SQL），
 // 这里经控制器走完整链路，仓储在拦截 mysql_cache 之后重新加载。
 
@@ -38,7 +39,7 @@ describe("ProblemSetManager Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_cache")) return cacheQueryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ cachedQuery: cacheQueryStub });
             // Mock other dependencies if needed
             // e.g. ../decorator/common/ContestModeChecker
             // Since decorators run on class definition, we might need to mock them or let them pass.

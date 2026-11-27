@@ -4,6 +4,7 @@ import Module from "module";
 import { ScoreboardInvalidator } from "../../../application/judging/recorder/ScoreboardInvalidator";
 import { judgeResultRepository } from "../../../application/ports/JudgeResultRepository";
 import { rebindFresh } from "../../setup/rebind-port";
+import { dbModuleStub, isDbModuleRequest } from "../../helpers/db-module-stub";
 
 function flush() {
     return new Promise(resolve => setImmediate(resolve));
@@ -102,7 +103,7 @@ describe("recorder.storeSubmission scoreboard invalidation", function () {
             if (request.includes("recorder/Maintainer")) return { __esModule: true, default: { maintainUserInfo: sinon.stub().resolves(), maintainProblem: sinon.stub().resolves() } };
             if (request.includes("SubmissionManager")) return { __esModule: true, default: { getSolutionInfo: sinon.stub().resolves({ problem_id: 1000 }) } };
             if (request.includes("user/user")) return { getUserIdBySolutionId: sinon.stub().resolves("u") };
-            if (request.includes("mysql_query") || request.includes("mysql_cache")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: queryStub });
             return previousLoad.apply(this, arguments);
         };
         // 判题结果回写的 SQL 在 MySqlJudgeResultRepository 里：拦截生效期间重新加载并绑定

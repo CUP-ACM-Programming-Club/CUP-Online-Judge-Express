@@ -1,6 +1,6 @@
 import { AdminContestRepository, ContestRow, ContestTxConnection } from "../../../application/ports/AdminContestRepository";
 import { MySQLManager } from "../../db/mysql/MySQLManager";
-import query = require("../../db/legacy/mysql_query");
+import { query } from "../../db";
 
 /** 后台比赛管理的 SQL。逐字搬自原 application/services/admin/AdminContestService。 */
 export class MySqlAdminContestRepository implements AdminContestRepository {

@@ -1,5 +1,5 @@
 /** 后台题目列表/上下架 SQL（从 application/services/admin/AdminProblemService 逐字搬来）。 */
-import query from "../../db/legacy/mysql_query";
+import { query } from "../../db";
 import { AdminProblemRepository } from "../../../application/ports/AdminProblemRepository";
 
 export class MySqlAdminProblemRepository implements AdminProblemRepository {

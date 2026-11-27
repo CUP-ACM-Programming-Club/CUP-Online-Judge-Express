@@ -1,5 +1,5 @@
 import { ContestCheatRecord, ContestCheatRepository } from "../../../application/ports/ContestCheatRepository";
-import query = require("../../db/legacy/mysql_query");
+import { query } from "../../db";
 
 /** contest_cheat 表。SQL 逐字搬自原 application/contest/cheating_ban。 */
 export class MySqlContestCheatRepository implements ContestCheatRepository {

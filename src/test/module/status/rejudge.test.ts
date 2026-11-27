@@ -5,6 +5,7 @@ import Module from "module";
 import { submissionJudger } from "../../../application/ports/SubmissionJudger";
 import { judgeQueueRepository } from "../../../application/ports/JudgeQueueRepository";
 import { bindTemporarily, rebindFresh } from "../../setup/rebind-port";
+import { dbModuleStub, isDbModuleRequest } from "../../helpers/db-module-stub";
 
 describe("Rejudge Logic (update_solution_result)", function () {
     let rejudgeModule: any;
@@ -31,7 +32,7 @@ describe("Rejudge Logic (update_solution_result)", function () {
         // 2. Intercept
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub });
             if (request.includes("judger")) {
                 // Return default export as the stub
                 return { __esModule: true, default: judgerStub };

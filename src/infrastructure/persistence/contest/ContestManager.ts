@@ -7,7 +7,22 @@ import { MySQLManager } from "../../db/mysql/MySQLManager";
 import PrivilegeManager from "../user/PrivilegeManager";
 import ContestCachePool = require("../../cache/pools/ContestCachePool");
 import { ContestListCriteria } from "../../../application/ports/ContestRepository";
-const cache_query = require("../../db/legacy/mysql_cache");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存 */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+
+/**
+ * 列表 SQL 会把 session 里的比赛 id（myContestIds）直接拼进去，静态上无法排除其中出现 update/insert/delete 字样，
+ * 所以这几处保留旧 mysql_cache 外壳的判定：小写 SQL 含这些字样时直接查询、不缓存，否则走 2s 缓存。
+ */
+function legacyCachedQuery(sql: string, params?: any[]) {
+    const lower = sql.toLowerCase();
+    if (lower.includes("update") || lower.includes("insert") || lower.includes("delete")) {
+        return query(sql, params || []);
+    }
+    return cachedQuery<any>(sql, params, CACHE);
+}
 const PAGE_SIZE = 50;
 interface searchQuery {
     sql: string | null,
@@ -23,7 +38,7 @@ class ContestManager {
     @Cacheable(ContestCachePool, 1, "second")
     getContestListByConditional(admin_str: string, myContest: string, search: searchQuery, limit: number) {
         const sql = this.buildSqlStructure(admin_str, myContest, search.sql);
-        return cache_query(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
+        return legacyCachedQuery(`${sql} order by (IF(start_time < NOW() and end_time > NOW(), 1, 0))desc,
          (IF(start_time < NOW() and end_time > NOW(), end_time, 0)),
          (IF(start_time >= NOW() and end_time <= NOW(), contest_id, contest_id)) desc limit ?, ?`, [...search.sqlArr, limit, PAGE_SIZE]);
     }
@@ -32,7 +47,7 @@ class ContestManager {
     @Cacheable(ContestCachePool, 1, "second")
     async getContestListCountByConditional(admin_str: string, myContest: string, search: searchQuery) {
         const sql = this.buildSqlCountStructure(admin_str, myContest, search.sql);
-        const countList = await cache_query(`${sql}`, [...search.sqlArr]);
+        const countList = await legacyCachedQuery(`${sql}`, [...search.sqlArr]);
         if (countList && countList.length && countList.length > 0) {
             return countList[0].cnt;
         }
@@ -45,7 +60,7 @@ class ContestManager {
     @Timer
     @Cacheable(new CachePool(), 1, "second")
     getAllContest() {
-        return cache_query(`select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest order by contest_id desc`);
+        return cachedQuery(`select maker as user_id,defunct,contest_id,cmod_visible,title,start_time,end_time,private from contest order by contest_id desc`, undefined, CACHE);
     }
 
     async isContestSubmittable(contestId: number | string, userId: number | string) {
@@ -66,7 +81,7 @@ class ContestManager {
     @Timer
     @Cacheable(ContestCachePool, 10, "minute")
     async countTotalNumber(sql: string) {
-        const response = await cache_query(`select count(1) as cnt from (${sql})t3`);
+        const response = await legacyCachedQuery(`select count(1) as cnt from (${sql})t3`);
         if (response && response.length && response.length > 0) {
             return response[0].cnt;
         }

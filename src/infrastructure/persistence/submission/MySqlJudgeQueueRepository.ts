@@ -1,7 +1,7 @@
 import { MySQLManager } from "../../db/mysql/MySQLManager";
 import { JudgeQueueRepository } from "../../../application/ports/JudgeQueueRepository";
 
-const query = require("../../db/legacy/mysql_query");
+import { query } from "../../db";
 
 /** 判题队列相关 SQL（自 UnjudgedSubmissionCollector / update_solution_result / RuntimeErrorHandler 原样搬来）。 */
 export class MySqlJudgeQueueRepository implements JudgeQueueRepository {

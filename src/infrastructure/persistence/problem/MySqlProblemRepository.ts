@@ -1,9 +1,13 @@
 /**
  * 题目查询的 SQL（从 application/services/ProblemService 逐字搬来）。
- * 继续走 legacy mysql_cache 外壳：它的 2s 缓存与「写语句不缓存」启发式是现有行为的一部分。
+ * 读语句沿用原 mysql_cache 的 2s 缓存（cachedQuery）；写语句直接 query（原外壳也会把它识别为写语句、不缓存）。
+ * 拼进 SQL 的 vjudge / prefix 只会是 "" 或 "vjudge_"。
  */
-import cache_query = require("../../db/legacy/mysql_cache");
-import query = require("../../db/legacy/mysql_query");
+import { query, cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
+
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
 import { ProblemRepository } from "../../../application/ports/ProblemRepository";
 
 export class MySqlProblemRepository implements ProblemRepository {

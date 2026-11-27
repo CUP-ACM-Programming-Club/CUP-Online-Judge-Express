@@ -1,7 +1,11 @@
 import { ScoreboardRepository } from "../../../application/ports/ScoreboardRepository";
-import cache_query = require("../../db/legacy/mysql_cache");
+import { cachedQuery, LEGACY_CACHE_TTL_MS } from "../../db";
 
-/** 榜单查询。SQL 逐字搬自原 application/services/ScoreboardService（仍走 legacy mysql_cache，缓存行为不变）。 */
+/** 与原 mysql_cache 相同的 2s 读缓存（本文件经它的 SQL 都不含 update/insert/delete 字样，旧外壳同样会缓存） */
+const CACHE = { ttlMs: LEGACY_CACHE_TTL_MS };
+const cache_query = (sql: string, params?: any[]) => cachedQuery<any>(sql, params, CACHE);
+
+/** 榜单查询。SQL 逐字搬自原 application/services/ScoreboardService（沿用原 mysql_cache 的 2s 缓存）。 */
 export class MySqlScoreboardRepository implements ScoreboardRepository {
     findContestSubmissions(cid: number, browserPrivilege: boolean) {
         return cache_query(`

@@ -3,6 +3,7 @@ import sinon from "sinon";
 import Module from "module";
 import { PortHarness } from "../helpers/problem-port-harness";
 import { topicRepository } from "../../application/ports/TopicRepository";
+import { dbModuleStub, isDbModuleRequest } from "../helpers/db-module-stub";
 
 describe("TopicService Tests", function () {
     let TopicService: any;
@@ -26,8 +27,7 @@ describe("TopicService Tests", function () {
         // 2. Intercept Module._load
         previousLoad = (Module as any)._load;
         (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-            if (request.includes("mysql_cache")) return cacheQueryStub;
-            if (request.includes("mysql_query")) return queryStub;
+            if (isDbModuleRequest(request)) return dbModuleStub({ query: queryStub, cachedQuery: cacheQueryStub });
             return previousLoad.apply(this, arguments);
         };
 
