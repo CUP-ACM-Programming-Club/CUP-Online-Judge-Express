@@ -38,6 +38,10 @@ describe("Status Router Legacy Routes", function () {
         (Module as any)._load = function (requestStr: string, parent: any, isMain: boolean) {
 
             if (requestStr.includes("ContestAssistantManager")) return { default: {} };
+            if (requestStr.includes("SubmissionViewUseCases")) {
+                const mock = { checkSourcePrivilege: sinon.stub().resolves(false) };
+                return { ...mock, default: mock };
+            }
             if (requestStr.includes("SourcePrivilegeCache")) {
                 const mock = { checkPrivilege: sinon.stub().resolves(true) };
                 return { ...mock, default: mock };
@@ -60,7 +64,7 @@ describe("Status Router Legacy Routes", function () {
 
         // 3. Clear cache
         Object.keys(require.cache).forEach(key => {
-            if (key.includes("StatusService") || key.includes("routes\\status") || key.includes("SubmissionService")) {
+            if (key.includes("StatusService") || /routes[\\/]status/.test(key) || key.includes("SubmissionService")) {
                 delete require.cache[key];
             }
         });
