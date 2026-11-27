@@ -4,7 +4,7 @@
  */
 import fsDefault from "fs";
 import Promise from "bluebird";
-import SocketIoClient from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import JudgeManager from "../persistence/judge/JudgeManager";
 import { judgerEventListener, RejectJudgeInfo, SubmissionJudger } from "../../application/ports/SubmissionJudger";
 import { judgeQueueRepository } from "../../application/ports/JudgeQueueRepository";
@@ -21,7 +21,7 @@ const eventEmitter = require("events").EventEmitter;
  * 判题结果、拒绝判题等事件交给 application 的 JudgerEventListener 端口处理。
  */
 export class localJudger extends eventEmitter implements SubmissionJudger {
-	socket:SocketIOClient.Socket;
+	socket: Socket;
 	oj_home: string;
 	status: any = {free_judger: []};
 	/**
@@ -31,7 +31,8 @@ export class localJudger extends eventEmitter implements SubmissionJudger {
      */
 	constructor(home_dir: string, judger_num: number) {
 		super();
-		const socket = this.socket = SocketIoClient(global.config.judger.address);
+		// socket.io-client 4.x；判题机（judge v2）是 socket.io 4 服务端，口令仍放在地址里（?token=）
+		const socket = this.socket = io(global.config.judger.address);
 		this.oj_home = home_dir;
 		socket.on("connect", () => {
 			socket.emit("type", {

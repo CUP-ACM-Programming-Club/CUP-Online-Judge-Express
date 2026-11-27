@@ -136,7 +136,9 @@ describe("localJudger 把判题机事件交给 JudgerEventListener 端口", func
 		previousLoad = (Module as any)._load;
 		(Module as any)._load = function (request: string) {
 			if (request === "socket.io-client") {
-				return () => ({ connected: false, on: (event: string, handler: any) => { handlers[event] = handler; }, emit() { } });
+				// socket.io-client 4.x：localJudger 用的是具名导出 io()
+				const fake: any = () => ({ connected: false, on: (event: string, handler: any) => { handlers[event] = handler; }, emit() { } });
+				return { __esModule: true, io: fake, default: fake };
 			}
 			return previousLoad.apply(this, arguments);
 		};

@@ -232,7 +232,8 @@ const originalLoad = (Module as any)._load;
 		};
 	}
 	if (request === "socket.io-client") {
-		return function () {
+		// socket.io-client 4.x 的具名导出 io() 与默认导出都指向同一个假实现
+		const fakeIo = function () {
 			const handlers = {};
 			return {
 				connected: false,
@@ -243,6 +244,7 @@ const originalLoad = (Module as any)._load;
 				}
 			};
 		};
+		return { __esModule: true, io: fakeIo, default: fakeIo };
 	}
 	if (request === "socket.io") {
 		return function () {
